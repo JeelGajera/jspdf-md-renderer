@@ -27,7 +27,9 @@
     },
     "homepage": "https://github.com/JeelGajera/jspdf-md-renderer#readme",
     "dependencies": {
-        "@jspdf/md-renderer": "file:"
+        "@jspdf/md-renderer": "file:",
+        "jspdf": "^2.5.2",
+        "marked": "^15.0.3"
     },
     "devDependencies": {
         "@eslint/js": "^9.16.0",
