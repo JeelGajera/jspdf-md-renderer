@@ -20,8 +20,8 @@ export type RenderOption = {
         regular: FontItem;
         light: FontItem;
     };
-    content: {
-        textAlignment: "left" | "right" | "justify"
+    content?: {
+        textAlignment: 'left' | 'right' | 'justify';
     };
     pageBreakHandler: () => void;
     endCursorYHandler: (y: number) => void;

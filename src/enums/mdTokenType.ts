@@ -14,5 +14,5 @@ export enum MdTokenType {
     Em = 'em',
     TableHeader = 'table_header',
     TableCell = 'table_cell',
-    Raw = "raw"
+    Raw = 'raw',
 }

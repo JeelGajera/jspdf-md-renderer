@@ -10,6 +10,6 @@ export type ParsedElement = {
     alt?: string;
     href?: string;
     text?: string;
-    header?: {type?: string, content?: any};
-    rows?: {type?: string, content?: any};
+    header?: { type?: string; content?: any };
+    rows?: { type?: string; content?: any };
 };
