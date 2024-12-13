@@ -14,20 +14,23 @@ const renderRawItem = (
     options: RenderOption,
 ): number => {
     const indent = indentLevel * options.page.indent;
+    const lineHeight =
+        doc.getTextDimensions('A').h * options.page.defaultLineHeightFactor;
     if (
         y +
             doc.splitTextToSize(
                 element.content ?? '',
                 options.page.maxContentWidth - indent,
             ).length *
-                options.page.lineSpace -
-            2 * options.page.lineSpace >=
+                lineHeight -
+            2 * lineHeight >=
         options.page.maxContentHeight
     ) {
-        HandlePageBreaks(options.pageBreakHandler, doc);
+        HandlePageBreaks(doc, options);
+        y = options.page.topmargin;
     }
 
-    const lineHeight =
+    const lineHeightFactor =
         doc.getTextWidth(element.content ?? '') >
         options.page.maxContentWidth - indent
             ? options.page.defaultLineHeightFactor
@@ -40,9 +43,8 @@ const renderRawItem = (
             x + indent,
             y,
             options.page.maxContentWidth - indent,
-            lineHeight,
-        ) +
-        1.5 * options.page.lineSpace;
+            lineHeightFactor,
+        ) + lineHeight;
     return y;
 };
 

@@ -25,6 +25,9 @@ export const MdTextRender = async (
     options: RenderOption,
 ) => {
     const parsedElements = await MdTextParser(text);
+    console.log(parsedElements);
+    console.log(doc);
+    
     let y = options.cursor.y;
     const x = options.cursor.x;
 
@@ -43,19 +46,19 @@ export const MdTextRender = async (
                     options.page.lineSpace >=
             options.page.maxContentHeight
         ) {
-            HandlePageBreaks(options.pageBreakHandler, doc);
+            HandlePageBreaks(doc, options);
             y = options.page.topmargin;
         }
 
         switch (element.type) {
             case MdTokenType.Heading:
-                y += renderHeading(doc, element, x, y, indent, options);
+                y = renderHeading(doc, element, x, y, indent, options);
                 break;
             case MdTokenType.Paragraph:
-                y += renderParagraph(doc, element, x, y, indent, options);
+                y = renderParagraph(doc, element, x, y, indent, options);
                 break;
             case MdTokenType.List:
-                y += renderList(
+                y = renderList(
                     doc,
                     element,
                     y,
@@ -65,7 +68,7 @@ export const MdTextRender = async (
                 );
                 break;
             case MdTokenType.ListItem:
-                y += renderListItem(
+                y = renderListItem(
                     doc,
                     element,
                     x,
@@ -76,7 +79,7 @@ export const MdTextRender = async (
                 );
                 break;
             case MdTokenType.Raw:
-                y += renderRawItem(
+                y = renderRawItem(
                     doc,
                     element,
                     x,
@@ -88,12 +91,10 @@ export const MdTextRender = async (
                 break;
             default:
                 console.warn(
-                    `Warning: Unsupported element type encountered: ${element.type}. ` +
-                        '\n' +
-                        `If you believe this element type should be supported, please create an issue at: ` +
-                        `https://github.com/JeelGajera/jspdf-md-renderer/issues ` +
-                        +'\n' +
-                        `with details of the element and expected behavior. Thank you for helping improve this library!`,
+                    `Warning: Unsupported element type encountered: ${element.type}. 
+                        If you believe this element type should be supported, please create an issue at:
+                        https://github.com/JeelGajera/jspdf-md-renderer/issues
+                        with details of the element and expected behavior. Thank you for helping improve this library!`,
                 );
                 break;
         }

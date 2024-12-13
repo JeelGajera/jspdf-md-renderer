@@ -24,11 +24,12 @@ const renderListItem = (
                 element.content ?? '',
                 options.page.maxContentWidth - indent,
             ).length *
-                options.page.lineSpace -
-            2 * options.page.lineSpace >=
+                doc.getTextDimensions('A')?.h -
+            2 * doc.getTextDimensions('A')?.h >=
         options.page.maxContentHeight
     ) {
-        HandlePageBreaks(options.pageBreakHandler, doc);
+        HandlePageBreaks(doc, options);
+        y = options.page.topmargin;
     }
     if (element.content) {
         const lineHeight =
@@ -45,7 +46,7 @@ const renderListItem = (
                 options.page.maxContentWidth - indent,
                 lineHeight,
             ) +
-            1.5 * options.page.lineSpace;
+            1.5 * doc.getTextDimensions('A')?.h;
     }
     // Recursively render nested items if they exist
     if (element.items && element.items.length > 0) {

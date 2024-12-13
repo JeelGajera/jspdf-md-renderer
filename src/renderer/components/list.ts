@@ -15,11 +15,11 @@ const renderList = (
     ) => void,
 ): number => {
     doc.setFontSize(options.page.defaultFontSize);
-    doc.setFont(options.font.light.name, options.font.light.style);
+    // doc.setFont(options.font.light.name, options.font.light.style);
     for (const point of element?.items ?? []) {
         parentElementRenderer(point, indentLevel + 1, true); // Recursively render nested list items
     }
-    y += options.page.lineSpace;
+    y += doc.getTextDimensions('A')?.h;
     return y;
 };
 

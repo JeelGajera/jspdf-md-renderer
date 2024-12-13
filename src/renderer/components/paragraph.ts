@@ -16,16 +16,18 @@ const renderParagraph = (
     options: RenderOption,
 ): number => {
     doc.setFontSize(options.page.defaultFontSize);
-    doc.setFont(options.font.light.name, options.font.light.style);
+    // doc.setFont(options.font.light.name, options.font.light.style);
     let content = element.content;
+    const lineHeight =
+        doc.getTextDimensions('A').h * options.page.defaultLineHeightFactor;
     if (
         y +
             doc.splitTextToSize(
                 content ?? '',
                 options.page.maxContentWidth - indent,
             ).length *
-                options.page.lineSpace -
-            3 * options.page.lineSpace >=
+                lineHeight -
+            3 * lineHeight >=
         options.page.maxContentHeight
     ) {
         // ADD Possible text to Page bottom
@@ -36,10 +38,7 @@ const renderParagraph = (
         const possibleContentLines: string[] = [];
         const possibleContentY = y;
         for (let j = 0; j < contentLeft.length; j++) {
-            if (
-                y - 2 * options.page.lineSpace <
-                options.page.maxContentHeight
-            ) {
+            if (y - 2 * lineHeight < options.page.maxContentHeight) {
                 possibleContentLines.push(contentLeft[j]);
                 y += options.page.lineSpace;
             } else {
@@ -51,7 +50,7 @@ const renderParagraph = (
             }
         }
         if (possibleContentLines.length > 0) {
-            justifyText(
+            y = justifyText(
                 doc,
                 possibleContentLines.join(' '),
                 x + indent,
@@ -60,7 +59,8 @@ const renderParagraph = (
                 options.page.defaultLineHeightFactor,
             );
         }
-        HandlePageBreaks(options.pageBreakHandler, doc);
+        HandlePageBreaks(doc, options);
+        y = options.page.topmargin;
     }
     y =
         justifyText(
@@ -71,6 +71,7 @@ const renderParagraph = (
             options.page.maxContentWidth - indent,
             options.page.defaultLineHeightFactor,
         ) + options.page.lineSpace;
+
     return y;
 };
 

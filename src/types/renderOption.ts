@@ -1,9 +1,14 @@
+import { jsPDFOptions } from "jspdf";
+
 export type RenderOption = {
     cursor: {
         x: number;
         y: number;
     };
     page: {
+        format?: string | number[];
+        unit?: jsPDFOptions["unit"];
+        orientation?: jsPDFOptions["orientation"];
         maxContentWidth: number;
         maxContentHeight: number;
         lineSpace: number;
@@ -21,9 +26,9 @@ export type RenderOption = {
         light: FontItem;
     };
     content?: {
-        textAlignment: 'left' | 'right' | 'justify';
+        textAlignment: 'left' | 'right' | 'center' | 'justify';
     };
-    pageBreakHandler: () => void;
+    pageBreakHandler?: () => void;
     endCursorYHandler: (y: number) => void;
 };
 
