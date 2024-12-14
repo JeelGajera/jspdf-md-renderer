@@ -1,4 +1,4 @@
-import { jsPDFOptions } from "jspdf";
+import { jsPDFOptions } from 'jspdf';
 
 export type RenderOption = {
     cursor: {
@@ -7,8 +7,8 @@ export type RenderOption = {
     };
     page: {
         format?: string | number[];
-        unit?: jsPDFOptions["unit"];
-        orientation?: jsPDFOptions["orientation"];
+        unit?: jsPDFOptions['unit'];
+        orientation?: jsPDFOptions['orientation'];
         maxContentWidth: number;
         maxContentHeight: number;
         lineSpace: number;

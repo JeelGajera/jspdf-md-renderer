@@ -51,7 +51,9 @@ const renderListItem = (
     // Recursively render nested items if they exist
     if (element.items && element.items.length > 0) {
         for (const subItem of element.items) {
-            y = parentElementRenderer(subItem, indentLevel + 1, true) + getCharHight(doc, options)*0.2;
+            y =
+                parentElementRenderer(subItem, indentLevel + 1, true) +
+                getCharHight(doc, options) * 0.2;
         }
     }
     return y;

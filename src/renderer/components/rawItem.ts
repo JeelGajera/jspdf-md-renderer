@@ -15,18 +15,19 @@ const renderRawItem = (
 ): number => {
     const indent = indentLevel * options.page.indent;
     const bullet = hasRawBullet ? '\u2022 ' : ''; // unicode for bullet point
-    const lines = doc.splitTextToSize(bullet + element.content, options.page.maxContentWidth - indent);
+    const lines = doc.splitTextToSize(
+        bullet + element.content,
+        options.page.maxContentWidth - indent,
+    );
     if (
-        y +
-            lines.length *
-                getCharHight(doc, options) >=
+        y + lines.length * getCharHight(doc, options) >=
         options.page.maxContentHeight
     ) {
         HandlePageBreaks(doc, options);
         y = options.page.topmargin;
     }
     doc.text(lines, x + indent, y);
-    y += (lines.length) * getCharHight(doc, options);
+    y += lines.length * getCharHight(doc, options);
 
     return y;
 };

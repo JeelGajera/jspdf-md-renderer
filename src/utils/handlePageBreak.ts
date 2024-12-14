@@ -8,6 +8,6 @@ export const HandlePageBreaks = (doc: jsPDF, options: RenderOption) => {
     if (typeof options.pageBreakHandler === 'function') {
         options.pageBreakHandler();
     } else {
-        doc.addPage(options.page?.format,options.page?.orientation)
+        doc.addPage(options.page?.format, options.page?.orientation);
     }
 };
