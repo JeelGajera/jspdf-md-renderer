@@ -74,7 +74,7 @@ export const pdfGenerator = async () => {
     // const toppading = height * 0.05
     const xpading = 15
     const maxLineWidth = width - (2 * xpading)
-    const maxContentHeight = height - topmargin
+    const maxContentHeight = height
     const lineSpace = 6.2
     const defaultIndent = 8;
     const defaultLineHeightFactor = 1.4
@@ -87,18 +87,16 @@ export const pdfGenerator = async () => {
     doc.setCharSpace(0.2) // document char spacing
 
 
-    doc.setDrawColor(248, 250, 252)
-    doc.setFillColor(248, 250, 252);
-    doc.rect(0, 0, width, 18, "FD")
+    doc.setFillColor('#EEEEEE')
+    doc.setDrawColor('#686D76');
+    doc.rect(0, 0, width, 18, "F")
     doc.setFontSize(defaultHeadFontSize)
     doc.setTextColor(151, 166, 186)
-    const x = (maxLineWidth/2)+(doc.getTextWidth("Test Example")/2.5)
-    doc.text("Test Example ", x, lineSpace*2, { align: "center" })
+    doc.text("Sample Markdown Rendering Example", xpading, lineSpace*2, { align: "left" })
     doc.setTextColor(0, 0, 0)
     doc.setDrawColor(0, 0, 0)
     doc.setFontSize(defaultFontSize)
 
-    y += lineSpace
     const options: RenderOption = {
         cursor: {
             x: xpading,
@@ -134,7 +132,34 @@ export const pdfGenerator = async () => {
             }
         },
     }
-    await MdTextRender(doc,mdString, options)
+    await MdTextRender(doc, mdString, options)
+    
+
+    const footerY = Math.min(y + 10, height - 20);
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(
+        "Contribute to this project and learn more on GitHub:",
+        xpading,
+        footerY
+    );
+    doc.setTextColor(0, 0, 255);
+    doc.textWithLink(
+        "https://github.com/JeelGajera/jspdf-md-renderer",
+        xpading,
+        footerY + 6,
+        { url: "https://github.com/JeelGajera/jspdf-md-renderer" }
+    );
+
+    doc.setProperties({
+        title: "Markdown Rendering Example PDF",
+        subject: "Markdown to PDF Example",
+        author: "Jeel Gajera",
+        keywords: "Markdown, jsPDF, PDF generation, example",
+        creator: "jsPDF and Custom Renderer"
+    });
 
     doc.output("dataurlnewwindow");
+    // const filename = "markdown_rendering_example.pdf";
+    // doc.save(filename);
 }

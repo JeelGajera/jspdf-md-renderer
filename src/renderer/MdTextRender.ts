@@ -11,6 +11,7 @@ import {
     renderParagraph,
     renderRawItem,
 } from './components';
+import { getCharHight } from '../utils/doc-helpers';
 
 /**
  * Renders parsed markdown text into jsPDF document.
@@ -27,7 +28,7 @@ export const MdTextRender = async (
     const parsedElements = await MdTextParser(text);
     console.log(parsedElements);
     console.log(doc);
-    
+
     let y = options.cursor.y;
     const x = options.cursor.x;
 
@@ -43,7 +44,7 @@ export const MdTextRender = async (
                     element.content ?? '',
                     options.page.maxContentWidth - indent,
                 ).length *
-                    options.page.lineSpace >=
+                    getCharHight(doc, options) >=
             options.page.maxContentHeight
         ) {
             HandlePageBreaks(doc, options);
@@ -98,6 +99,7 @@ export const MdTextRender = async (
                 );
                 break;
         }
+        return y;
     };
 
     for (const item of parsedElements) {

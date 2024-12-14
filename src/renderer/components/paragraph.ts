@@ -3,6 +3,7 @@ import { ParsedElement } from '../../types/parsedElement';
 import { RenderOption } from '../../types/renderOption';
 import { justifyText } from '../../utils/justifyText';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
+import { getCharHight } from '../../utils/doc-helpers';
 
 /**
  * Renders paragraph elements.
@@ -70,7 +71,7 @@ const renderParagraph = (
             y,
             options.page.maxContentWidth - indent,
             options.page.defaultLineHeightFactor,
-        ) + options.page.lineSpace;
+        ) + getCharHight(doc, options);
 
     return y;
 };

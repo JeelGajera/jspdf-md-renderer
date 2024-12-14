@@ -3,6 +3,7 @@ import { ParsedElement } from '../../types/parsedElement';
 import { RenderOption } from '../../types/renderOption';
 import { justifyText } from '../../utils/justifyText';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
+import { getCharHight } from '../../utils/doc-helpers';
 
 const renderListItem = (
     doc: jsPDF,
@@ -15,7 +16,7 @@ const renderListItem = (
         element: ParsedElement,
         indentLevel: number,
         hasRawBullet?: boolean,
-    ) => void,
+    ) => number,
 ): number => {
     const indent = indentLevel * options.page.indent;
     if (
@@ -24,14 +25,14 @@ const renderListItem = (
                 element.content ?? '',
                 options.page.maxContentWidth - indent,
             ).length *
-                doc.getTextDimensions('A')?.h -
-            2 * doc.getTextDimensions('A')?.h >=
+                getCharHight(doc, options) -
+            2 * getCharHight(doc, options) >=
         options.page.maxContentHeight
     ) {
         HandlePageBreaks(doc, options);
         y = options.page.topmargin;
     }
-    if (element.content) {
+    if (!element.items && element.content) {
         const lineHeight =
             doc.getTextWidth(element.content) >
             options.page.maxContentWidth - indent
@@ -45,13 +46,12 @@ const renderListItem = (
                 y,
                 options.page.maxContentWidth - indent,
                 lineHeight,
-            ) +
-            1.5 * doc.getTextDimensions('A')?.h;
+            ) + getCharHight(doc, options);
     }
     // Recursively render nested items if they exist
     if (element.items && element.items.length > 0) {
         for (const subItem of element.items) {
-            parentElementRenderer(subItem, indentLevel + 1, true);
+            y = parentElementRenderer(subItem, indentLevel + 1, true) + getCharHight(doc, options)*0.2;
         }
     }
     return y;

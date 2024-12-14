@@ -30,7 +30,11 @@ const convertTokens = (tokens: TokensList): ParsedElement[] => {
             parsedElements.push({ type: MdTokenType.Raw, content: token.raw });
         }
     });
-    return parsedElements;
+    return parsedElements.map((element) =>
+        element.type === MdTokenType.Raw && element.content === '\n\n'
+            ? { ...element, content: element.content.replace('\n\n', '\n') }
+            : element,
+    );
 };
 
 /**

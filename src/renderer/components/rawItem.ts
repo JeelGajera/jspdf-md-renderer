@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
 import { RenderOption } from '../../types/renderOption';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
-import { justifyText } from '../../utils/justifyText';
+import { getCharHight } from '../../utils/doc-helpers';
 
 const renderRawItem = (
     doc: jsPDF,
@@ -14,37 +14,20 @@ const renderRawItem = (
     options: RenderOption,
 ): number => {
     const indent = indentLevel * options.page.indent;
-    const lineHeight =
-        doc.getTextDimensions('A').h * options.page.defaultLineHeightFactor;
+    const bullet = hasRawBullet ? '\u2022 ' : ''; // unicode for bullet point
+    const lines = doc.splitTextToSize(bullet + element.content, options.page.maxContentWidth - indent);
     if (
         y +
-            doc.splitTextToSize(
-                element.content ?? '',
-                options.page.maxContentWidth - indent,
-            ).length *
-                lineHeight -
-            2 * lineHeight >=
+            lines.length *
+                getCharHight(doc, options) >=
         options.page.maxContentHeight
     ) {
         HandlePageBreaks(doc, options);
         y = options.page.topmargin;
     }
+    doc.text(lines, x + indent, y);
+    y += (lines.length) * getCharHight(doc, options);
 
-    const lineHeightFactor =
-        doc.getTextWidth(element.content ?? '') >
-        options.page.maxContentWidth - indent
-            ? options.page.defaultLineHeightFactor
-            : options.page.defaultLineHeightFactor + 0.4;
-    const bullet = hasRawBullet ? '\u2022 ' : '';
-    y =
-        justifyText(
-            doc,
-            bullet + element.content,
-            x + indent,
-            y,
-            options.page.maxContentWidth - indent,
-            lineHeightFactor,
-        ) + lineHeight;
     return y;
 };
 
