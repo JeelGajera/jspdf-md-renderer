@@ -14,6 +14,6 @@
     },
     "dependencies": {
         "jspdf": "^2.5.2",
-        "@jspdf/md-renderer": "../../"
+        "jspdf-md-renderer": "../../"
     }
 }

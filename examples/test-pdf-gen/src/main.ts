@@ -11,7 +11,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <a href="https://www.typescriptlang.org/" target="_blank">
       <img src="${typescriptLogo}" class="logo vanilla" alt="TypeScript logo" />
     </a>
-    <h1>Vite + TypeScript + jsPDF + @jspdf/md-renderer</h1>
+    <h1>Vite + TypeScript + jsPDF + jspdf-md-renderer</h1>
     <div class="card">
       <button id="pdfGenBtn" type="button">Generate PDF!</button>
     </div>

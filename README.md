@@ -16,7 +16,7 @@ A jsPDF utility to render Markdown directly into formatted PDFs with custom desi
 To install the library, you can use npm:
 
 ```sh
-npm install @jspdf/md-renderer
+npm install jspdf-md-renderer
 ```
 
 ## Usage
@@ -27,7 +27,7 @@ Here is a basic example of how to use the library to generate a PDF from Markdow
 
 ```ts
 import { jsPDF } from 'jspdf';
-import { MdTextRender } from '@jspdf/md-renderer';
+import { MdTextRender } from 'jspdf-md-renderer';
 
 const mdString = `
 # Main Title
@@ -139,7 +139,7 @@ Parses markdown into tokens and converts to a custom parsed structure.
 
 ## Supported Markdown Elements
 
-The following Markdown elements are currently supported by `@jspdf/md-renderer`:
+The following Markdown elements are currently supported by `jspdf-md-renderer`:
 
 - **Headings**: `#`, `##`, `###`, etc.
 - **Paragraphs**

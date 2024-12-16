@@ -1,5 +1,5 @@
-import { RenderOption } from "@jspdf/md-renderer/types";
-import { MdTextRender } from "@jspdf/md-renderer";
+import { RenderOption } from "jspdf-md-renderer/types";
+import { MdTextRender } from "jspdf-md-renderer";
 import jsPDF from "jspdf";
 
 const mdString = `
