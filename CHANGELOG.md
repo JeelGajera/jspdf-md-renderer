@@ -1,4 +1,13 @@
-# 1.1.0 (2024-12-16)
+# [1.2.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.1.0...v1.2.0) (2024-12-16)
+
+
+### Features
+
+* **scop:** update package name scope ([4cba74a](https://github.com/JeelGajera/jspdf-md-renderer/commit/4cba74a5d1f9756544d22517cfa90ae3bcab3cab))
+
+
+
+# [1.1.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/cdd227fac377a0a9aa34c8076d43cee76bc2de8e...v1.1.0) (2024-12-16)
 
 
 ### Bug Fixes
