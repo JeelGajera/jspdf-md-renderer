@@ -14,8 +14,9 @@
   },
   "files": [
     "dist",
-    "src",
-    "types"
+    "types",
+    "LICENSE",
+    "README.md"
   ],
   "scripts": {
     "build": "rimraf dist && tsc",
@@ -43,7 +44,6 @@
   "homepage": "https://github.com/JeelGajera/jspdf-md-renderer#readme",
   "dependencies": {
     "jspdf": "^2.5.2",
-    "jspdf-md-renderer": "file:",
     "marked": "^15.0.3"
   },
   "devDependencies": {

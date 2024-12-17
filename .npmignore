@@ -1,0 +1,7 @@
+src/
+examples/
+test/
+node_modules/
+*.log
+*.ts
+!.d.ts
