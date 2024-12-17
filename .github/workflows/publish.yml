@@ -2,7 +2,6 @@ name: Publish to NPM
 on:
   release:
     types: [created, published]
-  #workflow_dispatch:
 
 permissions:
   contents: write
