@@ -1,3 +1,12 @@
+## [1.2.1](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.2.0...v1.2.1) (2024-12-17)
+
+
+### Bug Fixes
+
+* update publish file structure ([3c0c5b0](https://github.com/JeelGajera/jspdf-md-renderer/commit/3c0c5b023f226e554daacb9dda95c3520535bb5e))
+
+
+
 # [1.2.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.1.0...v1.2.0) (2024-12-16)
 
 
