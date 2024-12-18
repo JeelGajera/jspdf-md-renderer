@@ -27,7 +27,6 @@ export const MdTextRender = async (
 ) => {
     const parsedElements = await MdTextParser(text);
     console.log(parsedElements);
-    console.log(doc);
 
     let y = options.cursor.y;
     const x = options.cursor.x;
@@ -93,9 +92,9 @@ export const MdTextRender = async (
             default:
                 console.warn(
                     `Warning: Unsupported element type encountered: ${element.type}. 
-                        If you believe this element type should be supported, please create an issue at:
-                        https://github.com/JeelGajera/jspdf-md-renderer/issues
-                        with details of the element and expected behavior. Thank you for helping improve this library!`,
+                    If you believe this element type should be supported, please create an issue at:
+                    https://github.com/JeelGajera/jspdf-md-renderer/issues
+                    with details of the element and expected behavior. Thank you for helping improve this library!`,
                 );
                 break;
         }
