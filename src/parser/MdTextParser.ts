@@ -23,6 +23,8 @@ export const MdTextParser = async (text: string): Promise<ParsedElement[]> => {
 const convertTokens = (tokens: TokensList): ParsedElement[] => {
     const parsedElements: ParsedElement[] = [];
     tokens.forEach((token) => {
+        console.log(token);
+        
         const handler = tokenHandlers[token.type];
         if (handler) {
             parsedElements.push(handler(token));
@@ -94,5 +96,9 @@ const tokenHandlers: Record<string, (token: any) => ParsedElement> = {
     [MdTokenType.Em]: (token) => ({
         type: MdTokenType.Em,
         content: token.text,
+    }),
+    [MdTokenType.Hr]: (token) => ({
+        type: MdTokenType.Hr,
+        content: token.raw,
     }),
 };

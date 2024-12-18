@@ -4,6 +4,7 @@ export type ParsedElement = {
     content?: string;
     depth?: number;
     items?: ParsedElement[];
+    ordered?: boolean;
     lang?: string;
     code?: string;
     src?: string;
