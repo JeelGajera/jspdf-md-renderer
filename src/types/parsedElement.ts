@@ -5,6 +5,7 @@ export type ParsedElement = {
     depth?: number;
     items?: ParsedElement[];
     ordered?: boolean;
+    start?: number | string;
     lang?: string;
     code?: string;
     src?: string;

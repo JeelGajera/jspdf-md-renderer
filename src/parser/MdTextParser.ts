@@ -23,20 +23,21 @@ export const MdTextParser = async (text: string): Promise<ParsedElement[]> => {
 const convertTokens = (tokens: TokensList): ParsedElement[] => {
     const parsedElements: ParsedElement[] = [];
     tokens.forEach((token) => {
-        console.log(token);
-        
-        const handler = tokenHandlers[token.type];
-        if (handler) {
-            parsedElements.push(handler(token));
-        } else {
-            parsedElements.push({ type: MdTokenType.Raw, content: token.raw });
+        try {
+            const handler = tokenHandlers[token.type];
+            if (handler) {
+                parsedElements.push(handler(token));
+            } else {
+                parsedElements.push({
+                    type: MdTokenType.Raw,
+                    content: token.raw,
+                });
+            }
+        } catch (error) {
+            console.error('Failed to handle token ==>', token, error);
         }
     });
-    return parsedElements.map((element) =>
-        element.type === MdTokenType.Raw && element.content === '\n\n'
-            ? { ...element, content: element.content.replace('\n\n', '\n') }
-            : element,
-    );
+    return parsedElements;
 };
 
 /**
@@ -47,13 +48,17 @@ const tokenHandlers: Record<string, (token: any) => ParsedElement> = {
         type: MdTokenType.Heading,
         depth: token.depth,
         content: token.text,
+        items: token.tokens ? convertTokens(token.tokens) : [],
     }),
     [MdTokenType.Paragraph]: (token) => ({
         type: MdTokenType.Paragraph,
         content: token.text,
+        items: token.tokens ? convertTokens(token.tokens) : [],
     }),
     [MdTokenType.List]: (token) => ({
         type: MdTokenType.List,
+        ordered: token.ordered,
+        start: token.start,
         items: token.items ? convertTokens(token.items) : [],
     }),
     [MdTokenType.ListItem]: (token) => ({
@@ -88,17 +93,31 @@ const tokenHandlers: Record<string, (token: any) => ParsedElement> = {
         type: MdTokenType.Link,
         href: token.href,
         text: token.text,
+        items: token.tokens ? convertTokens(token.tokens) : [],
     }),
     [MdTokenType.Strong]: (token) => ({
         type: MdTokenType.Strong,
         content: token.text,
+        items: token.tokens ? convertTokens(token.tokens) : [],
     }),
     [MdTokenType.Em]: (token) => ({
         type: MdTokenType.Em,
         content: token.text,
+        items: token.tokens ? convertTokens(token.tokens) : [],
+    }),
+    [MdTokenType.Text]: (token) => ({
+        type: MdTokenType.Text,
+        content: token.text,
+        items: token.tokens ? convertTokens(token.tokens) : [],
     }),
     [MdTokenType.Hr]: (token) => ({
         type: MdTokenType.Hr,
         content: token.raw,
+        items: token.tokens ? convertTokens(token.tokens) : [],
+    }),
+    [MdTokenType.CodeSpan]: (token) => ({
+        type: MdTokenType.CodeSpan,
+        content: token.text,
+        items: token.tokens ? convertTokens(token.tokens) : [],
     }),
 };
