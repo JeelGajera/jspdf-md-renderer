@@ -149,7 +149,7 @@ The following Markdown elements are currently supported by `jspdf-md-renderer`:
 
 
 ## Examples
-
+Output of above basic Example => [Sample Generated PDF](examples/test-pdf-gen/markdown_rendering_example.pdf)
 You can find more examples in the [examples](examples/test-pdf-gen) directory.
 
 ## Contributing
