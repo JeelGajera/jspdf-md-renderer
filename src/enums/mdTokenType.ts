@@ -5,6 +5,7 @@ export enum MdTokenType {
     ListItem = 'list_item',
     Blockquote = 'blockquote',
     Code = 'code',
+    CodeSpan = 'codespan',
     Table = 'table',
     Html = 'html',
     Hr = 'hr',
@@ -15,4 +16,5 @@ export enum MdTokenType {
     TableHeader = 'table_header',
     TableCell = 'table_cell',
     Raw = 'raw',
+    Text = 'text',
 }

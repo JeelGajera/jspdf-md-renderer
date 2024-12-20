@@ -1,59 +1,7 @@
 import { RenderOption } from "jspdf-md-renderer/types";
 import { MdTextRender } from "jspdf-md-renderer";
 import jsPDF from "jspdf";
-
-const mdString = `
-# Main Title
-
-This is a brief introduction paragraph. It sets the tone for the document and introduces the main topic in a concise manner.
-
-## Section 1: Overview
-
-Here is a medium-length paragraph that goes into more detail about the first section. It explains the context, provides background information, and sets up the discussion for the subsections.
-
-### Subsection 1.1: Details
-
-A longer paragraph with detailed explanations about the subsection. This paragraph is significantly longer to showcase how text can expand on key ideas, provide examples, and explain technical concepts in a way that engages the reader. It includes a lot of descriptive content to fill out the space and make the information comprehensive.
-
-#### Sub-subsection 1.1.1: Specifics
-
-An even shorter paragraph. Sometimes, brevity is key.
-
-## Section 2: Lists and Examples
-
-This section showcases how to create simple and nested lists.
-
-### Simple List
-
-- Item 1
-- Item 2
-- Item 3
-
-### Nested List
-
-1. First Level 1
-   - First Level 2
-     - First Level 3
-2. Second Level 1
-   - Second Level 2
-   - Another Second Level 2
-     - Nested deeper
-
-### Mixed List Example
-
-- Topic 1
-  1. Subtopic 1.1
-  2. Subtopic 1.2
-- Topic 2
-  - Subtopic 2.1
-  - Subtopic 2.2
-    1. Nested Subtopic 2.2.1
-    2. Nested Subtopic 2.2.2
-
-## Section 3: Conclusion
-
-Finally, we wrap up with a short paragraph that highlights the key takeaways and invites the reader to reflect on the content.
-`
+import { mdString } from "./md-text";
 
 export const pdfGenerator = async () => {
     const doc = new jsPDF({

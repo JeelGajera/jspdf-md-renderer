@@ -27,7 +27,6 @@ export const MdTextRender = async (
 ) => {
     const parsedElements = await MdTextParser(text);
     console.log(parsedElements);
-    console.log(doc);
 
     let y = options.cursor.y;
     const x = options.cursor.x;
@@ -53,10 +52,10 @@ export const MdTextRender = async (
 
         switch (element.type) {
             case MdTokenType.Heading:
-                y = renderHeading(doc, element, x, y, indent, options);
+                y = renderHeading(doc, element, x, y, indent, options, renderElement);
                 break;
             case MdTokenType.Paragraph:
-                y = renderParagraph(doc, element, x, y, indent, options);
+                y = renderParagraph(doc, element, x, y, indent, options, renderElement);
                 break;
             case MdTokenType.List:
                 y = renderList(
@@ -80,6 +79,7 @@ export const MdTextRender = async (
                 );
                 break;
             case MdTokenType.Raw:
+            case MdTokenType.Text:
                 y = renderRawItem(
                     doc,
                     element,
@@ -88,14 +88,15 @@ export const MdTextRender = async (
                     indentLevel,
                     hasRawBullet,
                     options,
+                    renderElement,
                 );
                 break;
             default:
                 console.warn(
                     `Warning: Unsupported element type encountered: ${element.type}. 
-                        If you believe this element type should be supported, please create an issue at:
-                        https://github.com/JeelGajera/jspdf-md-renderer/issues
-                        with details of the element and expected behavior. Thank you for helping improve this library!`,
+                    If you believe this element type should be supported, please create an issue at:
+                    https://github.com/JeelGajera/jspdf-md-renderer/issues
+                    with details of the element and expected behavior. Thank you for helping improve this library!`,
                 );
                 break;
         }
