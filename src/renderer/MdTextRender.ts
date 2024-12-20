@@ -52,10 +52,10 @@ export const MdTextRender = async (
 
         switch (element.type) {
             case MdTokenType.Heading:
-                y = renderHeading(doc, element, x, y, indent, options);
+                y = renderHeading(doc, element, x, y, indent, options, renderElement);
                 break;
             case MdTokenType.Paragraph:
-                y = renderParagraph(doc, element, x, y, indent, options);
+                y = renderParagraph(doc, element, x, y, indent, options, renderElement);
                 break;
             case MdTokenType.List:
                 y = renderList(
@@ -79,6 +79,7 @@ export const MdTextRender = async (
                 );
                 break;
             case MdTokenType.Raw:
+            case MdTokenType.Text:
                 y = renderRawItem(
                     doc,
                     element,
@@ -87,6 +88,7 @@ export const MdTextRender = async (
                     indentLevel,
                     hasRawBullet,
                     options,
+                    renderElement,
                 );
                 break;
             default:
