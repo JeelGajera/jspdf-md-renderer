@@ -35,6 +35,8 @@ export const MdTextRender = async (
         element: ParsedElement,
         indentLevel: number = 0,
         hasRawBullet: boolean = false,
+        start: number = 0,
+        ordered: boolean = false,
     ) => {
         const indent = indentLevel * options.page.indent;
         if (
@@ -76,6 +78,8 @@ export const MdTextRender = async (
                     indentLevel,
                     options,
                     renderElement,
+                    start,
+                    ordered,
                 );
                 break;
             case MdTokenType.Raw:
@@ -89,6 +93,8 @@ export const MdTextRender = async (
                     hasRawBullet,
                     options,
                     renderElement,
+                    start,
+                    ordered,
                 );
                 break;
             default:

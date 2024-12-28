@@ -13,13 +13,22 @@ const renderList = (
         element: ParsedElement,
         indentLevel: number,
         hasRawBullet?: boolean,
+        start?: number,
+        ordered?: boolean,
     ) => number,
 ): number => {
     doc.setFontSize(options.page.defaultFontSize);
     // doc.setFont(options.font.light.name, options.font.light.style);
-    for (const point of element?.items ?? []) {
+    for (const [i, point] of element?.items?.entries() ?? []) {
+        const _start = element.ordered ? (element.start ?? 0) + i : element.start;
         y =
-            parentElementRenderer(point, indentLevel + 1, true) +
+            parentElementRenderer(
+                point,
+                indentLevel + 1,
+                true,
+                _start,
+                element.ordered,
+            ) +
             getCharHight(doc, options) * 0.2; // Recursively render nested list items
     }
     return y;
