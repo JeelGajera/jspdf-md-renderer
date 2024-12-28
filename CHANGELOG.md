@@ -1,3 +1,12 @@
+## [1.2.3](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.2.2...v1.2.3) (2024-12-28)
+
+
+### Bug Fixes
+
+* **list:** handle order and unorder list bulleting with start index ([518aa94](https://github.com/JeelGajera/jspdf-md-renderer/commit/518aa94e1e7f8262d23a4c0088e14ceb5fd181e4))
+
+
+
 ## [1.2.2](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.2.1...v1.2.2) (2024-12-20)
 
 
