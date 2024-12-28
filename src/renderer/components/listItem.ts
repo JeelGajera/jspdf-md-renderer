@@ -16,9 +16,14 @@ const renderListItem = (
         element: ParsedElement,
         indentLevel: number,
         hasRawBullet?: boolean,
+        start?: number,
+        ordered?: boolean,
     ) => number,
+    start: number,
+    ordered: boolean,
 ): number => {
     const indent = indentLevel * options.page.indent;
+    const bullet = ordered ? `${start}. ` : '\u2022 ';
     if (
         y +
             doc.splitTextToSize(
@@ -41,7 +46,7 @@ const renderListItem = (
         y =
             justifyText(
                 doc,
-                '\u2022 ' + element.content,
+                bullet + element.content,
                 x + indent,
                 y,
                 options.page.maxContentWidth - indent,
@@ -52,7 +57,13 @@ const renderListItem = (
     if (element.items && element.items.length > 0) {
         for (const subItem of element.items) {
             y =
-                parentElementRenderer(subItem, indentLevel + 1, true) +
+                parentElementRenderer(
+                    subItem,
+                    indentLevel + 1,
+                    true,
+                    start,
+                    ordered,
+                ) +
                 getCharHight(doc, options) * 0.2;
         }
     }

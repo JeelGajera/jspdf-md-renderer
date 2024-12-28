@@ -17,15 +17,19 @@ const renderRawItem = (
         element: ParsedElement,
         indentLevel: number,
         hasRawBullet?: boolean,
+        start?: number,
+        ordered?: boolean,
     ) => number,
+    start: number,
+    ordered: boolean,
 ): number => {
     if (element?.items && element?.items.length > 0) {
         for (const item of element?.items ?? []) {
-            y = parentElementRenderer(item, indentLevel, hasRawBullet);
+            y = parentElementRenderer(item, indentLevel, hasRawBullet, start, ordered);
         }
     } else {
         const indent = indentLevel * options.page.indent;
-        const bullet = hasRawBullet ? '\u2022 ' : ''; // unicode for bullet point
+        const bullet = hasRawBullet ? (ordered ? `${start}. ` : '\u2022 ') : ''; // unicode for bullet point
         const lines = doc.splitTextToSize(
             bullet + element.content,
             options.page.maxContentWidth - indent,
