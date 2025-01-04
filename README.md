@@ -136,19 +136,55 @@ Parses markdown into tokens and converts to a custom parsed structure.
 
 - `Promise<ParsedElement[]>`: Parsed markdown elements.
 
-
 ## Supported Markdown Elements
 
 The following Markdown elements are currently supported by `jspdf-md-renderer`:
 
+### Already Implemented:
 - **Headings**: `#`, `##`, `###`, etc.
 - **Paragraphs**
 - **Lists**:
-  - Unordered lists: `-`, `*`, `+`
-  - Ordered lists: `1.`, `2.`, `3.`, etc.
+    - Unordered lists: `-`, `*`, `+`
+    - Ordered lists: `1.`, `2.`, `3.`, etc.
+### Proposed for Future Implementation:
+- **Emphasis**:
+    - **Bold**: `**bold text**` or `__bold text__`
+    - _Italic_: `*italic text*` or `_italic text_`
+    - **_Bold Italic_**: `***bold italic***`
+- **Blockquotes**:
+    ```markdown
+    > This is a blockquote.
+    ```
+- **Images**:
+    ```markdown
+    ![Alt text](https://example.com/image.png)
+    ```
+- **Links**:
+    ```markdown
+    [GitHub](https://github.com)
+    ```
+- **Code Blocks** (fenced and indented):
+    ````markdown
+    ```js
+    console.log('Hello, world!');
+    ```
+    ````
 
+
+- **Inline Code**:
+    ```markdown
+    This is an `inline code` example.
+    ```
+- **Tables**:
+    ```markdown
+    | Header 1 | Header 2 | Header 3 |
+    | -------- | -------- | -------- |
+    | Row 1    | Data     | Value    |
+    | Row 2    | Data     | Value    |
+    ```
 
 ## Examples
+
 Output of above basic Example => [Sample Generated PDF](examples/test-pdf-gen/markdown_rendering_example.pdf)
 You can find more examples in the [examples](examples/test-pdf-gen) directory.
 
