@@ -6,6 +6,7 @@ import { RenderOption } from '../types/renderOption';
 import { HandlePageBreaks } from '../utils/handlePageBreak';
 import {
     renderHeading,
+    renderHR,
     renderList,
     renderListItem,
     renderParagraph,
@@ -81,6 +82,9 @@ export const MdTextRender = async (
                     start,
                     ordered,
                 );
+                break;
+            case MdTokenType.Hr:
+                y = renderHR(doc, y, options);
                 break;
             case MdTokenType.Raw:
             case MdTokenType.Text:
