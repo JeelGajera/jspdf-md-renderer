@@ -11,6 +11,7 @@ import {
     renderListItem,
     renderParagraph,
     renderRawItem,
+    renderCodeBlock
 } from './components';
 import { getCharHight } from '../utils/doc-helpers';
 
@@ -27,7 +28,7 @@ export const MdTextRender = async (
     options: RenderOption,
 ) => {
     const parsedElements = await MdTextParser(text);
-    console.log(parsedElements);
+    // console.log(parsedElements);
 
     let y = options.cursor.y;
     const x = options.cursor.x;
@@ -85,6 +86,17 @@ export const MdTextRender = async (
                 break;
             case MdTokenType.Hr:
                 y = renderHR(doc, y, options);
+                break;
+            case MdTokenType.Code:
+                y = renderCodeBlock(
+                    doc,
+                    element,
+                    x,
+                    y,
+                    indentLevel,
+                    hasRawBullet,
+                    options,
+                );
                 break;
             case MdTokenType.Raw:
             case MdTokenType.Text:

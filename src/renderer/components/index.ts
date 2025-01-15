@@ -4,3 +4,4 @@ export { default as renderList } from './list';
 export { default as renderListItem } from './listItem';
 export { default as renderRawItem } from './rawItem';
 export { default as renderHR } from './hr';
+export { default as renderCodeBlock } from './code';
