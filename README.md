@@ -146,6 +146,12 @@ The following Markdown elements are currently supported by `jspdf-md-renderer`:
 - **Lists**:
     - Unordered lists: `-`, `*`, `+`
     - Ordered lists: `1.`, `2.`, `3.`, etc.
+- **Code Blocks** (fenced and indented):
+    ````markdown
+    ```js
+    console.log('Hello, world!');
+    ```
+    ````
 ### Proposed for Future Implementation:
 - **Emphasis**:
     - **Bold**: `**bold text**` or `__bold text__`
@@ -163,14 +169,6 @@ The following Markdown elements are currently supported by `jspdf-md-renderer`:
     ```markdown
     [GitHub](https://github.com)
     ```
-- **Code Blocks** (fenced and indented):
-    ````markdown
-    ```js
-    console.log('Hello, world!');
-    ```
-    ````
-
-
 - **Inline Code**:
     ```markdown
     This is an `inline code` example.
