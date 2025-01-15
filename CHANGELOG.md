@@ -1,3 +1,12 @@
+# [1.4.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.3.0...v1.4.0) (2025-01-15)
+
+
+### Features
+
+* **rendering:** add support for code block rendering with bg ([c7828b7](https://github.com/JeelGajera/jspdf-md-renderer/commit/c7828b7be26e453406f0607c44f0a6075bfbbd90))
+
+
+
 # [1.3.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.2.3...v1.3.0) (2025-01-04)
 
 
@@ -32,15 +41,6 @@
 ### Bug Fixes
 
 * update publish file structure ([3c0c5b0](https://github.com/JeelGajera/jspdf-md-renderer/commit/3c0c5b023f226e554daacb9dda95c3520535bb5e))
-
-
-
-# [1.2.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.1.0...v1.2.0) (2024-12-16)
-
-
-### Features
-
-* **scop:** update package name scope ([4cba74a](https://github.com/JeelGajera/jspdf-md-renderer/commit/4cba74a5d1f9756544d22517cfa90ae3bcab3cab))
 
 
 
