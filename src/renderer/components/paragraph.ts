@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { RenderOption } from '../../types/renderOption';
+import { Cursor, RenderOption } from '../../types/renderOption';
 import { justifyText } from '../../utils/justifyText';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
 import { getCharHight } from '../../utils/doc-helpers';
@@ -11,16 +11,15 @@ import { getCharHight } from '../../utils/doc-helpers';
 const renderParagraph = (
     doc: jsPDF,
     element: ParsedElement,
-    x: number,
-    y: number,
+    cursor: Cursor,
     indent: number,
     options: RenderOption,
     parentElementRenderer: (
         element: ParsedElement,
         indentLevel: number,
         hasRawBullet?: boolean,
-    ) => number,
-): number => {
+    ) => Cursor,
+): Cursor => {
     doc.setFontSize(options.page.defaultFontSize);
     // doc.setFont(options.font.light.name, options.font.light.style);
     let content = element.content;
@@ -28,11 +27,11 @@ const renderParagraph = (
         doc.getTextDimensions('A').h * options.page.defaultLineHeightFactor;
     if (element?.items && element?.items.length > 0) {
         for (const item of element?.items ?? []) {
-            y = parentElementRenderer(item, indent, false);
+            cursor = parentElementRenderer(item, indent, false);
         }
     } else {
         if (
-            y +
+            cursor.y +
                 doc.splitTextToSize(
                     content ?? '',
                     options.page.maxContentWidth - indent,
@@ -47,11 +46,11 @@ const renderParagraph = (
                 options.page.maxContentWidth - indent,
             );
             const possibleContentLines: string[] = [];
-            const possibleContentY = y;
+            const possibleContentY = cursor.y;
             for (let j = 0; j < contentLeft.length; j++) {
-                if (y - 2 * lineHeight < options.page.maxContentHeight) {
+                if (cursor.y - 2 * lineHeight < options.page.maxContentHeight) {
                     possibleContentLines.push(contentLeft[j]);
-                    y += options.page.lineSpace;
+                    cursor.y += options.page.lineSpace;
                 } else {
                     // set left content to move next page
                     if (j <= contentLeft.length - 1) {
@@ -61,30 +60,30 @@ const renderParagraph = (
                 }
             }
             if (possibleContentLines.length > 0) {
-                y = justifyText(
+                cursor.y = justifyText(
                     doc,
                     possibleContentLines.join(' '),
-                    x + indent,
+                    cursor.x + indent,
                     possibleContentY,
                     options.page.maxContentWidth - indent,
                     options.page.defaultLineHeightFactor,
                 );
             }
             HandlePageBreaks(doc, options);
-            y = options.page.topmargin;
+            cursor.y = options.page.topmargin;
         }
-        y =
+        cursor.y =
             justifyText(
                 doc,
                 content ?? '',
-                x + indent,
-                y,
+                cursor.x + indent,
+                cursor.y,
                 options.page.maxContentWidth - indent,
                 options.page.defaultLineHeightFactor,
             ) + getCharHight(doc, options);
     }
 
-    return y;
+    return cursor;
 };
 
 export default renderParagraph;
