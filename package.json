@@ -44,7 +44,7 @@
   },
   "homepage": "https://github.com/JeelGajera/jspdf-md-renderer#readme",
   "dependencies": {
-    "jspdf": "^2.5.2",
+    "jspdf": "^3.0.1",
     "marked": "^15.0.3"
   },
   "devDependencies": {
