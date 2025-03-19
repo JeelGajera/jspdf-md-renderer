@@ -13,7 +13,7 @@
         "vite": "^5.2.0"
     },
     "dependencies": {
-        "jspdf": "^2.5.2",
+        "jspdf": "^3.0.1",
         "jspdf-md-renderer": "../../"
     }
 }
