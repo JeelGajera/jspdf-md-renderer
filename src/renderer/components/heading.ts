@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { RenderOption } from '../../types/renderOption';
+import { Cursor, RenderOption } from '../../types/renderOption';
 import { getCharHight } from '../../utils/doc-helpers';
 
 /**
@@ -9,34 +9,33 @@ import { getCharHight } from '../../utils/doc-helpers';
 const renderHeading = (
     doc: jsPDF,
     element: ParsedElement,
-    x: number,
-    y: number,
+    cursor: Cursor,
     indent: number,
     options: RenderOption,
     parentElementRenderer: (
         element: ParsedElement,
         indentLevel: number,
         hasRawBullet?: boolean,
-    ) => number,
-): number => {
+    ) => Cursor,
+): Cursor => {
     const size = 6 - (element?.depth ?? 0) > 0 ? 6 - (element?.depth ?? 0) : 0;
     // doc.setFont(options.font.regular.name, options.font.regular.style);
     doc.setFontSize(options.page.defaultFontSize + size);
     if (element?.items && element?.items.length > 0) {
         for (const item of element?.items ?? []) {
-            y = parentElementRenderer(item, indent, false);
+            cursor = parentElementRenderer(item, indent, false);
         }
     } else {
-        doc.text(element?.content ?? '', x + indent, y, {
+        doc.text(element?.content ?? '', cursor.x + indent, cursor.y, {
             align: 'left',
             maxWidth: options.page.maxContentWidth - indent,
         });
-        y += 1.5 * getCharHight(doc, options);
+        cursor.y += 1.5 * getCharHight(doc, options);
     }
 
     // doc.setFont(options.font.light.name, options.font.light.style);
     doc.setFontSize(options.page.defaultFontSize);
-    return y;
+    return cursor;
 };
 
 export default renderHeading;
