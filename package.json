@@ -3,10 +3,11 @@
   "version": "1.4.0",
   "description": "A jsPDF utility to render Markdown directly into formatted PDFs with custom designs.",
   "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
+      "import": "./dist/index.mjs",
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
@@ -19,13 +20,13 @@
     "README.md"
   ],
   "scripts": {
-    "build": "rimraf dist && tsc",
+    "build": "rimraf dist && vite build",
     "lint": "eslint src/**",
     "lint:fix": "eslint src/** --fix",
     "format": "prettier --write .",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "npm run build",
-    "watch": "tsc --watch"
+    "watch": "vite build --watch"
   },
   "repository": {
     "type": "git",
@@ -44,7 +45,8 @@
   },
   "homepage": "https://github.com/JeelGajera/jspdf-md-renderer#readme",
   "dependencies": {
-    "jspdf": "^2.5.2",
+    "jspdf": "^3.0.1",
+    "jspdf-md-renderer": "file:",
     "marked": "^15.0.3"
   },
   "devDependencies": {
@@ -59,6 +61,8 @@
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
     "typescript": "^5.7.2",
-    "typescript-eslint": "^8.18.0"
+    "typescript-eslint": "^8.18.0",
+    "vite": "^6.2.4",
+    "vite-plugin-dts": "^4.5.3"
   }
 }
