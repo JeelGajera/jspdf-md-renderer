@@ -24,7 +24,13 @@ const renderRawItem = (
 ): Cursor => {
     if (element?.items && element?.items.length > 0) {
         for (const item of element?.items ?? []) {
-            cursor = parentElementRenderer(item, indentLevel, hasRawBullet, start, ordered);
+            cursor = parentElementRenderer(
+                item,
+                indentLevel,
+                hasRawBullet,
+                start,
+                ordered,
+            );
         }
     } else {
         const indent = indentLevel * options.page.indent;

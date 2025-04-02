@@ -20,14 +20,16 @@ const renderList = (
     doc.setFontSize(options.page.defaultFontSize);
     // doc.setFont(options.font.light.name, options.font.light.style);
     for (const [i, point] of element?.items?.entries() ?? []) {
-        const _start = element.ordered ? (element.start ?? 0) + i : element.start;
+        const _start = element.ordered
+            ? (element.start ?? 0) + i
+            : element.start;
         cursor = parentElementRenderer(
             point,
             indentLevel + 1,
             true,
             _start,
             element.ordered,
-        )
+        );
         cursor.y += getCharHight(doc, options) * 0.2; // Recursively render nested list items
     }
     return cursor;

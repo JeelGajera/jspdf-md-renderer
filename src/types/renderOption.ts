@@ -32,7 +32,7 @@ export type RenderOption = {
     endCursorYHandler: (y: number) => void;
 };
 
-export type Cursor = { x: number; y: number }
+export type Cursor = { x: number; y: number };
 
 type FontItem = {
     name: string;

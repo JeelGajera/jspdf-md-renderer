@@ -11,7 +11,8 @@ import {
     renderListItem,
     renderParagraph,
     renderRawItem,
-    renderCodeBlock
+    renderCodeBlock,
+    renderInlineText,
 } from './components';
 import { getCharHight } from '../utils/doc-helpers';
 
@@ -29,10 +30,10 @@ export const MdTextRender = async (
 ) => {
     const parsedElements = await MdTextParser(text);
     // console.log(parsedElements);
-    let cursor : Cursor = {
+    let cursor: Cursor = {
         x: options.cursor.x,
-        y: options.cursor.y
-    }
+        y: options.cursor.y,
+    };
 
     const renderElement = (
         element: ParsedElement,
@@ -57,10 +58,24 @@ export const MdTextRender = async (
 
         switch (element.type) {
             case MdTokenType.Heading:
-                cursor = renderHeading(doc, element, cursor, indent, options, renderElement);
+                cursor = renderHeading(
+                    doc,
+                    element,
+                    cursor,
+                    indent,
+                    options,
+                    renderElement,
+                );
                 break;
             case MdTokenType.Paragraph:
-                cursor = renderParagraph(doc, element, cursor, indent, options, renderElement);
+                cursor = renderParagraph(
+                    doc,
+                    element,
+                    cursor,
+                    indent,
+                    options,
+                    renderElement,
+                );
                 break;
             case MdTokenType.List:
                 cursor = renderList(
@@ -95,6 +110,17 @@ export const MdTextRender = async (
                     indentLevel,
                     hasRawBullet,
                     options,
+                );
+                break;
+            case MdTokenType.Strong:
+            case MdTokenType.Em:
+                cursor = renderInlineText(
+                    doc,
+                    element,
+                    cursor,
+                    indent,
+                    options,
+                    renderElement,
                 );
                 break;
             case MdTokenType.Raw:
