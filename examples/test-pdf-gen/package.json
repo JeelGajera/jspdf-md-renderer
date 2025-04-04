@@ -14,7 +14,6 @@
     },
     "dependencies": {
         "jspdf": "^3.0.1",
-        "jspdf-md-renderer": "../../",
-        "test-pdf-gen": "file:"
+        "jspdf-md-renderer": "../../"
     }
 }

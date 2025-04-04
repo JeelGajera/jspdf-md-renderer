@@ -1,3 +1,12 @@
+## [1.4.1](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.4.0...v1.4.1) (2025-03-19)
+
+
+### Bug Fixes
+
+* dependency updates ([4d7eaf0](https://github.com/JeelGajera/jspdf-md-renderer/commit/4d7eaf01f2b388c92953829682d3ea9ec3a6d510))
+
+
+
 # [1.4.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.3.0...v1.4.0) (2025-01-15)
 
 
@@ -32,15 +41,6 @@
 
 * **rendering:** support nested rendering for heading, paragraph & raw item components ([f428b13](https://github.com/JeelGajera/jspdf-md-renderer/commit/f428b13d8c461d2ea3b946d773eb77fb83d7598c))
 * update md parser handlers to manage nested elements ([c7bc541](https://github.com/JeelGajera/jspdf-md-renderer/commit/c7bc541c4de7d6e169a6c5fc912f3683dd01ed84))
-
-
-
-## [1.2.1](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.2.0...v1.2.1) (2024-12-17)
-
-
-### Bug Fixes
-
-* update publish file structure ([3c0c5b0](https://github.com/JeelGajera/jspdf-md-renderer/commit/3c0c5b023f226e554daacb9dda95c3520535bb5e))
 
 
 
