@@ -1,9 +1,9 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
 import { Cursor, RenderOption } from '../../types/renderOption';
-import { justifyText } from '../../utils/justifyText';
-import { HandlePageBreaks } from '../../utils/handlePageBreak';
 import { getCharHight } from '../../utils/doc-helpers';
+import { HandlePageBreaks } from '../../utils/handlePageBreak';
+import renderInlineText from './inlineText';
 
 const renderListItem = (
     doc: jsPDF,
@@ -23,48 +23,41 @@ const renderListItem = (
 ): Cursor => {
     const indent = indentLevel * options.page.indent;
     const bullet = ordered ? `${start}. ` : '\u2022 ';
+
+    // Check for page break
     if (
-        cursor.y +
-            doc.splitTextToSize(
-                element.content ?? '',
-                options.page.maxContentWidth - indent,
-            ).length *
-                getCharHight(doc, options) -
-            2 * getCharHight(doc, options) >=
+        cursor.y + getCharHight(doc, options) >=
         options.page.maxContentHeight
     ) {
         HandlePageBreaks(doc, options);
         cursor.y = options.page.topmargin;
     }
-    if (!element.items && element.content) {
-        const lineHeight =
-            doc.getTextWidth(element.content) >
-            options.page.maxContentWidth - indent
-                ? options.page.defaultLineHeightFactor
-                : options.page.defaultLineHeightFactor + 0.4;
-        cursor.y =
-            justifyText(
-                doc,
-                bullet + element.content,
-                cursor.x + indent,
-                cursor.y,
-                options.page.maxContentWidth - indent,
-                lineHeight,
-            ) + getCharHight(doc, options);
-    }
-    // Recursively render nested items if they exist
+
+    // Render bullet
+    doc.setFont(options.font.regular.name, options.font.regular.style);
+    doc.text(bullet, cursor.x + indent, cursor.y, { baseline: 'top' });
+    cursor.x += doc.getTextWidth(bullet);
+
+    // Render inline content
     if (element.items && element.items.length > 0) {
         for (const subItem of element.items) {
-            cursor = parentElementRenderer(
+            cursor = renderInlineText(
+                doc,
                 subItem,
-                indentLevel + 1,
-                true,
-                start,
-                ordered,
+                cursor,
+                indent,
+                options,
             );
-            cursor.y += getCharHight(doc, options) * 0.2;
         }
+    } else if (element.content) {
+        doc.text(element.content, cursor.x, cursor.y, { baseline: 'top' });
+        cursor.x += doc.getTextWidth(element.content);
     }
+
+    // Move to next line after the entire list item
+    cursor.y += getCharHight(doc, options);
+    cursor.x = options.page.xpading;
+
     return cursor;
 };
 

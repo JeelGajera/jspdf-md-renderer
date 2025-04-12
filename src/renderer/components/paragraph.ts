@@ -60,7 +60,7 @@ const renderParagraph = (
                 }
             }
             if (possibleContentLines.length > 0) {
-                cursor.y = justifyText(
+                cursor = justifyText(
                     doc,
                     possibleContentLines.join(' '),
                     cursor.x + indent,
@@ -80,7 +80,9 @@ const renderParagraph = (
                 cursor.y,
                 options.page.maxContentWidth - indent,
                 options.page.defaultLineHeightFactor,
-            ) + getCharHight(doc, options);
+            ).y + getCharHight(doc, options);
+        // handle x
+        cursor.x = options.page.xpading;
     }
 
     return cursor;

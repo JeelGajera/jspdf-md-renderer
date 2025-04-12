@@ -29,7 +29,7 @@ export const MdTextRender = async (
     options: RenderOption,
 ) => {
     const parsedElements = await MdTextParser(text);
-    // console.log(parsedElements);
+    console.log(parsedElements);
     let cursor: Cursor = {
         x: options.cursor.x,
         y: options.cursor.y,
@@ -41,6 +41,7 @@ export const MdTextRender = async (
         hasRawBullet: boolean = false,
         start: number = 0,
         ordered: boolean = false,
+        justify: boolean = true,
     ) => {
         const indent = indentLevel * options.page.indent;
         if (
@@ -119,8 +120,7 @@ export const MdTextRender = async (
                     element,
                     cursor,
                     indent,
-                    options,
-                    renderElement,
+                    options
                 );
                 break;
             case MdTokenType.Raw:
@@ -135,6 +135,7 @@ export const MdTextRender = async (
                     renderElement,
                     start,
                     ordered,
+                    justify
                 );
                 break;
             default:

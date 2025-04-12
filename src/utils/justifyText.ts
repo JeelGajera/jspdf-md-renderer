@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import { WordInfo } from '../types/wordInfo';
+import { Cursor } from '../types';
 
 // -------- Handle Justify Content for Custome Fonts
 export const writeLineJustify = (
@@ -60,7 +61,11 @@ export const justifyText = (
     yStart: number,
     textWidth: number,
     defaultLineHeightFactor: number,
-) => {
+): Cursor => {
+    const cursor: Cursor = {
+        x: xStart,
+        y: yStart,
+    };
     const lineHeight =
         pdfGen.getTextDimensions('A').h * defaultLineHeightFactor;
     const words = text.split(' ');
@@ -99,5 +104,7 @@ export const justifyText = (
             defaultLineHeightFactor,
         );
     }
-    return yStart + lineNumber * lineHeight;
+    cursor.y = yStart + lineNumber * lineHeight;
+    cursor.x = pdfGen.getTextWidth(text) + xStart;
+    return cursor;
 };
