@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import { MdTokenType } from '../enums/mdTokenType';
 import { MdTextParser } from '../parser/MdTextParser';
 import { ParsedElement } from '../types/parsedElement';
-import { RenderOption } from '../types/renderOption';
+import { Cursor, RenderOption } from '../types/renderOption';
 import { HandlePageBreaks } from '../utils/handlePageBreak';
 import {
     renderHeading,
@@ -11,7 +11,8 @@ import {
     renderListItem,
     renderParagraph,
     renderRawItem,
-    renderCodeBlock
+    renderCodeBlock,
+    renderInlineText,
 } from './components';
 import { getCharHight } from '../utils/doc-helpers';
 
@@ -28,10 +29,11 @@ export const MdTextRender = async (
     options: RenderOption,
 ) => {
     const parsedElements = await MdTextParser(text);
-    // console.log(parsedElements);
-
-    let y = options.cursor.y;
-    const x = options.cursor.x;
+    console.log(parsedElements);
+    let cursor: Cursor = {
+        x: options.cursor.x,
+        y: options.cursor.y,
+    };
 
     const renderElement = (
         element: ParsedElement,
@@ -39,10 +41,11 @@ export const MdTextRender = async (
         hasRawBullet: boolean = false,
         start: number = 0,
         ordered: boolean = false,
+        justify: boolean = true,
     ) => {
         const indent = indentLevel * options.page.indent;
         if (
-            y +
+            cursor.y +
                 doc.splitTextToSize(
                     element.content ?? '',
                     options.page.maxContentWidth - indent,
@@ -51,32 +54,45 @@ export const MdTextRender = async (
             options.page.maxContentHeight
         ) {
             HandlePageBreaks(doc, options);
-            y = options.page.topmargin;
+            cursor.y = options.page.topmargin;
         }
 
         switch (element.type) {
             case MdTokenType.Heading:
-                y = renderHeading(doc, element, x, y, indent, options, renderElement);
-                break;
-            case MdTokenType.Paragraph:
-                y = renderParagraph(doc, element, x, y, indent, options, renderElement);
-                break;
-            case MdTokenType.List:
-                y = renderList(
+                cursor = renderHeading(
                     doc,
                     element,
-                    y,
+                    cursor,
+                    indent,
+                    options,
+                    renderElement,
+                );
+                break;
+            case MdTokenType.Paragraph:
+                cursor = renderParagraph(
+                    doc,
+                    element,
+                    cursor,
+                    indent,
+                    options,
+                    renderElement,
+                );
+                break;
+            case MdTokenType.List:
+                cursor = renderList(
+                    doc,
+                    element,
+                    cursor,
                     indentLevel,
                     options,
                     renderElement,
                 );
                 break;
             case MdTokenType.ListItem:
-                y = renderListItem(
+                cursor = renderListItem(
                     doc,
                     element,
-                    x,
-                    y,
+                    cursor,
                     indentLevel,
                     options,
                     renderElement,
@@ -85,32 +101,41 @@ export const MdTextRender = async (
                 );
                 break;
             case MdTokenType.Hr:
-                y = renderHR(doc, y, options);
+                cursor = renderHR(doc, cursor, options);
                 break;
             case MdTokenType.Code:
-                y = renderCodeBlock(
+                cursor = renderCodeBlock(
                     doc,
                     element,
-                    x,
-                    y,
+                    cursor,
                     indentLevel,
                     hasRawBullet,
                     options,
                 );
                 break;
-            case MdTokenType.Raw:
-            case MdTokenType.Text:
-                y = renderRawItem(
+            case MdTokenType.Strong:
+            case MdTokenType.Em:
+                cursor = renderInlineText(
                     doc,
                     element,
-                    x,
-                    y,
+                    cursor,
+                    indent,
+                    options
+                );
+                break;
+            case MdTokenType.Raw:
+            case MdTokenType.Text:
+                cursor = renderRawItem(
+                    doc,
+                    element,
+                    cursor,
                     indentLevel,
                     hasRawBullet,
                     options,
                     renderElement,
                     start,
                     ordered,
+                    justify
                 );
                 break;
             default:
@@ -122,12 +147,12 @@ export const MdTextRender = async (
                 );
                 break;
         }
-        return y;
+        return cursor;
     };
 
     for (const item of parsedElements) {
         renderElement(item);
     }
 
-    options.endCursorYHandler(y);
+    options.endCursorYHandler(cursor.y);
 };

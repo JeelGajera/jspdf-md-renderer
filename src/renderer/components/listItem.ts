@@ -1,15 +1,14 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { RenderOption } from '../../types/renderOption';
-import { justifyText } from '../../utils/justifyText';
-import { HandlePageBreaks } from '../../utils/handlePageBreak';
+import { Cursor, RenderOption } from '../../types/renderOption';
 import { getCharHight } from '../../utils/doc-helpers';
+import { HandlePageBreaks } from '../../utils/handlePageBreak';
+import renderInlineText from './inlineText';
 
 const renderListItem = (
     doc: jsPDF,
     element: ParsedElement,
-    x: number,
-    y: number,
+    cursor: Cursor,
     indentLevel: number,
     options: RenderOption,
     parentElementRenderer: (
@@ -18,56 +17,48 @@ const renderListItem = (
         hasRawBullet?: boolean,
         start?: number,
         ordered?: boolean,
-    ) => number,
+    ) => Cursor,
     start: number,
     ordered: boolean,
-): number => {
+): Cursor => {
     const indent = indentLevel * options.page.indent;
     const bullet = ordered ? `${start}. ` : '\u2022 ';
+
+    // Check for page break
     if (
-        y +
-            doc.splitTextToSize(
-                element.content ?? '',
-                options.page.maxContentWidth - indent,
-            ).length *
-                getCharHight(doc, options) -
-            2 * getCharHight(doc, options) >=
+        cursor.y + getCharHight(doc, options) >=
         options.page.maxContentHeight
     ) {
         HandlePageBreaks(doc, options);
-        y = options.page.topmargin;
+        cursor.y = options.page.topmargin;
     }
-    if (!element.items && element.content) {
-        const lineHeight =
-            doc.getTextWidth(element.content) >
-            options.page.maxContentWidth - indent
-                ? options.page.defaultLineHeightFactor
-                : options.page.defaultLineHeightFactor + 0.4;
-        y =
-            justifyText(
-                doc,
-                bullet + element.content,
-                x + indent,
-                y,
-                options.page.maxContentWidth - indent,
-                lineHeight,
-            ) + getCharHight(doc, options);
-    }
-    // Recursively render nested items if they exist
+
+    // Render bullet
+    doc.setFont(options.font.regular.name, options.font.regular.style);
+    doc.text(bullet, cursor.x + indent, cursor.y, { baseline: 'top' });
+    cursor.x += doc.getTextWidth(bullet);
+
+    // Render inline content
     if (element.items && element.items.length > 0) {
         for (const subItem of element.items) {
-            y =
-                parentElementRenderer(
-                    subItem,
-                    indentLevel + 1,
-                    true,
-                    start,
-                    ordered,
-                ) +
-                getCharHight(doc, options) * 0.2;
+            cursor = renderInlineText(
+                doc,
+                subItem,
+                cursor,
+                indent,
+                options,
+            );
         }
+    } else if (element.content) {
+        doc.text(element.content, cursor.x, cursor.y, { baseline: 'top' });
+        cursor.x += doc.getTextWidth(element.content);
     }
-    return y;
+
+    // Move to next line after the entire list item
+    cursor.y += getCharHight(doc, options);
+    cursor.x = options.page.xpading;
+
+    return cursor;
 };
 
 export default renderListItem;

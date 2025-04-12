@@ -6,4 +6,5 @@ node_modules
 # Ignore all HTML files:
 test
 examples
+**/*.md
 **/*.html
