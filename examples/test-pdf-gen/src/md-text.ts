@@ -48,6 +48,6 @@ This section showcases how to create simple and nested lists.
 - **Bold** text using double asterisks.
 - __Bold__ text using double underscores.
 - ***Bold and Italic*** text using triple asterisks.
-
+- ___Bold and Italic___ text using triple underscores.
 
 `;

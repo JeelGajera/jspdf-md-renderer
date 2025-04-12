@@ -69,6 +69,14 @@ This section showcases how to create simple and nested lists.
     1. Nested Subtopic 2.2.1
     2. Nested Subtopic 2.2.2
 
+### Emphasis and Strong Emphasis
+- *Italic* text using asterisks.
+- _Italic_ text using underscores.
+- **Bold** text using double asterisks.
+- __Bold__ text using double underscores.
+- ***Bold and Italic*** text using triple asterisks.
+- ___Bold and Italic___ text using triple underscores.
+
 `;
 
 const generatePDF = async () => {
@@ -146,17 +154,19 @@ The following Markdown elements are currently supported by `jspdf-md-renderer`:
 - **Lists**:
     - Unordered lists: `-`, `*`, `+`
     - Ordered lists: `1.`, `2.`, `3.`, etc.
+- **Horizontal Rules**: `---`, `***`, `___`
+- **Text Styles**:
+    - Bold: `**bold**` or `__bold__`
+    - Italic: `*italic*` or `_italic_`
+    - Bold Italic: `***bold italic***` or `___bold italic___`
 - **Code Blocks** (fenced and indented):
     ````markdown
     ```js
     console.log('Hello, world!');
     ```
     ````
+
 ### Proposed for Future Implementation:
-- **Emphasis**:
-    - **Bold**: `**bold text**` or `__bold text__`
-    - _Italic_: `*italic text*` or `_italic text_`
-    - **_Bold Italic_**: `***bold italic***`
 - **Blockquotes**:
     ```markdown
     > This is a blockquote.
