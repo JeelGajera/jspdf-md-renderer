@@ -4,7 +4,11 @@ import { Cursor, RenderOption } from '../../types/renderOption';
 import { getCharHight } from '../../utils/doc-helpers';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
 import renderInlineText from './inlineText';
+import { MdTokenType } from '../../enums/mdTokenType';
 
+/**
+ * Render a single list item, including bullets/numbering, inline text, and any nested lists.
+ */
 const renderListItem = (
     doc: jsPDF,
     element: ParsedElement,
@@ -16,47 +20,83 @@ const renderListItem = (
         indentLevel: number,
         hasRawBullet?: boolean,
         start?: number,
-        ordered?: boolean,
+        ordered?: boolean
     ) => Cursor,
     start: number,
-    ordered: boolean,
+    ordered: boolean
 ): Cursor => {
-    const indent = indentLevel * options.page.indent;
+    // We'll calculate a base indent so list items at the same level are aligned
+    const baseIndent = indentLevel * options.page.indent;
+    // The bullet or number for this item
     const bullet = ordered ? `${start}. ` : '\u2022 ';
 
-    // Check for page break
-    if (
-        cursor.y + getCharHight(doc, options) >=
-        options.page.maxContentHeight
-    ) {
+    // If we are close to bottom, do a page break
+    if (cursor.y + getCharHight(doc, options) >= options.page.maxContentHeight) {
         HandlePageBreaks(doc, options);
         cursor.y = options.page.topmargin;
     }
 
-    // Render bullet
+    // 1) Print the bullet at (x + baseIndent, y)
     doc.setFont(options.font.regular.name, options.font.regular.style);
-    doc.text(bullet, cursor.x + indent, cursor.y, { baseline: 'top' });
-    cursor.x += doc.getTextWidth(bullet);
+    doc.text(bullet, cursor.x + baseIndent, cursor.y, { baseline: 'top' });
 
-    // Render inline content
+    // 2) Move x forward by bullet width
+    const bulletWidth = doc.getTextWidth(bullet);
+    cursor.x += bulletWidth;
+
+    // 3) If we have nested items, render them. They might be inline text or sub-lists
     if (element.items && element.items.length > 0) {
+        // If the parent is "list_item", then sub-lists are truly nested => indentLevel + 1
+        // If the parent is "list", the sub-items are the same level => indentLevel
         for (const subItem of element.items) {
-            cursor = renderInlineText(
-                doc,
-                subItem,
-                cursor,
-                indent,
-                options,
-            );
+            // Check for page break before each sub-item
+            if (
+                cursor.y + getCharHight(doc, options) >=
+                options.page.maxContentHeight
+            ) {
+                HandlePageBreaks(doc, options);
+                cursor.y = options.page.topmargin;
+            }
+
+            if (subItem.type === MdTokenType.List) {
+                // A sub-list is always an extra level of indent
+                parentElementRenderer(subItem, indentLevel + 1, true, start, subItem.ordered ?? false);
+            } else if (subItem.type === MdTokenType.ListItem) {
+                // Same level if parent is a list, 
+                // otherwise if the parent is a list_item, it's nested => indent + 1
+                const newIndentLevel =
+                    element.type === MdTokenType.List
+                        ? indentLevel
+                        : indentLevel + 1;
+                parentElementRenderer(subItem, newIndentLevel, true, start, ordered);
+            } else {
+                // Inline content (e.g., emphasis, text, strong)
+                // Render on the same line (indented after bullet)
+                cursor = renderInlineText(
+                    doc,
+                    subItem,
+                    cursor,
+                    baseIndent,
+                    options
+                );
+            }
+
+            // Move to next line after each sub-item (and reset x to left)
+            cursor.x = options.page.xpading;
+            cursor.y += getCharHight(doc, options);
         }
     } else if (element.content) {
-        doc.text(element.content, cursor.x, cursor.y, { baseline: 'top' });
-        cursor.x += doc.getTextWidth(element.content);
+        // No nested items, just text content
+        doc.text(
+            element.content,
+            cursor.x + baseIndent,
+            cursor.y,
+            { baseline: 'top' }
+        );
+        // Move the cursor forward by the text width
+        const contentWidth = doc.getTextWidth(element.content);
+        cursor.x += contentWidth;
     }
-
-    // Move to next line after the entire list item
-    cursor.y += getCharHight(doc, options);
-    cursor.x = options.page.xpading;
 
     return cursor;
 };

@@ -24,11 +24,11 @@ This section showcases how to create simple and nested lists.
 
 1. First Level 1
    - First Level 2
-     - First Level 3
+      - First Level 3
 2. Second Level 1
    - Second Level 2
    - Another Second Level 2
-     - Nested deeper
+      - Nested deeper
 
 ### Mixed List Example
 
