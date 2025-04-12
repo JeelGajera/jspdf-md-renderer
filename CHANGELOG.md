@@ -1,3 +1,19 @@
+# [1.5.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.4.1...v1.5.0) (2025-04-12)
+
+
+### Bug Fixes
+
+* **rendere-code:** update renderer code for return cursor values ([e350361](https://github.com/JeelGajera/jspdf-md-renderer/commit/e35036127f2b18a54b52e1d8351afa814653ed27))
+
+
+### Features
+
+* add support for the Em and strong elements ([be8d99f](https://github.com/JeelGajera/jspdf-md-renderer/commit/be8d99f4dd313240230ad98e424fad3363d53768))
+* add vite build configs ([b4b1eed](https://github.com/JeelGajera/jspdf-md-renderer/commit/b4b1eedabf76ddcf23781755a40327509b227520))
+* **emphasis:** enhance PDF rendering for empasis md components and update configurations ([cbc141c](https://github.com/JeelGajera/jspdf-md-renderer/commit/cbc141c2f7fdd6743b8cc3994895b7d565803e0c))
+
+
+
 ## [1.4.1](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.4.0...v1.4.1) (2025-03-19)
 
 
@@ -31,16 +47,6 @@
 ### Bug Fixes
 
 * **list:** handle order and unorder list bulleting with start index ([518aa94](https://github.com/JeelGajera/jspdf-md-renderer/commit/518aa94e1e7f8262d23a4c0088e14ceb5fd181e4))
-
-
-
-## [1.2.2](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.2.1...v1.2.2) (2024-12-20)
-
-
-### Bug Fixes
-
-* **rendering:** support nested rendering for heading, paragraph & raw item components ([f428b13](https://github.com/JeelGajera/jspdf-md-renderer/commit/f428b13d8c461d2ea3b946d773eb77fb83d7598c))
-* update md parser handlers to manage nested elements ([c7bc541](https://github.com/JeelGajera/jspdf-md-renderer/commit/c7bc541c4de7d6e169a6c5fc912f3683dd01ed84))
 
 
 
