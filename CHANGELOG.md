@@ -1,3 +1,12 @@
+## [1.5.1](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.5.0...v1.5.1) (2025-04-12)
+
+
+### Bug Fixes
+
+* **readme:** update README and examples to include additional emphasis styles ([580b50d](https://github.com/JeelGajera/jspdf-md-renderer/commit/580b50dc21c0e5211aa23190e77579cb8d1e4e84))
+
+
+
 # [1.5.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.4.1...v1.5.0) (2025-04-12)
 
 
@@ -38,15 +47,6 @@
 ### Features
 
 * **hr:** add horizontal rule rendering functionality ([843455e](https://github.com/JeelGajera/jspdf-md-renderer/commit/843455e557c6e5bbfbda1ada65c46a2a4108fc76))
-
-
-
-## [1.2.3](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.2.2...v1.2.3) (2024-12-28)
-
-
-### Bug Fixes
-
-* **list:** handle order and unorder list bulleting with start index ([518aa94](https://github.com/JeelGajera/jspdf-md-renderer/commit/518aa94e1e7f8262d23a4c0088e14ceb5fd181e4))
 
 
 
