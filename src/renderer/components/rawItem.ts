@@ -64,12 +64,9 @@ const renderRawItem = (
             cursor.x = options.page.xpading;
         } else {
             // Print text
-            doc.text(
-                bullet + element.content,
-                cursor.x + indent,
-                cursor.y,
-                { baseline: 'top' },
-            );
+            doc.text(bullet + element.content, cursor.x + indent, cursor.y, {
+                baseline: 'top',
+            });
             // Move x forward
             cursor.x += doc.getTextWidth(bullet + element.content);
             // Handle page break
@@ -79,7 +76,7 @@ const renderRawItem = (
             ) {
                 HandlePageBreaks(doc, options);
                 cursor.x = options.page.xpading;
-                cursor.y += getCharHight(doc, options);
+                cursor.y = options.page.topmargin;
             }
         }
     }

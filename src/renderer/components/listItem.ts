@@ -20,10 +20,10 @@ const renderListItem = (
         indentLevel: number,
         hasRawBullet?: boolean,
         start?: number,
-        ordered?: boolean
+        ordered?: boolean,
     ) => Cursor,
     start: number,
-    ordered: boolean
+    ordered: boolean,
 ): Cursor => {
     // We'll calculate a base indent so list items at the same level are aligned
     const baseIndent = indentLevel * options.page.indent;
@@ -31,7 +31,10 @@ const renderListItem = (
     const bullet = ordered ? `${start}. ` : '\u2022 ';
 
     // If we are close to bottom, do a page break
-    if (cursor.y + getCharHight(doc, options) >= options.page.maxContentHeight) {
+    if (
+        cursor.y + getCharHight(doc, options) >=
+        options.page.maxContentHeight
+    ) {
         HandlePageBreaks(doc, options);
         cursor.y = options.page.topmargin;
     }
@@ -60,15 +63,28 @@ const renderListItem = (
 
             if (subItem.type === MdTokenType.List) {
                 // A sub-list is always an extra level of indent
-                parentElementRenderer(subItem, indentLevel + 1, true, start, subItem.ordered ?? false);
+                parentElementRenderer(
+                    subItem,
+                    indentLevel + 1,
+                    true,
+                    start,
+                    subItem.ordered ?? false,
+                );
             } else if (subItem.type === MdTokenType.ListItem) {
-                // Same level if parent is a list, 
+                // Same level if parent is a list,
                 // otherwise if the parent is a list_item, it's nested => indent + 1
                 const newIndentLevel =
                     element.type === MdTokenType.List
                         ? indentLevel
                         : indentLevel + 1;
-                parentElementRenderer(subItem, newIndentLevel, true, start, ordered);
+                
+                parentElementRenderer(
+                    subItem,
+                    newIndentLevel,
+                    true,
+                    start,
+                    ordered,
+                );
             } else {
                 // Inline content (e.g., emphasis, text, strong)
                 // Render on the same line (indented after bullet)
@@ -86,13 +102,24 @@ const renderListItem = (
             cursor.y += getCharHight(doc, options);
         }
     } else if (element.content) {
-        // No nested items, just text content
-        doc.text(
+        // handle text with line breaks page break & multiple lines texts
+        const textLines = doc.splitTextToSize(
             element.content,
+            options.page.maxContentWidth - baseIndent - cursor.x,
+        );
+        // Render text
+        doc.text(
+            textLines,
             cursor.x + baseIndent,
             cursor.y,
-            { baseline: 'top' }
+            {
+                baseline: 'top',
+                maxWidth: options.page.maxContentWidth - baseIndent - cursor.x,
+            },
         );
+        // Update cursor position\
+        cursor.y += getCharHight(doc, options) * textLines.length;
+        cursor.x = options.page.xmargin + baseIndent;
         // Move the cursor forward by the text width
         const contentWidth = doc.getTextWidth(element.content);
         cursor.x += contentWidth;
