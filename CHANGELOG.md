@@ -1,3 +1,12 @@
+## [1.6.1](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.6.0...v1.6.1) (2025-05-03)
+
+
+### Bug Fixes
+
+* **renderer:** adjust long text rendering and indentation for list items and raw items ([c18a0e9](https://github.com/JeelGajera/jspdf-md-renderer/commit/c18a0e9294cdb0c61eac73988253820822e9005e))
+
+
+
 # [1.6.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.5.1...v1.6.0) (2025-04-12)
 
 
@@ -38,15 +47,6 @@
 ### Bug Fixes
 
 * dependency updates ([4d7eaf0](https://github.com/JeelGajera/jspdf-md-renderer/commit/4d7eaf01f2b388c92953829682d3ea9ec3a6d510))
-
-
-
-# [1.4.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.3.0...v1.4.0) (2025-01-15)
-
-
-### Features
-
-* **rendering:** add support for code block rendering with bg ([c7828b7](https://github.com/JeelGajera/jspdf-md-renderer/commit/c7828b7be26e453406f0607c44f0a6075bfbbd90))
 
 
 
