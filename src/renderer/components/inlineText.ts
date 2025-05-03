@@ -29,7 +29,7 @@ const renderInlineText = (
             case 'italic':
                 return 1.5;
             case 'bolditalic':
-                return 2.5;
+                return 1.5;
             default:
                 return 0;
         }
@@ -61,19 +61,60 @@ const renderInlineText = (
             doc.setFont(options.font.regular.name, currentFontStyle);
         }
 
-        const textWidth = doc.getTextWidth(text);
-        // Check for line break
-        if (
-            cursor.x + textWidth >
-            options.page.xpading + options.page.maxContentWidth
-        ) {
-            cursor.x = options.page.xpading;
+        // Calculate available width for text
+        const availableWidth = options.page.maxContentWidth - indent - cursor.x;
+
+        // Split text into lines
+        const textLines = doc.splitTextToSize(text, availableWidth);
+
+        // Render lines
+        if (textLines.length > 1) {
+            // If the text is too long, adjust the cursor position for each line
+            // render firstline i availabe width
+            // and rest of the content in the next line with up to indent
+            const firstLine = textLines[0];
+            const restContent = textLines?.slice(1)?.join(' ');
+            // render first line
+            doc.text(
+                firstLine,
+                cursor.x + (indent >= 2 ? indent + 2 * spaceMultiplier(style) : 0),
+                cursor.y,
+                {
+                    baseline: 'top',
+                    maxWidth: availableWidth,
+                },
+            );
+
+            // update cursor position
+            cursor.x = indent;
             cursor.y += getCharHight(doc, options);
+
+            // render rest of the content in the next line with up to indent
+            const maxWidthForRest =
+                options.page.maxContentWidth -
+                indent -
+                options.page.xpading -
+                options.page.xmargin;
+            const restLines = doc.splitTextToSize(restContent, maxWidthForRest);
+            restLines.forEach((line: string) => {
+                doc.text(line, cursor.x + indent, cursor.y, {
+                    baseline: 'top',
+                    maxWidth: maxWidthForRest,
+                });
+                // update cursor position
+                cursor.x = indent;
+                cursor.y += getCharHight(doc, options);
+            });
+        } else {
+            doc.text(text, cursor.x + indent, cursor.y, {
+                baseline: 'top',
+                maxWidth: availableWidth,
+            });
+            cursor.x +=
+                doc.getTextDimensions(text).w +
+                (indent >= 2 ? text.split(' ').length + 2 : 2) *
+                    spaceMultiplier(style);
         }
-        const spaceWidth = doc.getTextWidth(' ');
-        doc.text(text, cursor.x + indent, cursor.y, { baseline: 'top' });
-        cursor.x +=
-            textWidth + (spaceWidth * spaceMultiplier(style)) + (style === 'normal'? indent*.7 : 0);
     };
 
     // Handle the element based on its type
