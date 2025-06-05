@@ -29,7 +29,7 @@ export const MdTextRender = async (
     options: RenderOption,
 ) => {
     const parsedElements = await MdTextParser(text);
-    console.log(parsedElements);
+    // console.log(parsedElements);
     let cursor: Cursor = {
         x: options.cursor.x,
         y: options.cursor.y,
@@ -120,7 +120,7 @@ export const MdTextRender = async (
                     element,
                     cursor,
                     indent,
-                    options
+                    options,
                 );
                 break;
             case MdTokenType.Raw:
@@ -135,7 +135,7 @@ export const MdTextRender = async (
                     renderElement,
                     start,
                     ordered,
-                    justify
+                    justify,
                 );
                 break;
             default:
