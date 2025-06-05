@@ -77,7 +77,8 @@ const renderInlineText = (
             // render first line
             doc.text(
                 firstLine,
-                cursor.x + (indent >= 2 ? indent + 2 * spaceMultiplier(style) : 0),
+                cursor.x +
+                    (indent >= 2 ? indent + 2 * spaceMultiplier(style) : 0),
                 cursor.y,
                 {
                     baseline: 'top',
@@ -86,7 +87,7 @@ const renderInlineText = (
             );
 
             // update cursor position
-            cursor.x = indent;
+            cursor.x = options.page.xpading + indent;
             cursor.y += getCharHight(doc, options);
 
             // render rest of the content in the next line with up to indent

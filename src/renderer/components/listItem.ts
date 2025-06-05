@@ -77,7 +77,7 @@ const renderListItem = (
                     element.type === MdTokenType.List
                         ? indentLevel
                         : indentLevel + 1;
-                
+
                 parentElementRenderer(
                     subItem,
                     newIndentLevel,
@@ -93,7 +93,7 @@ const renderListItem = (
                     subItem,
                     cursor,
                     baseIndent,
-                    options
+                    options,
                 );
             }
 
@@ -103,26 +103,35 @@ const renderListItem = (
         }
     } else if (element.content) {
         // handle text with line breaks page break & multiple lines texts
-        const textLines = doc.splitTextToSize(
-            element.content,
-            options.page.maxContentWidth - baseIndent - cursor.x,
-        );
-        // Render text
-        doc.text(
-            textLines,
-            cursor.x + baseIndent,
-            cursor.y,
-            {
+        const bulletX = cursor.x + baseIndent;
+        const bulletWidth = doc.getTextWidth(bullet);
+        const textMaxWidth =
+            options.page.maxContentWidth - baseIndent - bulletWidth;
+        // Split the content into lines, accounting for the bullet only on the first line
+        const textLines = doc.splitTextToSize(element.content, textMaxWidth);
+        // Render first line with bullet
+        if (textLines.length > 0) {
+            doc.text(textLines[0], bulletX + bulletWidth, cursor.y, {
                 baseline: 'top',
-                maxWidth: options.page.maxContentWidth - baseIndent - cursor.x,
-            },
-        );
-        // Update cursor position\
-        cursor.y += getCharHight(doc, options) * textLines.length;
-        cursor.x = options.page.xmargin + baseIndent;
-        // Move the cursor forward by the text width
-        const contentWidth = doc.getTextWidth(element.content);
-        cursor.x += contentWidth;
+                maxWidth: textMaxWidth,
+            });
+            // Render bullet (already rendered above, but for clarity)
+            // doc.text(bullet, bulletX, cursor.y, { baseline: 'top' });
+            // Render wrapped lines (if any)
+            for (let i = 1; i < textLines.length; i++) {
+                cursor.y += getCharHight(doc, options);
+                doc.text(textLines[i], bulletX + bulletWidth, cursor.y, {
+                    baseline: 'top',
+                    maxWidth: textMaxWidth,
+                });
+            }
+            // Update cursor position
+            cursor.y += getCharHight(doc, options);
+            cursor.x = options.page.xmargin + baseIndent;
+            // Move the cursor forward by the text width (optional, but keep for compatibility)
+            const contentWidth = doc.getTextWidth(element.content);
+            cursor.x += contentWidth;
+        }
     }
 
     return cursor;
