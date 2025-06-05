@@ -1,3 +1,16 @@
+## [1.6.4](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.6.2...v1.6.4) (2025-06-05)
+
+
+### Bug Fixes
+
+* publish workflow update ([817da14](https://github.com/JeelGajera/jspdf-md-renderer/commit/817da14dea28c4ed0353b8d92278d7d459a80958))
+
+
+
+## [1.6.2](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.6.1...v1.6.2) (2025-06-05)
+
+
+
 ## [1.6.1](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.6.0...v1.6.1) (2025-05-03)
 
 
@@ -22,31 +35,6 @@
 ### Bug Fixes
 
 * **readme:** update README and examples to include additional emphasis styles ([580b50d](https://github.com/JeelGajera/jspdf-md-renderer/commit/580b50dc21c0e5211aa23190e77579cb8d1e4e84))
-
-
-
-# [1.5.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.4.1...v1.5.0) (2025-04-12)
-
-
-### Bug Fixes
-
-* **rendere-code:** update renderer code for return cursor values ([e350361](https://github.com/JeelGajera/jspdf-md-renderer/commit/e35036127f2b18a54b52e1d8351afa814653ed27))
-
-
-### Features
-
-* add support for the Em and strong elements ([be8d99f](https://github.com/JeelGajera/jspdf-md-renderer/commit/be8d99f4dd313240230ad98e424fad3363d53768))
-* add vite build configs ([b4b1eed](https://github.com/JeelGajera/jspdf-md-renderer/commit/b4b1eedabf76ddcf23781755a40327509b227520))
-* **emphasis:** enhance PDF rendering for empasis md components and update configurations ([cbc141c](https://github.com/JeelGajera/jspdf-md-renderer/commit/cbc141c2f7fdd6743b8cc3994895b7d565803e0c))
-
-
-
-## [1.4.1](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.4.0...v1.4.1) (2025-03-19)
-
-
-### Bug Fixes
-
-* dependency updates ([4d7eaf0](https://github.com/JeelGajera/jspdf-md-renderer/commit/4d7eaf01f2b388c92953829682d3ea9ec3a6d510))
 
 
 
