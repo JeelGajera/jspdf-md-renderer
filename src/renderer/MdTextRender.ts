@@ -52,68 +52,38 @@ export const MdTextRender = async (
             options.page.maxContentHeight
         ) {
             HandlePageBreaks(doc, options);
-            RenderStore.updateY(options.page.topmargin)
+            RenderStore.updateY(options.page.topmargin);
         }
 
         switch (element.type) {
             case MdTokenType.Heading:
-                renderHeading(
-                    doc,
-                    element,
-                    indent,
-                    options,
-                    renderElement,
-                );
+                renderHeading(doc, element, indent, renderElement);
                 break;
             case MdTokenType.Paragraph:
-                renderParagraph(
-                    doc,
-                    element,
-                    indent,
-                    options,
-                    renderElement,
-                );
+                renderParagraph(doc, element, indent, renderElement);
                 break;
             case MdTokenType.List:
-                renderList(
-                    doc,
-                    element,
-                    indentLevel,
-                    options,
-                    renderElement,
-                );
+                renderList(doc, element, indentLevel, renderElement);
                 break;
             case MdTokenType.ListItem:
                 renderListItem(
                     doc,
                     element,
                     indentLevel,
-                    options,
                     renderElement,
                     start,
                     ordered,
                 );
                 break;
             case MdTokenType.Hr:
-                renderHR(doc, options);
+                renderHR(doc);
                 break;
             case MdTokenType.Code:
-                renderCodeBlock(
-                    doc,
-                    element,
-                    indentLevel,
-                    hasRawBullet,
-                    options,
-                );
+                renderCodeBlock(doc, element, indentLevel, hasRawBullet);
                 break;
             case MdTokenType.Strong:
             case MdTokenType.Em:
-                renderInlineText(
-                    doc,
-                    element,
-                    indent,
-                    options,
-                );
+                renderInlineText(doc, element, indent);
                 break;
             case MdTokenType.Raw:
             case MdTokenType.Text:
@@ -122,7 +92,6 @@ export const MdTextRender = async (
                     element,
                     indentLevel,
                     hasRawBullet,
-                    options,
                     renderElement,
                     start,
                     ordered,
@@ -134,14 +103,16 @@ export const MdTextRender = async (
                     `Warning: Unsupported element type encountered: ${element.type}. 
                     If you believe this element type should be supported, please create an issue at:
                     https://github.com/JeelGajera/jspdf-md-renderer/issues
-                    with details of the element and expected behavior. Thank you for helping to improve this library!`,
+                    with details of the element and expected behavior. Thanks for helping to improve this library!`,
                 );
                 break;
         }
-    };
+    };  
 
     for (const item of parsedElements) {
         renderElement(item);
+        console.log(`Rendered element: ${item.type}, Y position: ${RenderStore.Y}`);
+        
     }
 
     options.endCursorYHandler(RenderStore.Y);

@@ -1,6 +1,5 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { RenderOption } from '../../types/renderOption';
 import { getCharHight } from '../../utils/doc-helpers';
 import { RenderStore } from '../../store/renderStore';
 
@@ -10,8 +9,7 @@ import { RenderStore } from '../../store/renderStore';
 const renderInlineText = (
     doc: jsPDF,
     element: ParsedElement,
-    indent: number,
-    options: RenderOption,
+    indent: number
 ) => {
     // Save current font settings
     const currentFont = doc.getFont().fontName;
@@ -43,26 +41,26 @@ const renderInlineText = (
         // Set font style
         if (style === 'bold') {
             doc.setFont(
-                options.font.bold.name && options.font.bold.name !== ''
-                    ? options.font.bold.name
+                RenderStore.options.font.bold.name && RenderStore.options.font.bold.name !== ''
+                    ? RenderStore.options.font.bold.name
                     : currentFont,
-                options.font.bold.style || 'bold',
+                RenderStore.options.font.bold.style || 'bold',
             );
         } else if (style === 'italic') {
-            doc.setFont(options.font.regular.name, 'italic');
+            doc.setFont(RenderStore.options.font.regular.name, 'italic');
         } else if (style === 'bolditalic') {
             doc.setFont(
-                options.font.bold.name && options.font.bold.name !== ''
-                    ? options.font.bold.name
+                RenderStore.options.font.bold.name && RenderStore.options.font.bold.name !== ''
+                    ? RenderStore.options.font.bold.name
                     : currentFont,
                 'bolditalic',
             );
         } else {
-            doc.setFont(options.font.regular.name, currentFontStyle);
+            doc.setFont(RenderStore.options.font.regular.name, currentFontStyle);
         }
 
         // Calculate available width for text
-        const availableWidth = options.page.maxContentWidth - indent - RenderStore.X;
+        const availableWidth = RenderStore.options.page.maxContentWidth - indent - RenderStore.X;
 
         // Split text into lines
         const textLines = doc.splitTextToSize(text, availableWidth);
@@ -87,15 +85,15 @@ const renderInlineText = (
             );
 
             // update cursor position
-            RenderStore.updateX(options.page.xpading + indent);
-            RenderStore.updateY(getCharHight(doc, options), 'add');
+            RenderStore.updateX(RenderStore.options.page.xpading + indent);
+            RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
 
             // render rest of the content in the next line with up to indent
             const maxWidthForRest =
-                options.page.maxContentWidth -
+                RenderStore.options.page.maxContentWidth -
                 indent -
-                options.page.xpading -
-                options.page.xmargin;
+                RenderStore.options.page.xpading -
+                RenderStore.options.page.xmargin;
             const restLines = doc.splitTextToSize(restContent, maxWidthForRest);
             restLines.forEach((line: string) => {
                 doc.text(line, RenderStore.X + indent, RenderStore.Y, {
@@ -103,8 +101,8 @@ const renderInlineText = (
                     maxWidth: maxWidthForRest,
                 });
                 // update cursor position
-                RenderStore.updateX(options.page.xpading + indent);
-                RenderStore.updateY(getCharHight(doc, options), 'add');
+                RenderStore.updateX(RenderStore.options.page.xpading + indent);
+                RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
             });
         } else {
             doc.text(text, RenderStore.X + indent, RenderStore.Y, {

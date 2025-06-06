@@ -1,6 +1,5 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { RenderOption } from '../../types/renderOption';
 import { getCharHight } from '../../utils/doc-helpers';
 import { RenderStore } from '../../store/renderStore';
 
@@ -8,7 +7,6 @@ const renderList = (
     doc: jsPDF,
     element: ParsedElement,
     indentLevel: number,
-    options: RenderOption,
     parentElementRenderer: (
         element: ParsedElement,
         indentLevel: number,
@@ -17,8 +15,8 @@ const renderList = (
         ordered?: boolean,
     ) => void,
 ) => {
-    doc.setFontSize(options.page.defaultFontSize);
-    // doc.setFont(options.font.light.name, options.font.light.style);
+    doc.setFontSize(RenderStore.options.page.defaultFontSize);
+    // doc.setFont(RenderStore.options.font.light.name, RenderStore.options.font.light.style);
     for (const [i, point] of element?.items?.entries() ?? []) {
         const _start = element.ordered
             ? (element.start ?? 0) + i
@@ -30,7 +28,7 @@ const renderList = (
             _start,
             element.ordered,
         );
-        RenderStore.updateY(getCharHight(doc, options) * 0.2); // Recursively render nested list items
+        RenderStore.updateY(getCharHight(doc, RenderStore.options) * 0.2); // Recursively render nested list items
     }
 };
 
