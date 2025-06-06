@@ -1,20 +1,20 @@
 import jsPDF from 'jspdf';
-import { Cursor, RenderOption } from '../../types';
+import { RenderOption } from '../../types';
 import { getCharHight } from '../../utils/doc-helpers';
+import { RenderStore } from '../../store/renderStore';
 
-const renderHR = (doc: jsPDF, cursor: Cursor, options: RenderOption) => {
+const renderHR = (doc: jsPDF, options: RenderOption) => {
     const pageWidth = doc.internal.pageSize.getWidth();
     doc.setLineDashPattern([1, 1], 0);
     doc.setLineWidth(0.1);
     doc.line(
         options.page.xpading,
-        cursor.y,
+        RenderStore.Y,
         pageWidth - options.page.xpading,
-        cursor.y,
+        RenderStore.Y,
     );
     doc.setLineWidth(0.1);
     doc.setLineDashPattern([], 0);
-    cursor.y += getCharHight(doc, options);
-    return cursor;
+    RenderStore.updateY(getCharHight(doc, options), 'add');
 };
 export default renderHR;

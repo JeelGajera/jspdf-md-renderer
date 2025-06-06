@@ -1,10 +1,11 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { Cursor, RenderOption } from '../../types/renderOption';
+import { RenderOption } from '../../types/renderOption';
 import { getCharHight } from '../../utils/doc-helpers';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
 import renderInlineText from './inlineText';
 import { MdTokenType } from '../../enums/mdTokenType';
+import { RenderStore } from '../../store/renderStore';
 
 /**
  * Render a single list item, including bullets/numbering, inline text, and any nested lists.
@@ -12,7 +13,6 @@ import { MdTokenType } from '../../enums/mdTokenType';
 const renderListItem = (
     doc: jsPDF,
     element: ParsedElement,
-    cursor: Cursor,
     indentLevel: number,
     options: RenderOption,
     parentElementRenderer: (
@@ -21,10 +21,10 @@ const renderListItem = (
         hasRawBullet?: boolean,
         start?: number,
         ordered?: boolean,
-    ) => Cursor,
+    ) => void,
     start: number,
     ordered: boolean,
-): Cursor => {
+) => {
     // We'll calculate a base indent so list items at the same level are aligned
     const baseIndent = indentLevel * options.page.indent;
     // The bullet or number for this item
@@ -32,20 +32,20 @@ const renderListItem = (
 
     // If we are close to bottom, do a page break
     if (
-        cursor.y + getCharHight(doc, options) >=
+        RenderStore.Y + getCharHight(doc, options) >=
         options.page.maxContentHeight
     ) {
         HandlePageBreaks(doc, options);
-        cursor.y = options.page.topmargin;
+        RenderStore.updateY(options.page.topmargin);
     }
 
     // 1) Print the bullet at (x + baseIndent, y)
     doc.setFont(options.font.regular.name, options.font.regular.style);
-    doc.text(bullet, cursor.x + baseIndent, cursor.y, { baseline: 'top' });
+    doc.text(bullet, RenderStore.X + baseIndent, RenderStore.Y, { baseline: 'top' });
 
     // 2) Move x forward by bullet width
     const bulletWidth = doc.getTextWidth(bullet);
-    cursor.x += bulletWidth;
+    RenderStore.updateX(bulletWidth, 'add');
 
     // 3) If we have nested items, render them. They might be inline text or sub-lists
     if (element.items && element.items.length > 0) {
@@ -54,11 +54,11 @@ const renderListItem = (
         for (const subItem of element.items) {
             // Check for page break before each sub-item
             if (
-                cursor.y + getCharHight(doc, options) >=
+                RenderStore.Y + getCharHight(doc, options) >=
                 options.page.maxContentHeight
             ) {
                 HandlePageBreaks(doc, options);
-                cursor.y = options.page.topmargin;
+                RenderStore.updateY(options.page.topmargin);
             }
 
             if (subItem.type === MdTokenType.List) {
@@ -88,22 +88,21 @@ const renderListItem = (
             } else {
                 // Inline content (e.g., emphasis, text, strong)
                 // Render on the same line (indented after bullet)
-                cursor = renderInlineText(
+                renderInlineText(
                     doc,
                     subItem,
-                    cursor,
                     baseIndent,
                     options,
                 );
             }
 
             // Move to next line after each sub-item (and reset x to left)
-            cursor.x = options.page.xpading;
-            cursor.y += getCharHight(doc, options);
+            RenderStore.updateX(options.page.xpading)
+            RenderStore.updateY(getCharHight(doc, options), 'add');
         }
     } else if (element.content) {
         // handle text with line breaks page break & multiple lines texts
-        const bulletX = cursor.x + baseIndent;
+        const bulletX = RenderStore.X + baseIndent;
         const bulletWidth = doc.getTextWidth(bullet);
         const textMaxWidth =
             options.page.maxContentWidth - baseIndent - bulletWidth;
@@ -111,7 +110,7 @@ const renderListItem = (
         const textLines = doc.splitTextToSize(element.content, textMaxWidth);
         // Render first line with bullet
         if (textLines.length > 0) {
-            doc.text(textLines[0], bulletX + bulletWidth, cursor.y, {
+            doc.text(textLines[0], bulletX + bulletWidth, RenderStore.Y, {
                 baseline: 'top',
                 maxWidth: textMaxWidth,
             });
@@ -119,22 +118,20 @@ const renderListItem = (
             // doc.text(bullet, bulletX, cursor.y, { baseline: 'top' });
             // Render wrapped lines (if any)
             for (let i = 1; i < textLines.length; i++) {
-                cursor.y += getCharHight(doc, options);
-                doc.text(textLines[i], bulletX + bulletWidth, cursor.y, {
+                RenderStore.updateY(getCharHight(doc, options), 'add');
+                doc.text(textLines[i], bulletX + bulletWidth, RenderStore.Y, {
                     baseline: 'top',
                     maxWidth: textMaxWidth,
                 });
             }
             // Update cursor position
-            cursor.y += getCharHight(doc, options);
-            cursor.x = options.page.xmargin + baseIndent;
+            RenderStore.updateY(getCharHight(doc, options), 'add');
+            RenderStore.updateX(options.page.xmargin + baseIndent);
             // Move the cursor forward by the text width (optional, but keep for compatibility)
             const contentWidth = doc.getTextWidth(element.content);
-            cursor.x += contentWidth;
+            RenderStore.updateX(contentWidth, 'add');
         }
     }
-
-    return cursor;
 };
 
 export default renderListItem;

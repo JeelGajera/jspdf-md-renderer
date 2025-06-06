@@ -1,14 +1,14 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { Cursor, RenderOption } from '../../types/renderOption';
+import { RenderOption } from '../../types/renderOption';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
 import { getCharHight } from '../../utils/doc-helpers';
 import { justifyText } from '../../utils/justifyText';
+import { RenderStore } from '../../store/renderStore';
 
 const renderRawItem = (
     doc: jsPDF,
     element: ParsedElement,
-    cursor: Cursor,
     indentLevel: number,
     hasRawBullet: boolean,
     options: RenderOption,
@@ -19,14 +19,14 @@ const renderRawItem = (
         start?: number,
         ordered?: boolean,
         justify?: boolean,
-    ) => Cursor,
+    ) => void,
     start: number,
     ordered: boolean,
     justify: boolean = true,
-): Cursor => {
+) => {
     if (element?.items && element?.items.length > 0) {
         for (const item of element?.items ?? []) {
-            cursor = parentElementRenderer(
+            parentElementRenderer(
                 item,
                 indentLevel,
                 hasRawBullet,
@@ -49,14 +49,14 @@ const renderRawItem = (
             );
             if (textLines.length > 0) {
                 // Render bullet
-                doc.text(bullet, cursor.x + indent, cursor.y, {
+                doc.text(bullet, RenderStore.X + indent, RenderStore.Y, {
                     baseline: 'top',
                 });
                 // Render first line
                 doc.text(
                     textLines[0],
-                    cursor.x + indent + bulletWidth,
-                    cursor.y,
+                    RenderStore.X + indent + bulletWidth,
+                    RenderStore.Y,
                     {
                         baseline: 'top',
                         maxWidth: textMaxWidth,
@@ -64,12 +64,12 @@ const renderRawItem = (
                 );
                 // Render wrapped lines
                 for (let i = 1; i < textLines.length; i++) {
-                    cursor.x = options.page.xpading;
-                    cursor.y += getCharHight(doc, options);
+                    RenderStore.updateX(options.page.xpading);
+                    RenderStore.updateY(getCharHight(doc, options), 'add');
                     doc.text(
                         textLines[i],
-                        cursor.x + indent + bulletWidth,
-                        cursor.y,
+                        RenderStore.X + indent + bulletWidth,
+                        RenderStore.Y,
                         {
                             baseline: 'top',
                             maxWidth: textMaxWidth,
@@ -77,10 +77,10 @@ const renderRawItem = (
                     );
                 }
                 // Update cursor position
-                cursor.y += getCharHight(doc, options);
-                cursor.x = options.page.xpading + indent;
+                RenderStore.updateY(getCharHight(doc, options), 'add');
+                RenderStore.updateX(options.page.xpading + indent);
                 const contentWidth = doc.getTextWidth(element.content || '');
-                cursor.x += contentWidth;
+                RenderStore.updateX(contentWidth, 'add');
             }
         } else {
             const lines = doc.splitTextToSize(
@@ -88,40 +88,40 @@ const renderRawItem = (
                 options.page.maxContentWidth - indent,
             );
             if (
-                cursor.y + lines.length * getCharHight(doc, options) >=
+                RenderStore.Y + lines.length * getCharHight(doc, options) >=
                 options.page.maxContentHeight
             ) {
                 HandlePageBreaks(doc, options);
-                cursor.y = options.page.topmargin;
+                RenderStore.updateY(options.page.topmargin);
             }
             if (justify) {
-                cursor.y =
+                const yPoint =
                     justifyText(
                         doc,
                         element.content || '',
-                        cursor.x + indent,
-                        cursor.y,
+                        RenderStore.X + indent,
+                        RenderStore.Y,
                         options.page.maxContentWidth - indent,
                         options.page.defaultLineHeightFactor,
                     ).y + getCharHight(doc, options);
-                cursor.x = options.page.xpading;
+                RenderStore.updateY(yPoint);
+                RenderStore.updateX(options.page.xpading);
             } else {
-                doc.text(element.content || '', cursor.x + indent, cursor.y, {
+                doc.text(element.content || '', RenderStore.X + indent, RenderStore.Y, {
                     baseline: 'top',
                 });
-                cursor.x += doc.getTextWidth(element.content || '');
+                RenderStore.updateX(doc.getTextWidth(element.content || ''), 'add');
                 if (
-                    cursor.x >=
+                    RenderStore.X >=
                     options.page.xpading + options.page.maxContentWidth
                 ) {
                     HandlePageBreaks(doc, options);
-                    cursor.x = options.page.xpading;
-                    cursor.y = options.page.topmargin;
+                    RenderStore.updateX(options.page.xpading);
+                    RenderStore.updateY(options.page.topmargin);
                 }
             }
         }
     }
-    return cursor;
 };
 
 export default renderRawItem;

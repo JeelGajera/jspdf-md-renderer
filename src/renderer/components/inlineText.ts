@@ -1,7 +1,8 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { Cursor, RenderOption } from '../../types/renderOption';
+import { RenderOption } from '../../types/renderOption';
 import { getCharHight } from '../../utils/doc-helpers';
+import { RenderStore } from '../../store/renderStore';
 
 /**
  * Renders inline text elements (Strong, Em, and Text) with proper inline styling.
@@ -9,10 +10,9 @@ import { getCharHight } from '../../utils/doc-helpers';
 const renderInlineText = (
     doc: jsPDF,
     element: ParsedElement,
-    cursor: Cursor,
     indent: number,
     options: RenderOption,
-): Cursor => {
+) => {
     // Save current font settings
     const currentFont = doc.getFont().fontName;
     const currentFontStyle = doc.getFont().fontStyle;
@@ -62,7 +62,7 @@ const renderInlineText = (
         }
 
         // Calculate available width for text
-        const availableWidth = options.page.maxContentWidth - indent - cursor.x;
+        const availableWidth = options.page.maxContentWidth - indent - RenderStore.X;
 
         // Split text into lines
         const textLines = doc.splitTextToSize(text, availableWidth);
@@ -77,9 +77,9 @@ const renderInlineText = (
             // render first line
             doc.text(
                 firstLine,
-                cursor.x +
-                    (indent >= 2 ? indent + 2 * spaceMultiplier(style) : 0),
-                cursor.y,
+                RenderStore.X +
+                (indent >= 2 ? indent + 2 * spaceMultiplier(style) : 0),
+                RenderStore.Y,
                 {
                     baseline: 'top',
                     maxWidth: availableWidth,
@@ -87,8 +87,8 @@ const renderInlineText = (
             );
 
             // update cursor position
-            cursor.x = options.page.xpading + indent;
-            cursor.y += getCharHight(doc, options);
+            RenderStore.updateX(options.page.xpading + indent);
+            RenderStore.updateY(getCharHight(doc, options), 'add');
 
             // render rest of the content in the next line with up to indent
             const maxWidthForRest =
@@ -98,23 +98,22 @@ const renderInlineText = (
                 options.page.xmargin;
             const restLines = doc.splitTextToSize(restContent, maxWidthForRest);
             restLines.forEach((line: string) => {
-                doc.text(line, cursor.x + indent, cursor.y, {
+                doc.text(line, RenderStore.X + indent, RenderStore.Y, {
                     baseline: 'top',
                     maxWidth: maxWidthForRest,
                 });
                 // update cursor position
-                cursor.x = indent;
-                cursor.y += getCharHight(doc, options);
+                RenderStore.updateX(options.page.xpading + indent);
+                RenderStore.updateY(getCharHight(doc, options), 'add');
             });
         } else {
-            doc.text(text, cursor.x + indent, cursor.y, {
+            doc.text(text, RenderStore.X + indent, RenderStore.Y, {
                 baseline: 'top',
                 maxWidth: availableWidth,
             });
-            cursor.x +=
-                doc.getTextDimensions(text).w +
+            RenderStore.updateX(doc.getTextDimensions(text).w +
                 (indent >= 2 ? text.split(' ').length + 2 : 2) *
-                    spaceMultiplier(style);
+                spaceMultiplier(style), 'add');
         }
     };
 
@@ -169,8 +168,6 @@ const renderInlineText = (
     // Restore original font settings
     doc.setFont(currentFont, currentFontStyle);
     doc.setFontSize(currentFontSize);
-
-    return cursor;
 };
 
 export default renderInlineText;
