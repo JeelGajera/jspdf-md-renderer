@@ -1,6 +1,5 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types';
-import { RenderOption } from '../../types';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
 import { getCharHight } from '../../utils/doc-helpers';
 import { RenderStore } from '../../store/renderStore';
@@ -9,36 +8,36 @@ const renderCodeBlock = (
     doc: jsPDF,
     element: ParsedElement,
     indentLevel: number,
-    hasRawBullet: boolean,
-    options: RenderOption,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    hasRawBullet: boolean
 ) => {
-    const indent = indentLevel * options.page.indent;
+    const indent = indentLevel * RenderStore.options.page.indent;
     if (
         RenderStore.Y +
         doc.splitTextToSize(
             element.code ?? '',
-            options.page.maxContentWidth - indent,
+            RenderStore.options.page.maxContentWidth - indent,
         ).length *
-        getCharHight(doc, options) -
-        2 * getCharHight(doc, options) >=
-        options.page.maxContentHeight
+        getCharHight(doc, RenderStore.options) -
+        2 * getCharHight(doc, RenderStore.options) >=
+        RenderStore.options.page.maxContentHeight
     ) {
-        HandlePageBreaks(doc, options);
-        RenderStore.updateY(options.page.topmargin);
+        HandlePageBreaks(doc, RenderStore.options);
+        RenderStore.updateY(RenderStore.options.page.topmargin);
     }
 
     const totalHeight =
         doc.splitTextToSize(
             element.code ?? '',
-            options.page.maxContentWidth - indent,
-        ).length * getCharHight(doc, options);
-    RenderStore.updateY(options.page.lineSpace, 'add');
+            RenderStore.options.page.maxContentWidth - indent,
+        ).length * getCharHight(doc, RenderStore.options);
+    RenderStore.updateY(RenderStore.options.page.lineSpace, 'add');
     doc.setFillColor('#EEEEEE');
     doc.setDrawColor('#eee');
     doc.roundedRect(
         RenderStore.X,
-        RenderStore.Y - options.page.lineSpace,
-        options.page.maxContentWidth,
+        RenderStore.Y - RenderStore.options.page.lineSpace,
+        RenderStore.options.page.maxContentWidth,
         totalHeight,
         2,
         2,
@@ -48,12 +47,12 @@ const renderCodeBlock = (
     doc.text(
         element.lang ?? '',
         RenderStore.X +
-        options.page.maxContentWidth -
+        RenderStore.options.page.maxContentWidth -
         doc.getTextWidth(element.lang ?? '') -
-        options.page.lineSpace / 2,
+        RenderStore.options.page.lineSpace / 2,
         RenderStore.Y,
     );
-    doc.setFontSize(options.page.defaultFontSize);
+    doc.setFontSize(RenderStore.options.page.defaultFontSize);
     doc.text(element.code ?? '', RenderStore.X + 4, RenderStore.Y);
 
     RenderStore.updateY(totalHeight, 'add');

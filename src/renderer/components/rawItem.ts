@@ -1,6 +1,5 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { RenderOption } from '../../types/renderOption';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
 import { getCharHight } from '../../utils/doc-helpers';
 import { justifyText } from '../../utils/justifyText';
@@ -11,7 +10,6 @@ const renderRawItem = (
     element: ParsedElement,
     indentLevel: number,
     hasRawBullet: boolean,
-    options: RenderOption,
     parentElementRenderer: (
         element: ParsedElement,
         indentLevel: number,
@@ -36,13 +34,13 @@ const renderRawItem = (
             );
         }
     } else {
-        const indent = indentLevel * options.page.indent;
+        const indent = indentLevel * RenderStore.options.page.indent;
         const bullet = hasRawBullet ? (ordered ? `${start}. ` : '\u2022 ') : '';
         if (hasRawBullet && bullet) {
             // Align all wrapped lines with the first line's text (after bullet)
             const bulletWidth = doc.getTextWidth(bullet);
             const textMaxWidth =
-                options.page.maxContentWidth - indent - bulletWidth;
+                RenderStore.options.page.maxContentWidth - indent - bulletWidth;
             const textLines = doc.splitTextToSize(
                 element.content || '',
                 textMaxWidth,
@@ -64,8 +62,8 @@ const renderRawItem = (
                 );
                 // Render wrapped lines
                 for (let i = 1; i < textLines.length; i++) {
-                    RenderStore.updateX(options.page.xpading);
-                    RenderStore.updateY(getCharHight(doc, options), 'add');
+                    RenderStore.updateX(RenderStore.options.page.xpading);
+                    RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
                     doc.text(
                         textLines[i],
                         RenderStore.X + indent + bulletWidth,
@@ -77,22 +75,22 @@ const renderRawItem = (
                     );
                 }
                 // Update cursor position
-                RenderStore.updateY(getCharHight(doc, options), 'add');
-                RenderStore.updateX(options.page.xpading + indent);
+                RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
+                RenderStore.updateX(RenderStore.options.page.xpading + indent);
                 const contentWidth = doc.getTextWidth(element.content || '');
                 RenderStore.updateX(contentWidth, 'add');
             }
         } else {
             const lines = doc.splitTextToSize(
                 element.content || '',
-                options.page.maxContentWidth - indent,
+                RenderStore.options.page.maxContentWidth - indent,
             );
             if (
-                RenderStore.Y + lines.length * getCharHight(doc, options) >=
-                options.page.maxContentHeight
+                RenderStore.Y + lines.length * getCharHight(doc, RenderStore.options) >=
+                RenderStore.options.page.maxContentHeight
             ) {
-                HandlePageBreaks(doc, options);
-                RenderStore.updateY(options.page.topmargin);
+                HandlePageBreaks(doc, RenderStore.options);
+                RenderStore.updateY(RenderStore.options.page.topmargin);
             }
             if (justify) {
                 const yPoint =
@@ -101,11 +99,11 @@ const renderRawItem = (
                         element.content || '',
                         RenderStore.X + indent,
                         RenderStore.Y,
-                        options.page.maxContentWidth - indent,
-                        options.page.defaultLineHeightFactor,
-                    ).y + getCharHight(doc, options);
+                        RenderStore.options.page.maxContentWidth - indent,
+                        RenderStore.options.page.defaultLineHeightFactor,
+                    ).y + getCharHight(doc, RenderStore.options);
                 RenderStore.updateY(yPoint);
-                RenderStore.updateX(options.page.xpading);
+                RenderStore.updateX(RenderStore.options.page.xpading);
             } else {
                 doc.text(element.content || '', RenderStore.X + indent, RenderStore.Y, {
                     baseline: 'top',
@@ -113,11 +111,11 @@ const renderRawItem = (
                 RenderStore.updateX(doc.getTextWidth(element.content || ''), 'add');
                 if (
                     RenderStore.X >=
-                    options.page.xpading + options.page.maxContentWidth
+                    RenderStore.options.page.xpading + RenderStore.options.page.maxContentWidth
                 ) {
-                    HandlePageBreaks(doc, options);
-                    RenderStore.updateX(options.page.xpading);
-                    RenderStore.updateY(options.page.topmargin);
+                    HandlePageBreaks(doc, RenderStore.options);
+                    RenderStore.updateX(RenderStore.options.page.xpading);
+                    RenderStore.updateY(RenderStore.options.page.topmargin);
                 }
             }
         }

@@ -2,10 +2,10 @@ import { Cursor, RenderOption } from "../types";
 
 export class RenderStore {
     private static cursor: Cursor = { x: 0, y: 0 };
-    private static options: RenderOption;
+    private static options_: RenderOption;
 
     public static initialize(options: RenderOption) {
-        this.options = options;
+        this.options_ = options;
         this.cursor = { x: options.cursor.x, y: options.cursor.y };
     }
 
@@ -17,8 +17,8 @@ export class RenderStore {
         this.cursor = newCursor;
     }
 
-    public static getOptions(): RenderOption {
-        return this.options;
+    public static get options(): RenderOption {
+        return this.options_;
     }
 
     /**
@@ -50,11 +50,11 @@ export class RenderStore {
     }
 
     // Convenience methods to get individual x and y values
-    public static  get X(): number {
+    public static get X(): number {
         return this.cursor.x;
     }
 
-    public static  get Y(): number {
+    public static get Y(): number {
         return this.cursor.y;
     }
 }

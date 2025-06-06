@@ -1,6 +1,5 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { RenderOption } from '../../types/renderOption';
 import { getCharHight } from '../../utils/doc-helpers';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
 import renderInlineText from './inlineText';
@@ -14,7 +13,6 @@ const renderListItem = (
     doc: jsPDF,
     element: ParsedElement,
     indentLevel: number,
-    options: RenderOption,
     parentElementRenderer: (
         element: ParsedElement,
         indentLevel: number,
@@ -26,21 +24,21 @@ const renderListItem = (
     ordered: boolean,
 ) => {
     // We'll calculate a base indent so list items at the same level are aligned
-    const baseIndent = indentLevel * options.page.indent;
+    const baseIndent = indentLevel * RenderStore.options.page.indent;
     // The bullet or number for this item
     const bullet = ordered ? `${start}. ` : '\u2022 ';
 
     // If we are close to bottom, do a page break
     if (
-        RenderStore.Y + getCharHight(doc, options) >=
-        options.page.maxContentHeight
+        RenderStore.Y + getCharHight(doc, RenderStore.options) >=
+        RenderStore.options.page.maxContentHeight
     ) {
-        HandlePageBreaks(doc, options);
-        RenderStore.updateY(options.page.topmargin);
+        HandlePageBreaks(doc, RenderStore.options);
+        RenderStore.updateY(RenderStore.options.page.topmargin);
     }
 
     // 1) Print the bullet at (x + baseIndent, y)
-    doc.setFont(options.font.regular.name, options.font.regular.style);
+    doc.setFont(RenderStore.options.font.regular.name, RenderStore.options.font.regular.style);
     doc.text(bullet, RenderStore.X + baseIndent, RenderStore.Y, { baseline: 'top' });
 
     // 2) Move x forward by bullet width
@@ -54,11 +52,11 @@ const renderListItem = (
         for (const subItem of element.items) {
             // Check for page break before each sub-item
             if (
-                RenderStore.Y + getCharHight(doc, options) >=
-                options.page.maxContentHeight
+                RenderStore.Y + getCharHight(doc, RenderStore.options) >=
+                RenderStore.options.page.maxContentHeight
             ) {
-                HandlePageBreaks(doc, options);
-                RenderStore.updateY(options.page.topmargin);
+                HandlePageBreaks(doc, RenderStore.options);
+                RenderStore.updateY(RenderStore.options.page.topmargin);
             }
 
             if (subItem.type === MdTokenType.List) {
@@ -91,21 +89,20 @@ const renderListItem = (
                 renderInlineText(
                     doc,
                     subItem,
-                    baseIndent,
-                    options,
+                    baseIndent
                 );
             }
 
             // Move to next line after each sub-item (and reset x to left)
-            RenderStore.updateX(options.page.xpading)
-            RenderStore.updateY(getCharHight(doc, options), 'add');
+            RenderStore.updateX(RenderStore.options.page.xpading)
+            RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
         }
     } else if (element.content) {
         // handle text with line breaks page break & multiple lines texts
         const bulletX = RenderStore.X + baseIndent;
         const bulletWidth = doc.getTextWidth(bullet);
         const textMaxWidth =
-            options.page.maxContentWidth - baseIndent - bulletWidth;
+            RenderStore.options.page.maxContentWidth - baseIndent - bulletWidth;
         // Split the content into lines, accounting for the bullet only on the first line
         const textLines = doc.splitTextToSize(element.content, textMaxWidth);
         // Render first line with bullet
@@ -118,15 +115,15 @@ const renderListItem = (
             // doc.text(bullet, bulletX, cursor.y, { baseline: 'top' });
             // Render wrapped lines (if any)
             for (let i = 1; i < textLines.length; i++) {
-                RenderStore.updateY(getCharHight(doc, options), 'add');
+                RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
                 doc.text(textLines[i], bulletX + bulletWidth, RenderStore.Y, {
                     baseline: 'top',
                     maxWidth: textMaxWidth,
                 });
             }
             // Update cursor position
-            RenderStore.updateY(getCharHight(doc, options), 'add');
-            RenderStore.updateX(options.page.xmargin + baseIndent);
+            RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
+            RenderStore.updateX(RenderStore.options.page.xmargin + baseIndent);
             // Move the cursor forward by the text width (optional, but keep for compatibility)
             const contentWidth = doc.getTextWidth(element.content);
             RenderStore.updateX(contentWidth, 'add');
