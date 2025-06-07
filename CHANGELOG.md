@@ -1,3 +1,12 @@
+# [1.7.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.6.4...v1.7.0) (2025-06-07)
+
+
+### Features
+
+* inline locking for paragraph  rending ([dd7d05a](https://github.com/JeelGajera/jspdf-md-renderer/commit/dd7d05a75bbd7dd51ccef10918a5b55779a46401))
+
+
+
 ## [1.6.4](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.6.2...v1.6.4) (2025-06-05)
 
 
@@ -26,15 +35,6 @@
 ### Features
 
 * **list-rendering:** improve nested list rendering and indentation in PDF output ([12ad759](https://github.com/JeelGajera/jspdf-md-renderer/commit/12ad75980ee3b0b958e1eef079abc3358ea0603d))
-
-
-
-## [1.5.1](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.5.0...v1.5.1) (2025-04-12)
-
-
-### Bug Fixes
-
-* **readme:** update README and examples to include additional emphasis styles ([580b50d](https://github.com/JeelGajera/jspdf-md-renderer/commit/580b50dc21c0e5211aa23190e77579cb8d1e4e84))
 
 
 
