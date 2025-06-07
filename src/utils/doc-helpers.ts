@@ -1,10 +1,10 @@
 import jsPDF from 'jspdf';
-import { RenderOption } from '../types';
+import { RenderStore } from '../store/renderStore';
 
-export const getCharHight = (doc: jsPDF, options: RenderOption): number => {
-    return doc.getTextDimensions('H').h * options.page.defaultLineHeightFactor;
+export const getCharHight = (doc: jsPDF): number => {
+    return doc.getTextDimensions('H').h * RenderStore.options.page.defaultLineHeightFactor;
 };
 
-export const getCharWidth = (doc: jsPDF, options: RenderOption): number => {
-    return doc.getTextDimensions('H').w * options.page.defaultLineHeightFactor;
+export const getCharWidth = (doc: jsPDF): number => {
+    return doc.getTextDimensions('H').w * RenderStore.options.page.defaultLineHeightFactor;
 };

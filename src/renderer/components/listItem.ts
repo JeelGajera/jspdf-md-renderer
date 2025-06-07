@@ -30,7 +30,7 @@ const renderListItem = (
 
     // If we are close to bottom, do a page break
     if (
-        RenderStore.Y + getCharHight(doc, RenderStore.options) >=
+        RenderStore.Y + getCharHight(doc) >=
         RenderStore.options.page.maxContentHeight
     ) {
         HandlePageBreaks(doc, RenderStore.options);
@@ -56,7 +56,7 @@ const renderListItem = (
         for (const subItem of element.items) {
             // Check for page break before each sub-item
             if (
-                RenderStore.Y + getCharHight(doc, RenderStore.options) >=
+                RenderStore.Y + getCharHight(doc) >=
                 RenderStore.options.page.maxContentHeight
             ) {
                 HandlePageBreaks(doc, RenderStore.options);
@@ -94,7 +94,7 @@ const renderListItem = (
 
             // Move to next line after each sub-item (and reset x to left)
             RenderStore.updateX(RenderStore.options.page.xpading);
-            RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
+            RenderStore.updateY(getCharHight(doc), 'add');
         }
     } else if (element.content) {
         // handle text with line breaks page break & multiple lines texts
@@ -115,7 +115,7 @@ const renderListItem = (
             // Render wrapped lines (if any)
             for (let i = 1; i < textLines.length; i++) {
                 RenderStore.updateY(
-                    getCharHight(doc, RenderStore.options),
+                    getCharHight(doc),
                     'add',
                 );
                 doc.text(textLines[i], bulletX + bulletWidth, RenderStore.Y, {
@@ -124,7 +124,7 @@ const renderListItem = (
                 });
             }
             // Update cursor position
-            RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
+            RenderStore.updateY(getCharHight(doc), 'add');
             RenderStore.updateX(RenderStore.options.page.xmargin + baseIndent);
             // Move the cursor forward by the text width (optional, but keep for compatibility)
             const contentWidth = doc.getTextWidth(element.content);

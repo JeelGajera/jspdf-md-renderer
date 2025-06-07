@@ -36,7 +36,7 @@ const renderHeading = (
     // Reset font size to default after heading
     doc.setFontSize(RenderStore.options.page.defaultFontSize);
     // Move cursor to the next line after heading
-    // RenderStore.updateY((size*.2) * getCharHight(doc, RenderStore.options), 'add');
+    // RenderStore.updateY((size*.2) * getCharHight(doc), 'add');
     RenderStore.updateX(RenderStore.options.page.xpading);
 };
 
