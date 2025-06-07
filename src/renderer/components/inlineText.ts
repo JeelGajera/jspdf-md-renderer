@@ -9,7 +9,7 @@ import { RenderStore } from '../../store/renderStore';
 const renderInlineText = (
     doc: jsPDF,
     element: ParsedElement,
-    indent: number
+    indent: number,
 ) => {
     // Save current font settings
     const currentFont = doc.getFont().fontName;
@@ -41,7 +41,8 @@ const renderInlineText = (
         // Set font style
         if (style === 'bold') {
             doc.setFont(
-                RenderStore.options.font.bold.name && RenderStore.options.font.bold.name !== ''
+                RenderStore.options.font.bold.name &&
+                    RenderStore.options.font.bold.name !== ''
                     ? RenderStore.options.font.bold.name
                     : currentFont,
                 RenderStore.options.font.bold.style || 'bold',
@@ -50,17 +51,22 @@ const renderInlineText = (
             doc.setFont(RenderStore.options.font.regular.name, 'italic');
         } else if (style === 'bolditalic') {
             doc.setFont(
-                RenderStore.options.font.bold.name && RenderStore.options.font.bold.name !== ''
+                RenderStore.options.font.bold.name &&
+                    RenderStore.options.font.bold.name !== ''
                     ? RenderStore.options.font.bold.name
                     : currentFont,
                 'bolditalic',
             );
         } else {
-            doc.setFont(RenderStore.options.font.regular.name, currentFontStyle);
+            doc.setFont(
+                RenderStore.options.font.regular.name,
+                currentFontStyle,
+            );
         }
 
         // Calculate available width for text
-        const availableWidth = RenderStore.options.page.maxContentWidth - indent - RenderStore.X;
+        const availableWidth =
+            RenderStore.options.page.maxContentWidth - indent - RenderStore.X;
 
         // Split text into lines
         const textLines = doc.splitTextToSize(text, availableWidth);
@@ -76,7 +82,7 @@ const renderInlineText = (
             doc.text(
                 firstLine,
                 RenderStore.X +
-                (indent >= 2 ? indent + 2 * spaceMultiplier(style) : 0),
+                    (indent >= 2 ? indent + 2 * spaceMultiplier(style) : 0),
                 RenderStore.Y,
                 {
                     baseline: 'top',
@@ -102,16 +108,22 @@ const renderInlineText = (
                 });
                 // update cursor position
                 RenderStore.updateX(RenderStore.options.page.xpading + indent);
-                RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
+                RenderStore.updateY(
+                    getCharHight(doc, RenderStore.options),
+                    'add',
+                );
             });
         } else {
             doc.text(text, RenderStore.X + indent, RenderStore.Y, {
                 baseline: 'top',
                 maxWidth: availableWidth,
             });
-            RenderStore.updateX(doc.getTextDimensions(text).w +
-                (indent >= 2 ? text.split(' ').length + 2 : 2) *
-                spaceMultiplier(style), 'add');
+            RenderStore.updateX(
+                doc.getTextDimensions(text).w +
+                    (indent >= 2 ? text.split(' ').length + 2 : 2) *
+                        spaceMultiplier(style),
+                'add',
+            );
         }
     };
 

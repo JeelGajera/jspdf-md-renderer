@@ -16,7 +16,6 @@ const renderList = (
     ) => void,
 ) => {
     doc.setFontSize(RenderStore.options.page.defaultFontSize);
-    // doc.setFont(RenderStore.options.font.light.name, RenderStore.options.font.light.style);
     for (const [i, point] of element?.items?.entries() ?? []) {
         const _start = element.ordered
             ? (element.start ?? 0) + i
@@ -28,7 +27,10 @@ const renderList = (
             _start,
             element.ordered,
         );
-        RenderStore.updateY(getCharHight(doc, RenderStore.options) * 0.2); // Recursively render nested list items
+        RenderStore.updateY(
+            getCharHight(doc, RenderStore.options) * 0.2,
+            'add',
+        ); // Recursively render nested list items
     }
 };
 

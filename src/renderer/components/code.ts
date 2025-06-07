@@ -9,21 +9,20 @@ const renderCodeBlock = (
     element: ParsedElement,
     indentLevel: number,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    hasRawBullet: boolean
+    hasRawBullet: boolean,
 ) => {
     const indent = indentLevel * RenderStore.options.page.indent;
     if (
         RenderStore.Y +
-        doc.splitTextToSize(
-            element.code ?? '',
-            RenderStore.options.page.maxContentWidth - indent,
-        ).length *
-        getCharHight(doc, RenderStore.options) -
-        2 * getCharHight(doc, RenderStore.options) >=
+            doc.splitTextToSize(
+                element.code ?? '',
+                RenderStore.options.page.maxContentWidth - indent,
+            ).length *
+                getCharHight(doc, RenderStore.options) -
+            2 * getCharHight(doc, RenderStore.options) >=
         RenderStore.options.page.maxContentHeight
     ) {
         HandlePageBreaks(doc, RenderStore.options);
-        RenderStore.updateY(RenderStore.options.page.topmargin);
     }
 
     const totalHeight =
@@ -47,9 +46,9 @@ const renderCodeBlock = (
     doc.text(
         element.lang ?? '',
         RenderStore.X +
-        RenderStore.options.page.maxContentWidth -
-        doc.getTextWidth(element.lang ?? '') -
-        RenderStore.options.page.lineSpace / 2,
+            RenderStore.options.page.maxContentWidth -
+            doc.getTextWidth(element.lang ?? '') -
+            RenderStore.options.page.lineSpace / 2,
         RenderStore.Y,
     );
     doc.setFontSize(RenderStore.options.page.defaultFontSize);

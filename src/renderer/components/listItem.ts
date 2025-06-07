@@ -34,12 +34,16 @@ const renderListItem = (
         RenderStore.options.page.maxContentHeight
     ) {
         HandlePageBreaks(doc, RenderStore.options);
-        RenderStore.updateY(RenderStore.options.page.topmargin);
     }
 
     // 1) Print the bullet at (x + baseIndent, y)
-    doc.setFont(RenderStore.options.font.regular.name, RenderStore.options.font.regular.style);
-    doc.text(bullet, RenderStore.X + baseIndent, RenderStore.Y, { baseline: 'top' });
+    doc.setFont(
+        RenderStore.options.font.regular.name,
+        RenderStore.options.font.regular.style,
+    );
+    doc.text(bullet, RenderStore.X + baseIndent, RenderStore.Y, {
+        baseline: 'top',
+    });
 
     // 2) Move x forward by bullet width
     const bulletWidth = doc.getTextWidth(bullet);
@@ -56,7 +60,6 @@ const renderListItem = (
                 RenderStore.options.page.maxContentHeight
             ) {
                 HandlePageBreaks(doc, RenderStore.options);
-                RenderStore.updateY(RenderStore.options.page.topmargin);
             }
 
             if (subItem.type === MdTokenType.List) {
@@ -86,15 +89,11 @@ const renderListItem = (
             } else {
                 // Inline content (e.g., emphasis, text, strong)
                 // Render on the same line (indented after bullet)
-                renderInlineText(
-                    doc,
-                    subItem,
-                    baseIndent
-                );
+                renderInlineText(doc, subItem, baseIndent);
             }
 
             // Move to next line after each sub-item (and reset x to left)
-            RenderStore.updateX(RenderStore.options.page.xpading)
+            RenderStore.updateX(RenderStore.options.page.xpading);
             RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
         }
     } else if (element.content) {
@@ -115,7 +114,10 @@ const renderListItem = (
             // doc.text(bullet, bulletX, cursor.y, { baseline: 'top' });
             // Render wrapped lines (if any)
             for (let i = 1; i < textLines.length; i++) {
-                RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
+                RenderStore.updateY(
+                    getCharHight(doc, RenderStore.options),
+                    'add',
+                );
                 doc.text(textLines[i], bulletX + bulletWidth, RenderStore.Y, {
                     baseline: 'top',
                     maxWidth: textMaxWidth,

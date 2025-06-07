@@ -22,15 +22,12 @@ const renderParagraph = (
     doc.setFontSize(RenderStore.options.page.defaultFontSize);
     let content = element.content;
     const lineHeight =
-        doc.getTextDimensions('A').h * RenderStore.options.page.defaultLineHeightFactor;
+        doc.getTextDimensions('A').h *
+        RenderStore.options.page.defaultLineHeightFactor;
     if (element?.items && element?.items.length > 0) {
         for (const item of element?.items ?? []) {
-            if (["strong"].includes(item.type)) {
-                renderInlineText(
-                    doc,
-                    item,
-                    indent
-                );
+            if (['strong'].includes(item.type)) {
+                renderInlineText(doc, item, indent);
             } else {
                 parentElementRenderer(item, indent, false);
             }
@@ -38,12 +35,12 @@ const renderParagraph = (
     } else {
         if (
             RenderStore.Y +
-            doc.splitTextToSize(
-                content ?? '',
-                RenderStore.options.page.maxContentWidth - indent,
-            ).length *
-            lineHeight -
-            3 * lineHeight >=
+                doc.splitTextToSize(
+                    content ?? '',
+                    RenderStore.options.page.maxContentWidth - indent,
+                ).length *
+                    lineHeight -
+                3 * lineHeight >=
             RenderStore.options.page.maxContentHeight
         ) {
             // ADD Possible text to Page bottom
@@ -54,9 +51,15 @@ const renderParagraph = (
             const possibleContentLines: string[] = [];
             const possibleContentY = RenderStore.Y;
             for (let j = 0; j < contentLeft.length; j++) {
-                if (RenderStore.Y - 2 * lineHeight < RenderStore.options.page.maxContentHeight) {
+                if (
+                    RenderStore.Y - 2 * lineHeight <
+                    RenderStore.options.page.maxContentHeight
+                ) {
                     possibleContentLines.push(contentLeft[j]);
-                    RenderStore.updateY(RenderStore.options.page.lineSpace, 'add');
+                    RenderStore.updateY(
+                        RenderStore.options.page.lineSpace,
+                        'add',
+                    );
                 } else {
                     // set left content to move next page
                     if (j <= contentLeft.length - 1) {
@@ -74,10 +77,9 @@ const renderParagraph = (
                     RenderStore.options.page.maxContentWidth - indent,
                     RenderStore.options.page.defaultLineHeightFactor,
                 );
-                RenderStore.setCursor(cursor)
+                RenderStore.setCursor(cursor);
             }
             HandlePageBreaks(doc, RenderStore.options);
-            RenderStore.updateY(RenderStore.options.page.topmargin);
         }
         const yPointer =
             justifyText(
@@ -93,7 +95,7 @@ const renderParagraph = (
 
     // Move to next line after paragraph
     RenderStore.updateY(lineHeight, 'add');
-    RenderStore.updateX(RenderStore.options.page.xpading)
+    RenderStore.updateX(RenderStore.options.page.xpading);
 };
 
 export default renderParagraph;

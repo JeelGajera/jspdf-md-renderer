@@ -63,7 +63,10 @@ const renderRawItem = (
                 // Render wrapped lines
                 for (let i = 1; i < textLines.length; i++) {
                     RenderStore.updateX(RenderStore.options.page.xpading);
-                    RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
+                    RenderStore.updateY(
+                        getCharHight(doc, RenderStore.options),
+                        'add',
+                    );
                     doc.text(
                         textLines[i],
                         RenderStore.X + indent + bulletWidth,
@@ -75,7 +78,10 @@ const renderRawItem = (
                     );
                 }
                 // Update cursor position
-                RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
+                RenderStore.updateY(
+                    getCharHight(doc, RenderStore.options),
+                    'add',
+                );
                 RenderStore.updateX(RenderStore.options.page.xpading + indent);
                 const contentWidth = doc.getTextWidth(element.content || '');
                 RenderStore.updateX(contentWidth, 'add');
@@ -86,11 +92,11 @@ const renderRawItem = (
                 RenderStore.options.page.maxContentWidth - indent,
             );
             if (
-                RenderStore.Y + lines.length * getCharHight(doc, RenderStore.options) >=
+                RenderStore.Y +
+                    lines.length * getCharHight(doc, RenderStore.options) >=
                 RenderStore.options.page.maxContentHeight
             ) {
                 HandlePageBreaks(doc, RenderStore.options);
-                RenderStore.updateY(RenderStore.options.page.topmargin);
             }
             if (justify) {
                 const yPoint =
@@ -105,17 +111,24 @@ const renderRawItem = (
                 RenderStore.updateY(yPoint);
                 RenderStore.updateX(RenderStore.options.page.xpading);
             } else {
-                doc.text(element.content || '', RenderStore.X + indent, RenderStore.Y, {
-                    baseline: 'top',
-                });
-                RenderStore.updateX(doc.getTextWidth(element.content || ''), 'add');
+                doc.text(
+                    element.content || '',
+                    RenderStore.X + indent,
+                    RenderStore.Y,
+                    {
+                        baseline: 'top',
+                    },
+                );
+                RenderStore.updateX(
+                    doc.getTextWidth(element.content || ''),
+                    'add',
+                );
                 if (
                     RenderStore.X >=
-                    RenderStore.options.page.xpading + RenderStore.options.page.maxContentWidth
+                    RenderStore.options.page.xpading +
+                        RenderStore.options.page.maxContentWidth
                 ) {
                     HandlePageBreaks(doc, RenderStore.options);
-                    RenderStore.updateX(RenderStore.options.page.xpading);
-                    RenderStore.updateY(RenderStore.options.page.topmargin);
                 }
             }
         }
