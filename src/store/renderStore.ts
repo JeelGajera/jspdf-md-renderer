@@ -1,4 +1,4 @@
-import { Cursor, RenderOption } from "../types";
+import { Cursor, RenderOption } from '../types';
 
 export class RenderStore {
     private static cursor: Cursor = { x: 0, y: 0 };

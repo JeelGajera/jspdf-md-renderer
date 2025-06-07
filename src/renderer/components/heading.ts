@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { getCharHight } from '../../utils/doc-helpers';
+// import { getCharHight } from '../../utils/doc-helpers';
 import { RenderStore } from '../../store/renderStore';
 
 /**
@@ -23,17 +23,21 @@ const renderHeading = (
             parentElementRenderer(item, indent, false);
         }
     } else {
-        doc.text(element?.content ?? '', RenderStore.X + indent, RenderStore.Y, {
-            align: 'left',
-            maxWidth: RenderStore.options.page.maxContentWidth - indent,
-        });
-        RenderStore.updateY(1.5 * getCharHight(doc, RenderStore.options), 'add');
+        doc.text(
+            element?.content ?? '',
+            RenderStore.X + indent,
+            RenderStore.Y,
+            {
+                align: 'left',
+                maxWidth: RenderStore.options.page.maxContentWidth - indent,
+            },
+        );
     }
     // Reset font size to default after heading
     doc.setFontSize(RenderStore.options.page.defaultFontSize);
     // Move cursor to the next line after heading
-    RenderStore.updateY((4 - (element?.depth ?? 1)) * getCharHight(doc, RenderStore.options), 'add');
-    RenderStore.updateX(RenderStore.options.page.xpading)
+    // RenderStore.updateY((size*.2) * getCharHight(doc, RenderStore.options), 'add');
+    RenderStore.updateX(RenderStore.options.page.xpading);
 };
 
 export default renderHeading;

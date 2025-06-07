@@ -29,9 +29,9 @@ export const MdTextRender = async (
     text: string,
     options: RenderOption,
 ) => {
+    RenderStore.initialize(options);
     const parsedElements = await MdTextParser(text);
     console.log(parsedElements);
-    RenderStore.initialize(options);
 
     const renderElement = (
         element: ParsedElement,
@@ -52,7 +52,6 @@ export const MdTextRender = async (
             options.page.maxContentHeight
         ) {
             HandlePageBreaks(doc, options);
-            RenderStore.updateY(options.page.topmargin);
         }
 
         switch (element.type) {
@@ -107,12 +106,10 @@ export const MdTextRender = async (
                 );
                 break;
         }
-    };  
+    };
 
     for (const item of parsedElements) {
         renderElement(item);
-        console.log(`Rendered element: ${item.type}, Y position: ${RenderStore.Y}`);
-        
     }
 
     options.endCursorYHandler(RenderStore.Y);
