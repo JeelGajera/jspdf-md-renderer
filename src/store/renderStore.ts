@@ -3,6 +3,7 @@ import { Cursor, RenderOption } from '../types';
 export class RenderStore {
     private static cursor: Cursor = { x: 0, y: 0 };
     private static options_: RenderOption;
+    private static inlineLock: boolean = false;
 
     public static initialize(options: RenderOption) {
         this.options_ = options;
@@ -19,6 +20,18 @@ export class RenderStore {
 
     public static get options(): RenderOption {
         return this.options_;
+    }
+
+    public static get isInlineLockActive(): boolean {
+        return this.inlineLock;
+    }
+
+    public static activateInlineLock() {
+        this.inlineLock = true;
+    }
+
+    public static deactivateInlineLock() {
+        this.inlineLock = false;
     }
 
     /**

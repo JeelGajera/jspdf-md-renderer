@@ -18,8 +18,8 @@ const renderCodeBlock = (
                 element.code ?? '',
                 RenderStore.options.page.maxContentWidth - indent,
             ).length *
-                getCharHight(doc, RenderStore.options) -
-            2 * getCharHight(doc, RenderStore.options) >=
+                getCharHight(doc) -
+            2 * getCharHight(doc) >=
         RenderStore.options.page.maxContentHeight
     ) {
         HandlePageBreaks(doc, RenderStore.options);
@@ -29,7 +29,7 @@ const renderCodeBlock = (
         doc.splitTextToSize(
             element.code ?? '',
             RenderStore.options.page.maxContentWidth - indent,
-        ).length * getCharHight(doc, RenderStore.options);
+        ).length * getCharHight(doc);
     RenderStore.updateY(RenderStore.options.page.lineSpace, 'add');
     doc.setFillColor('#EEEEEE');
     doc.setDrawColor('#eee');

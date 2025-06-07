@@ -64,7 +64,7 @@ const renderRawItem = (
                 for (let i = 1; i < textLines.length; i++) {
                     RenderStore.updateX(RenderStore.options.page.xpading);
                     RenderStore.updateY(
-                        getCharHight(doc, RenderStore.options),
+                        getCharHight(doc),
                         'add',
                     );
                     doc.text(
@@ -79,7 +79,7 @@ const renderRawItem = (
                 }
                 // Update cursor position
                 RenderStore.updateY(
-                    getCharHight(doc, RenderStore.options),
+                    getCharHight(doc),
                     'add',
                 );
                 RenderStore.updateX(RenderStore.options.page.xpading + indent);
@@ -93,7 +93,7 @@ const renderRawItem = (
             );
             if (
                 RenderStore.Y +
-                    lines.length * getCharHight(doc, RenderStore.options) >=
+                    lines.length * getCharHight(doc) >=
                 RenderStore.options.page.maxContentHeight
             ) {
                 HandlePageBreaks(doc, RenderStore.options);
@@ -107,7 +107,7 @@ const renderRawItem = (
                         RenderStore.Y,
                         RenderStore.options.page.maxContentWidth - indent,
                         RenderStore.options.page.defaultLineHeightFactor,
-                    ).y + getCharHight(doc, RenderStore.options);
+                    ).y + getCharHight(doc);
                 RenderStore.updateY(yPoint);
                 RenderStore.updateX(RenderStore.options.page.xpading);
             } else {

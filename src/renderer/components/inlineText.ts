@@ -71,70 +71,82 @@ const renderInlineText = (
         // Split text into lines
         const textLines = doc.splitTextToSize(text, availableWidth);
 
-        // Render lines
-        if (textLines.length > 1) {
-            // If the text is too long, adjust the cursor position for each line
-            // render firstline i availabe width
-            // and rest of the content in the next line with up to indent
-            const firstLine = textLines[0];
-            const restContent = textLines?.slice(1)?.join(' ');
-            // render first line
-            doc.text(
-                firstLine,
-                RenderStore.X +
-                    (indent >= 2 ? indent + 2 * spaceMultiplier(style) : 0),
-                RenderStore.Y,
-                {
-                    baseline: 'top',
-                    maxWidth: availableWidth,
-                },
-            );
-
-            // update cursor position
-            RenderStore.updateX(RenderStore.options.page.xpading + indent);
-            RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
-
-            // render rest of the content in the next line with up to indent
-            const maxWidthForRest =
-                RenderStore.options.page.maxContentWidth -
-                indent -
-                RenderStore.options.page.xpading -
-                RenderStore.options.page.xmargin;
-            const restLines = doc.splitTextToSize(restContent, maxWidthForRest);
-            restLines.forEach((line: string) => {
-                doc.text(line, RenderStore.X + indent, RenderStore.Y, {
-                    baseline: 'top',
-                    maxWidth: maxWidthForRest,
-                });
-                // update cursor position
-                RenderStore.updateX(RenderStore.options.page.xpading + indent);
-                RenderStore.updateY(
-                    getCharHight(doc, RenderStore.options),
+        if (RenderStore.isInlineLockActive) {
+            // Inline lock: always render inline, only break if width exceeded
+            for (let i = 0; i < textLines.length; i++) {
+                doc.text(
+                    textLines[i],
+                    RenderStore.X + indent,
+                    RenderStore.Y,
+                    {
+                        baseline: 'top',
+                        maxWidth: availableWidth,
+                    },
+                );
+                RenderStore.updateX(
+                    doc.getTextDimensions(textLines[i]).w + 1,
                     'add',
                 );
-            });
+                if (i < textLines.length - 1) {
+                    RenderStore.updateY(getCharHight(doc), 'add');
+                    RenderStore.updateX(RenderStore.options.page.xpading + indent, 'set');
+                }
+            }
         } else {
-            doc.text(text, RenderStore.X + indent, RenderStore.Y, {
-                baseline: 'top',
-                maxWidth: availableWidth,
-            });
-            RenderStore.updateX(
-                doc.getTextDimensions(text).w +
-                    (indent >= 2 ? text.split(' ').length + 2 : 2) *
-                        spaceMultiplier(style),
-                'add',
-            );
+            // Original logic
+            if (textLines.length > 1) {
+                const firstLine = textLines[0];
+                const restContent = textLines?.slice(1)?.join(' ');
+                doc.text(
+                    firstLine,
+                    RenderStore.X +
+                        (indent >= 2 ? indent + 2 * spaceMultiplier(style) : 0),
+                    RenderStore.Y,
+                    {
+                        baseline: 'top',
+                        maxWidth: availableWidth,
+                    },
+                );
+                RenderStore.updateX(RenderStore.options.page.xpading + indent);
+                RenderStore.updateY(getCharHight(doc), 'add');
+                const maxWidthForRest =
+                    RenderStore.options.page.maxContentWidth -
+                    indent -
+                    RenderStore.options.page.xpading -
+                    RenderStore.options.page.xmargin;
+                const restLines = doc.splitTextToSize(restContent, maxWidthForRest);
+                restLines.forEach((line: string) => {
+                    doc.text(line, RenderStore.X + indent, RenderStore.Y, {
+                        baseline: 'top',
+                        maxWidth: maxWidthForRest,
+                    });
+                    RenderStore.updateX(RenderStore.options.page.xpading + indent);
+                    RenderStore.updateY(
+                        getCharHight(doc),
+                        'add',
+                    );
+                });
+            } else {
+                doc.text(text, RenderStore.X + indent, RenderStore.Y, {
+                    baseline: 'top',
+                    maxWidth: availableWidth,
+                });
+                RenderStore.updateX(
+                    doc.getTextDimensions(text).w +
+                        (indent >= 2 ? text.split(' ').length + 2 : 2) *
+                            spaceMultiplier(style),
+                    'add',
+                );
+            }
         }
     };
 
     // Handle the element based on its type
     if (element.type === 'text' && element.items && element.items.length > 0) {
-        // Process nested items (e.g., em, strong, text) inline
         for (const item of element.items) {
             if (item.type === 'em' || item.type === 'strong') {
                 const baseStyle = item.type === 'em' ? 'italic' : 'bold';
                 if (item.items && item.items.length > 0) {
-                    // Handle nested emphasis (e.g., ***Bold and Italic***)
                     for (const subItem of item.items) {
                         if (
                             subItem.type === 'strong' &&
@@ -163,7 +175,6 @@ const renderInlineText = (
                     renderTextWithStyle(item.content || '', baseStyle);
                 }
             } else {
-                // Regular text
                 renderTextWithStyle(item.content || '', 'normal');
             }
         }
@@ -175,7 +186,6 @@ const renderInlineText = (
         renderTextWithStyle(element.content || '', 'normal');
     }
 
-    // Restore original font settings
     doc.setFont(currentFont, currentFontStyle);
     doc.setFontSize(currentFontSize);
 };

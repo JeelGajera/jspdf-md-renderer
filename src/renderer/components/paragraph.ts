@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
 import { justifyText } from '../../utils/justifyText';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
-import { getCharHight } from '../../utils/doc-helpers';
+import { getCharHight, getCharWidth } from '../../utils/doc-helpers';
 import renderInlineText from './inlineText';
 import { RenderStore } from '../../store/renderStore';
 
@@ -19,18 +19,30 @@ const renderParagraph = (
         hasRawBullet?: boolean,
     ) => void,
 ) => {
+    RenderStore.activateInlineLock();
     doc.setFontSize(RenderStore.options.page.defaultFontSize);
     let content = element.content;
     const lineHeight =
         doc.getTextDimensions('A').h *
         RenderStore.options.page.defaultLineHeightFactor;
     if (element?.items && element?.items.length > 0) {
+        let idx = 0;
         for (const item of element?.items ?? []) {
-            if (['strong'].includes(item.type)) {
+            if (
+                ['strong', 'em', 'text'].includes(item.type) ||
+                RenderStore.isInlineLockActive
+            ) {
+                if (item.type !== 'text' && idx != 0) {
+                    RenderStore.updateX(getCharWidth(doc) * 1.5, 'add');
+                }
                 renderInlineText(doc, item, indent);
+                if (item.type !== 'text' && idx != 0) {
+                    RenderStore.updateX(getCharWidth(doc), 'add');
+                }
             } else {
                 parentElementRenderer(item, indent, false);
             }
+            idx++;
         }
     } else {
         if (
@@ -89,13 +101,14 @@ const renderParagraph = (
                 RenderStore.Y,
                 RenderStore.options.page.maxContentWidth - indent,
                 RenderStore.options.page.defaultLineHeightFactor,
-            ).y + getCharHight(doc, RenderStore.options);
+            ).y + getCharHight(doc);
         RenderStore.updateY(yPointer);
     }
 
     // Move to next line after paragraph
     RenderStore.updateY(lineHeight, 'add');
     RenderStore.updateX(RenderStore.options.page.xpading);
+    RenderStore.deactivateInlineLock();
 };
 
 export default renderParagraph;

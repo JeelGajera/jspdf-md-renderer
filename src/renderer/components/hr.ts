@@ -14,6 +14,6 @@ const renderHR = (doc: jsPDF) => {
     );
     doc.setLineWidth(0.1);
     doc.setLineDashPattern([], 0);
-    RenderStore.updateY(getCharHight(doc, RenderStore.options), 'add');
+    RenderStore.updateY(getCharHight(doc), 'add');
 };
 export default renderHR;

@@ -28,7 +28,7 @@ const renderList = (
             element.ordered,
         );
         RenderStore.updateY(
-            getCharHight(doc, RenderStore.options) * 0.2,
+            getCharHight(doc) * 0.2,
             'add',
         ); // Recursively render nested list items
     }
