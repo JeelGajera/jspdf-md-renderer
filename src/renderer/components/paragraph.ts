@@ -29,8 +29,7 @@ const renderParagraph = (
         let idx = 0;
         for (const item of element?.items ?? []) {
             if (
-                ['strong', 'em', 'text'].includes(item.type) ||
-                RenderStore.isInlineLockActive
+                ['strong', 'em', 'text'].includes(item.type)
             ) {
                 if (item.type !== 'text' && idx != 0) {
                     RenderStore.updateX(getCharWidth(doc) * 1.5, 'add');

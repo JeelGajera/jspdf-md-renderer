@@ -165,6 +165,10 @@ The following Markdown elements are currently supported by `jspdf-md-renderer`:
     console.log('Hello, world!');
     ```
     ````
+- **Links**:
+    ```markdown
+    [GitHub](https://github.com)
+    ```
 
 ### Proposed for Future Implementation:
 - **Blockquotes**:
@@ -174,10 +178,6 @@ The following Markdown elements are currently supported by `jspdf-md-renderer`:
 - **Images**:
     ```markdown
     ![Alt text](https://example.com/image.png)
-    ```
-- **Links**:
-    ```markdown
-    [GitHub](https://github.com)
     ```
 - **Inline Code**:
     ```markdown
