@@ -73,7 +73,7 @@ const renderRawItem = (
                         RenderStore.Y,
                         {
                             baseline: 'top',
-                            maxWidth: textMaxWidth,
+                            maxWidth: textMaxWidth - indent - bulletWidth,
                         },
                     );
                 }
@@ -96,7 +96,7 @@ const renderRawItem = (
                     lines.length * getCharHight(doc) >=
                 RenderStore.options.page.maxContentHeight
             ) {
-                HandlePageBreaks(doc, RenderStore.options);
+                HandlePageBreaks(doc);
             }
             if (justify) {
                 const yPoint =
@@ -107,12 +107,12 @@ const renderRawItem = (
                         RenderStore.Y,
                         RenderStore.options.page.maxContentWidth - indent,
                         RenderStore.options.page.defaultLineHeightFactor,
-                    ).y + getCharHight(doc);
+                    ).y + getCharHight(doc)*.5;
                 RenderStore.updateY(yPoint);
                 RenderStore.updateX(RenderStore.options.page.xpading);
             } else {
                 doc.text(
-                    element.content || '',
+                    lines || '',
                     RenderStore.X + indent,
                     RenderStore.Y,
                     {
@@ -128,7 +128,7 @@ const renderRawItem = (
                     RenderStore.options.page.xpading +
                         RenderStore.options.page.maxContentWidth
                 ) {
-                    HandlePageBreaks(doc, RenderStore.options);
+                    HandlePageBreaks(doc);
                 }
             }
         }

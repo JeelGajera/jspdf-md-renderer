@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { getCharHight } from '../../utils/doc-helpers';
+import { getCharHight, getCharWidth } from '../../utils/doc-helpers';
 import { RenderStore } from '../../store/renderStore';
 
 /**
@@ -112,19 +112,18 @@ const renderInlineText = (
                 const maxWidthForRest =
                     RenderStore.options.page.maxContentWidth -
                     indent -
-                    RenderStore.options.page.xpading -
-                    RenderStore.options.page.xmargin;
+                    RenderStore.options.page.xpading;
                 const restLines = doc.splitTextToSize(restContent, maxWidthForRest);
                 restLines.forEach((line: string) => {
-                    doc.text(line, RenderStore.X + indent, RenderStore.Y, {
+                    doc.text(line, RenderStore.X + getCharWidth(doc), RenderStore.Y, {
                         baseline: 'top',
                         maxWidth: maxWidthForRest,
                     });
-                    RenderStore.updateX(RenderStore.options.page.xpading + indent);
-                    RenderStore.updateY(
-                        getCharHight(doc),
-                        'add',
-                    );
+                    // RenderStore.updateX(RenderStore.options.page.xpading + indent);
+                    // RenderStore.updateY(
+                    //     getCharHight(doc),
+                    //     'add',
+                    // );
                 });
             } else {
                 doc.text(text, RenderStore.X + indent, RenderStore.Y, {
@@ -134,7 +133,7 @@ const renderInlineText = (
                 RenderStore.updateX(
                     doc.getTextDimensions(text).w +
                         (indent >= 2 ? text.split(' ').length + 2 : 2) *
-                            spaceMultiplier(style),
+                            spaceMultiplier(style)*.5,
                     'add',
                 );
             }

@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
 // import { getCharHight } from '../../utils/doc-helpers';
 import { RenderStore } from '../../store/renderStore';
+import { getCharHight } from '../../utils/doc-helpers';
 
 /**
  * Renders heading elements.
@@ -16,8 +17,9 @@ const renderHeading = (
         hasRawBullet?: boolean,
     ) => void,
 ) => {
-    const size = 6 - (element?.depth ?? 0) > 0 ? 6 - (element?.depth ?? 0) : 0;
+    const size = 6 - (element?.depth ?? 0) > 0 ? 6 - (element?.depth ?? 0) : 1;
     doc.setFontSize(RenderStore.options.page.defaultFontSize + size);
+    RenderStore.updateY(size * 0.2 * getCharHight(doc), 'add');
     if (element?.items && element?.items.length > 0) {
         for (const item of element?.items ?? []) {
             parentElementRenderer(item, indent, false);
@@ -36,7 +38,7 @@ const renderHeading = (
     // Reset font size to default after heading
     doc.setFontSize(RenderStore.options.page.defaultFontSize);
     // Move cursor to the next line after heading
-    // RenderStore.updateY((size*.2) * getCharHight(doc), 'add');
+    // RenderStore.updateY(size * 0.2 * getCharHight(doc), 'add');
     RenderStore.updateX(RenderStore.options.page.xpading);
 };
 

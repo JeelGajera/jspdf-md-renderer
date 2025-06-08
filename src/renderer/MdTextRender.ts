@@ -51,7 +51,7 @@ export const MdTextRender = async (
                     getCharHight(doc) >=
             options.page.maxContentHeight
         ) {
-            HandlePageBreaks(doc, options);
+            HandlePageBreaks(doc);
         }
 
         switch (element.type) {

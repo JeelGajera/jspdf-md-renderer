@@ -91,7 +91,7 @@ const renderParagraph = (
                 );
                 RenderStore.setCursor(cursor);
             }
-            HandlePageBreaks(doc, RenderStore.options);
+            HandlePageBreaks(doc);
         }
         const yPointer =
             justifyText(

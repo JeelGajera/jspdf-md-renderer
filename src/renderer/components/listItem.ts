@@ -33,7 +33,7 @@ const renderListItem = (
         RenderStore.Y + getCharHight(doc) >=
         RenderStore.options.page.maxContentHeight
     ) {
-        HandlePageBreaks(doc, RenderStore.options);
+        HandlePageBreaks(doc);
     }
 
     // 1) Print the bullet at (x + baseIndent, y)
@@ -59,7 +59,7 @@ const renderListItem = (
                 RenderStore.Y + getCharHight(doc) >=
                 RenderStore.options.page.maxContentHeight
             ) {
-                HandlePageBreaks(doc, RenderStore.options);
+                HandlePageBreaks(doc);
             }
 
             if (subItem.type === MdTokenType.List) {
@@ -110,23 +110,17 @@ const renderListItem = (
                 baseline: 'top',
                 maxWidth: textMaxWidth,
             });
-            // Render bullet (already rendered above, but for clarity)
-            // doc.text(bullet, bulletX, cursor.y, { baseline: 'top' });
             // Render wrapped lines (if any)
             for (let i = 1; i < textLines.length; i++) {
-                RenderStore.updateY(
-                    getCharHight(doc),
-                    'add',
-                );
+                RenderStore.updateY(getCharHight(doc), 'add');
                 doc.text(textLines[i], bulletX + bulletWidth, RenderStore.Y, {
                     baseline: 'top',
                     maxWidth: textMaxWidth,
                 });
             }
-            // Update cursor position
-            RenderStore.updateY(getCharHight(doc), 'add');
             RenderStore.updateX(RenderStore.options.page.xmargin + baseIndent);
-            // Move the cursor forward by the text width (optional, but keep for compatibility)
+            // Move the cursor forward by the text width
+            RenderStore.updateY(getCharHight(doc), 'add');
             const contentWidth = doc.getTextWidth(element.content);
             RenderStore.updateX(contentWidth, 'add');
         }

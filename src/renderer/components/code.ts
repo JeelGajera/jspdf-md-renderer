@@ -22,7 +22,7 @@ const renderCodeBlock = (
             2 * getCharHight(doc) >=
         RenderStore.options.page.maxContentHeight
     ) {
-        HandlePageBreaks(doc, RenderStore.options);
+        HandlePageBreaks(doc);
     }
 
     const totalHeight =
