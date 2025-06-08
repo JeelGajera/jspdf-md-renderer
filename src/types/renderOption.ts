@@ -28,6 +28,9 @@ export type RenderOption = {
     content?: {
         textAlignment: 'left' | 'right' | 'center' | 'justify';
     };
+    link?: {
+        linkColor: [number, number, number];
+    };
     pageBreakHandler?: () => void;
     endCursorYHandler: (y: number) => void;
 };

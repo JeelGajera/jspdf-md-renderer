@@ -6,3 +6,4 @@ export { default as renderRawItem } from './rawItem';
 export { default as renderHR } from './hr';
 export { default as renderCodeBlock } from './code';
 export { default as renderInlineText } from './inlineText';
+export { default as renderLink } from './link';

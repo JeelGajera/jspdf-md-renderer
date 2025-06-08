@@ -13,6 +13,7 @@ import {
     renderRawItem,
     renderCodeBlock,
     renderInlineText,
+    renderLink,
 } from './components';
 import { getCharHight } from '../utils/doc-helpers';
 import { RenderStore } from '../store/renderStore';
@@ -83,6 +84,9 @@ export const MdTextRender = async (
             case MdTokenType.Strong:
             case MdTokenType.Em:
                 renderInlineText(doc, element, indent);
+                break;
+            case MdTokenType.Link:
+                renderLink(doc, element, indent);
                 break;
             case MdTokenType.Raw:
             case MdTokenType.Text:
