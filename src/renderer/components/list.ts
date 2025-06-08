@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { getCharHight } from '../../utils/doc-helpers';
+// import { getCharHight } from '../../utils/doc-helpers';
 import { RenderStore } from '../../store/renderStore';
 
 const renderList = (
@@ -27,11 +27,8 @@ const renderList = (
             _start,
             element.ordered,
         );
-        RenderStore.updateY(
-            getCharHight(doc) * 0.2,
-            'add',
-        ); // Recursively render nested list items
     }
+    // RenderStore.updateY(getCharHight(doc)*.2, 'add');
 };
 
 export default renderList;
