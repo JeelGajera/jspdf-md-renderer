@@ -1,3 +1,17 @@
+# [1.8.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.7.0...v1.8.0) (2025-06-08)
+
+
+### Bug Fixes
+
+* list component wrap line spacing ([02576d8](https://github.com/JeelGajera/jspdf-md-renderer/commit/02576d81fdcc9e5f99b31d47bc4054adb228471a))
+
+
+### Features
+
+* add link component to handle md links ([0483337](https://github.com/JeelGajera/jspdf-md-renderer/commit/04833373ecb423145b0f62fc7af4ea3e57c1a14d))
+
+
+
 # [1.7.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.6.4...v1.7.0) (2025-06-07)
 
 
@@ -26,15 +40,6 @@
 ### Bug Fixes
 
 * **renderer:** adjust long text rendering and indentation for list items and raw items ([c18a0e9](https://github.com/JeelGajera/jspdf-md-renderer/commit/c18a0e9294cdb0c61eac73988253820822e9005e))
-
-
-
-# [1.6.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.5.1...v1.6.0) (2025-04-12)
-
-
-### Features
-
-* **list-rendering:** improve nested list rendering and indentation in PDF output ([12ad759](https://github.com/JeelGajera/jspdf-md-renderer/commit/12ad75980ee3b0b958e1eef079abc3358ea0603d))
 
 
 
