@@ -32,7 +32,7 @@ export const MdTextRender = async (
 ) => {
     RenderStore.initialize(options);
     const parsedElements = await MdTextParser(text);
-    console.log(parsedElements);
+    // console.log(parsedElements);
 
     const renderElement = (
         element: ParsedElement,
