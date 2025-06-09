@@ -1,3 +1,12 @@
+## [1.8.1](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.8.0...v1.8.1) (2025-06-09)
+
+
+### Bug Fixes
+
+* remove console logs ([853f816](https://github.com/JeelGajera/jspdf-md-renderer/commit/853f8160b6e273f12d021a5cb43f5f0d8c5c17ab))
+
+
+
 # [1.8.0](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.7.0...v1.8.0) (2025-06-08)
 
 
@@ -31,15 +40,6 @@
 
 
 ## [1.6.2](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.6.1...v1.6.2) (2025-06-05)
-
-
-
-## [1.6.1](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.6.0...v1.6.1) (2025-05-03)
-
-
-### Bug Fixes
-
-* **renderer:** adjust long text rendering and indentation for list items and raw items ([c18a0e9](https://github.com/JeelGajera/jspdf-md-renderer/commit/c18a0e9294cdb0c61eac73988253820822e9005e))
 
 
 

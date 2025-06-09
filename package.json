@@ -1,6 +1,6 @@
 {
   "name": "jspdf-md-renderer",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "A jsPDF utility to render Markdown directly into formatted PDFs with custom designs.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
