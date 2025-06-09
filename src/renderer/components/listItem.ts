@@ -89,7 +89,9 @@ const renderListItem = (
             } else {
                 // Inline content (e.g., emphasis, text, strong)
                 // Render on the same line (indented after bullet)
+                RenderStore.activateInlineLock();
                 renderInlineText(doc, subItem, baseIndent);
+                RenderStore.deactivateInlineLock();
             }
 
             // Move to next line after each sub-item (and reset x to left)
