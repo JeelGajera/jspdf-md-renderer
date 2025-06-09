@@ -1,3 +1,12 @@
+## [1.8.2](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.8.1...v1.8.2) (2025-06-09)
+
+
+### Bug Fixes
+
+* list item inline rendering ([5a41672](https://github.com/JeelGajera/jspdf-md-renderer/commit/5a41672671b62772ec29791736fd911a1785eeb2))
+
+
+
 ## [1.8.1](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.8.0...v1.8.1) (2025-06-09)
 
 
@@ -36,10 +45,6 @@
 ### Bug Fixes
 
 * publish workflow update ([817da14](https://github.com/JeelGajera/jspdf-md-renderer/commit/817da14dea28c4ed0353b8d92278d7d459a80958))
-
-
-
-## [1.6.2](https://github.com/JeelGajera/jspdf-md-renderer/compare/v1.6.1...v1.6.2) (2025-06-05)
 
 
 
