@@ -47,7 +47,7 @@
   "dependencies": {
     "jspdf": "^3.0.1",
     "jspdf-md-renderer": "file:",
-    "marked": "^15.0.3"
+    "marked": "^16.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.16.0",
