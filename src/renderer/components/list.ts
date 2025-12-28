@@ -1,6 +1,5 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-// import { getCharHight } from '../../utils/doc-helpers';
 import { RenderStore } from '../../store/renderStore';
 
 const renderList = (
@@ -28,7 +27,6 @@ const renderList = (
             element.ordered,
         );
     }
-    // RenderStore.updateY(getCharHight(doc)*.2, 'add');
 };
 
 export default renderList;

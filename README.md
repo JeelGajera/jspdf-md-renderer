@@ -2,6 +2,10 @@
 
 A jsPDF utility to render Markdown directly into formatted PDFs with custom designs.
 
+[![npm version](https://img.shields.io/npm/v/jspdf-md-renderer.svg)](https://www.npmjs.com/package/jspdf-md-renderer)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Downloads](https://img.shields.io/npm/dm/jspdf-md-renderer.svg)](https://www.npmjs.com/package/jspdf-md-renderer)
+
 ## Table of Contents
 
 - [Installation](#installation)
@@ -148,7 +152,6 @@ Parses markdown into tokens and converts to a custom parsed structure.
 
 The following Markdown elements are currently supported by `jspdf-md-renderer`:
 
-### Already Implemented:
 - **Headings**: `#`, `##`, `###`, etc.
 - **Paragraphs**
 - **Lists**:
@@ -169,8 +172,6 @@ The following Markdown elements are currently supported by `jspdf-md-renderer`:
     ```markdown
     [GitHub](https://github.com)
     ```
-
-### Proposed for Future Implementation:
 - **Blockquotes**:
     ```markdown
     > This is a blockquote.
@@ -199,6 +200,10 @@ You can find more examples in the [examples](examples/test-pdf-gen) directory.
 ## Contributing
 
 Contributions are welcome! Please read the [contributing guidelines](CONTRIBUTING.md) first.
+
+## Support
+
+If you find this library useful, please consider giving it a ⭐ on GitHub! It helps others find the project and motivates continued development.
 
 ## License
 

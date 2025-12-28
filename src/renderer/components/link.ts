@@ -35,7 +35,7 @@ const renderLink = (doc: jsPDF, element: ParsedElement, indent: number) => {
         // Inline lock: always render inline, only break if width exceeded
         for (let i = 0; i < textLines.length; i++) {
             const textWidth = doc.getTextDimensions(textLines[i]).w;
-            const textHeight = getCharHight(doc)/2;
+            const textHeight = getCharHight(doc) / 2;
 
             // Add link annotation
             doc.link(
@@ -43,24 +43,16 @@ const renderLink = (doc: jsPDF, element: ParsedElement, indent: number) => {
                 RenderStore.Y,
                 textWidth,
                 textHeight,
-                { url: linkUrl }
+                { url: linkUrl },
             );
 
             // Render text
-            doc.text(
-                textLines[i],
-                RenderStore.X + indent,
-                RenderStore.Y,
-                {
-                    baseline: 'top',
-                    maxWidth: availableWidth,
-                }
-            );
+            doc.text(textLines[i], RenderStore.X + indent, RenderStore.Y, {
+                baseline: 'top',
+                maxWidth: availableWidth,
+            });
 
-            RenderStore.updateX(
-                textWidth + 1,
-                'add',
-            );
+            RenderStore.updateX(textWidth + 1, 'add');
             // if x exceeds max width, move to next line
             if (
                 RenderStore.X + textWidth >
@@ -86,7 +78,7 @@ const renderLink = (doc: jsPDF, element: ParsedElement, indent: number) => {
             const firstLine = textLines[0];
             const restContent = textLines?.slice(1)?.join(' ');
             const firstLineWidth = doc.getTextDimensions(firstLine).w;
-            const textHeight = getCharHight(doc)/2;
+            const textHeight = getCharHight(doc) / 2;
 
             // Add link annotation for first line
             doc.link(
@@ -94,19 +86,14 @@ const renderLink = (doc: jsPDF, element: ParsedElement, indent: number) => {
                 RenderStore.Y,
                 firstLineWidth,
                 textHeight,
-                { url: linkUrl }
+                { url: linkUrl },
             );
 
             // Render first line
-            doc.text(
-                firstLine,
-                RenderStore.X + indent,
-                RenderStore.Y,
-                {
-                    baseline: 'top',
-                    maxWidth: availableWidth,
-                }
-            );
+            doc.text(firstLine, RenderStore.X + indent, RenderStore.Y, {
+                baseline: 'top',
+                maxWidth: availableWidth,
+            });
 
             RenderStore.updateX(RenderStore.options.page.xpading + indent);
             RenderStore.updateY(textHeight, 'add');
@@ -126,7 +113,7 @@ const renderLink = (doc: jsPDF, element: ParsedElement, indent: number) => {
                     RenderStore.Y,
                     lineWidth,
                     textHeight,
-                    { url: linkUrl }
+                    { url: linkUrl },
                 );
 
                 // Render line
@@ -137,12 +124,12 @@ const renderLink = (doc: jsPDF, element: ParsedElement, indent: number) => {
                     {
                         baseline: 'top',
                         maxWidth: maxWidthForRest,
-                    }
+                    },
                 );
             });
         } else {
             const textWidth = doc.getTextDimensions(linkText).w;
-            const textHeight = getCharHight(doc)/2;
+            const textHeight = getCharHight(doc) / 2;
 
             // Add link annotation
             doc.link(
@@ -150,19 +137,14 @@ const renderLink = (doc: jsPDF, element: ParsedElement, indent: number) => {
                 RenderStore.Y,
                 textWidth,
                 textHeight,
-                { url: linkUrl }
+                { url: linkUrl },
             );
 
             // Render text
-            doc.text(
-                linkText,
-                RenderStore.X + indent,
-                RenderStore.Y,
-                {
-                    baseline: 'top',
-                    maxWidth: availableWidth,
-                }
-            );
+            doc.text(linkText, RenderStore.X + indent, RenderStore.Y, {
+                baseline: 'top',
+                maxWidth: availableWidth,
+            });
 
             RenderStore.updateX(textWidth + 2, 'add');
         }

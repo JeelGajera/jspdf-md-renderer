@@ -1,4 +1,4 @@
-import { MdTextRender, RenderOption } from "jspdf-md-renderer";
+import { MdTextRender, RenderOption } from "../../../dist";
 import jsPDF from "jspdf";
 import { mdString } from "./md-text";
 
@@ -76,8 +76,8 @@ export const pdfGenerator = async () => {
             light: {
                 name: "",
                 style: ""
-            }
-        },
+            } 
+        }
     }
     await MdTextRender(doc, mdString, options)
     

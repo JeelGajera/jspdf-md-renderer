@@ -6,9 +6,12 @@ import { RenderStore } from '../store/renderStore';
  */
 export const HandlePageBreaks = (doc: jsPDF) => {
     if (typeof RenderStore.options.pageBreakHandler === 'function') {
-        RenderStore.options.pageBreakHandler();
+        RenderStore.options.pageBreakHandler(doc);
     } else {
-        doc.addPage(RenderStore.options.page?.format, RenderStore.options.page?.orientation);
+        doc.addPage(
+            RenderStore.options.page?.format,
+            RenderStore.options.page?.orientation,
+        );
     }
     // reset cursor positions on new page
     RenderStore.updateY(RenderStore.options.page.topmargin);

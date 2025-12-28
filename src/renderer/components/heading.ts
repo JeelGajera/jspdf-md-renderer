@@ -1,6 +1,5 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-// import { getCharHight } from '../../utils/doc-helpers';
 import { RenderStore } from '../../store/renderStore';
 import { getCharHight } from '../../utils/doc-helpers';
 
@@ -38,7 +37,6 @@ const renderHeading = (
     // Reset font size to default after heading
     doc.setFontSize(RenderStore.options.page.defaultFontSize);
     // Move cursor to the next line after heading
-    // RenderStore.updateY(size * 0.2 * getCharHight(doc), 'add');
     RenderStore.updateX(RenderStore.options.page.xpading);
 };
 

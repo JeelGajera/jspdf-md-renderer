@@ -63,10 +63,7 @@ const renderRawItem = (
                 // Render wrapped lines
                 for (let i = 1; i < textLines.length; i++) {
                     RenderStore.updateX(RenderStore.options.page.xpading);
-                    RenderStore.updateY(
-                        getCharHight(doc),
-                        'add',
-                    );
+                    RenderStore.updateY(getCharHight(doc), 'add');
                     doc.text(
                         textLines[i],
                         RenderStore.X + indent + bulletWidth,
@@ -78,10 +75,7 @@ const renderRawItem = (
                     );
                 }
                 // Update cursor position
-                RenderStore.updateY(
-                    getCharHight(doc),
-                    'add',
-                );
+                RenderStore.updateY(getCharHight(doc), 'add');
                 RenderStore.updateX(RenderStore.options.page.xpading + indent);
                 const contentWidth = doc.getTextWidth(element.content || '');
                 RenderStore.updateX(contentWidth, 'add');
@@ -92,8 +86,7 @@ const renderRawItem = (
                 RenderStore.options.page.maxContentWidth - indent,
             );
             if (
-                RenderStore.Y +
-                    lines.length * getCharHight(doc) >=
+                RenderStore.Y + lines.length * getCharHight(doc) >=
                 RenderStore.options.page.maxContentHeight
             ) {
                 HandlePageBreaks(doc);
@@ -107,18 +100,14 @@ const renderRawItem = (
                         RenderStore.Y,
                         RenderStore.options.page.maxContentWidth - indent,
                         RenderStore.options.page.defaultLineHeightFactor,
-                    ).y + getCharHight(doc)*.5;
+                    ).y +
+                    getCharHight(doc) * 0.5;
                 RenderStore.updateY(yPoint);
                 RenderStore.updateX(RenderStore.options.page.xpading);
             } else {
-                doc.text(
-                    lines || '',
-                    RenderStore.X + indent,
-                    RenderStore.Y,
-                    {
-                        baseline: 'top',
-                    },
-                );
+                doc.text(lines || '', RenderStore.X + indent, RenderStore.Y, {
+                    baseline: 'top',
+                });
                 RenderStore.updateX(
                     doc.getTextWidth(element.content || ''),
                     'add',

@@ -14,9 +14,14 @@ import {
     renderCodeBlock,
     renderInlineText,
     renderLink,
+    renderBlockquote,
+    renderImage,
+    renderTable,
 } from './components';
 import { getCharHight } from '../utils/doc-helpers';
 import { RenderStore } from '../store/renderStore';
+import { prefetchImages } from '../utils/image-utils';
+import { validateOptions } from '../utils/options-validation';
 
 /**
  * Renders parsed markdown text into jsPDF document.
@@ -30,9 +35,11 @@ export const MdTextRender = async (
     text: string,
     options: RenderOption,
 ) => {
-    RenderStore.initialize(options);
+    const validOptions = validateOptions(options);
+    RenderStore.initialize(validOptions);
     const parsedElements = await MdTextParser(text);
-    // console.log(parsedElements);
+    await prefetchImages(parsedElements);
+    console.log(parsedElements);
 
     const renderElement = (
         element: ParsedElement,
@@ -40,17 +47,18 @@ export const MdTextRender = async (
         hasRawBullet: boolean = false,
         start: number = 0,
         ordered: boolean = false,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         justify: boolean = true,
     ) => {
-        const indent = indentLevel * options.page.indent;
+        const indent = indentLevel * validOptions.page.indent;
         if (
             RenderStore.Y +
                 doc.splitTextToSize(
                     element.content ?? '',
-                    options.page.maxContentWidth - indent,
+                    validOptions.page.maxContentWidth - indent,
                 ).length *
                     getCharHight(doc) >=
-            options.page.maxContentHeight
+            validOptions.page.maxContentHeight
         ) {
             HandlePageBreaks(doc);
         }
@@ -83,10 +91,20 @@ export const MdTextRender = async (
                 break;
             case MdTokenType.Strong:
             case MdTokenType.Em:
+            case MdTokenType.CodeSpan:
                 renderInlineText(doc, element, indent);
                 break;
             case MdTokenType.Link:
                 renderLink(doc, element, indent);
+                break;
+            case MdTokenType.Blockquote:
+                renderBlockquote(doc, element, indentLevel, renderElement);
+                break;
+            case MdTokenType.Image:
+                renderImage(doc, element, indentLevel);
+                break;
+            case MdTokenType.Table:
+                renderTable(doc, element, indentLevel);
                 break;
             case MdTokenType.Raw:
             case MdTokenType.Text:
@@ -98,7 +116,7 @@ export const MdTextRender = async (
                     renderElement,
                     start,
                     ordered,
-                    justify,
+                    validOptions.page.defaultFontSize > 0, // Using validOptions here if needed, or just true for justify
                 );
                 break;
             default:
@@ -116,5 +134,5 @@ export const MdTextRender = async (
         renderElement(item);
     }
 
-    options.endCursorYHandler(RenderStore.Y);
+    validOptions.endCursorYHandler(RenderStore.Y);
 };
