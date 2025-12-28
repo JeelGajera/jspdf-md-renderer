@@ -10,7 +10,8 @@ import { ParsedElement } from '../types/parsedElement';
  * @returns Parsed markdown elements.
  */
 export const MdTextParser = async (text: string): Promise<ParsedElement[]> => {
-    const tokens = await marked.lexer(text, { async: true });
+    const tokens = await marked.lexer(text, { async: true, gfm: true });
+    // console.log(tokens);
     return convertTokens(tokens);
 };
 
@@ -75,12 +76,12 @@ const tokenHandlers: Record<string, (token: any) => ParsedElement> = {
         type: MdTokenType.Table,
         header: token.header.map((header: any) => ({
             type: MdTokenType.TableHeader,
-            content: header,
+            content: header.text,
         })),
         rows: token.rows.map((row: any[]) =>
             row.map((cell: any) => ({
                 type: MdTokenType.TableCell,
-                content: cell,
+                content: cell.text,
             })),
         ),
     }),
@@ -117,6 +118,11 @@ const tokenHandlers: Record<string, (token: any) => ParsedElement> = {
     }),
     [MdTokenType.CodeSpan]: (token) => ({
         type: MdTokenType.CodeSpan,
+        content: token.text,
+        items: token.tokens ? convertTokens(token.tokens) : [],
+    }),
+    [MdTokenType.Blockquote]: (token) => ({
+        type: MdTokenType.Blockquote,
         content: token.text,
         items: token.tokens ? convertTokens(token.tokens) : [],
     }),

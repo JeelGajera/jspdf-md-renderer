@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export type ParsedElement = {
     type: string;
     content?: string;
@@ -12,6 +11,7 @@ export type ParsedElement = {
     alt?: string;
     href?: string;
     text?: string;
-    header?: { type?: string; content?: any };
-    rows?: { type?: string; content?: any };
+    header?: ParsedElement[];
+    rows?: ParsedElement[][];
+    data?: string;
 };

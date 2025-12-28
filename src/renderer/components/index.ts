@@ -7,3 +7,6 @@ export { default as renderHR } from './hr';
 export { default as renderCodeBlock } from './code';
 export { default as renderInlineText } from './inlineText';
 export { default as renderLink } from './link';
+export { default as renderBlockquote } from './blockquote';
+export { default as renderImage } from './image';
+export { default as renderTable } from './table';

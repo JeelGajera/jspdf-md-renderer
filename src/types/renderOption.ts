@@ -1,4 +1,5 @@
-import { jsPDFOptions } from 'jspdf';
+import jsPDF, { jsPDFOptions } from 'jspdf';
+import { UserOptions } from 'jspdf-autotable';
 
 export type RenderOption = {
     cursor: {
@@ -31,7 +32,8 @@ export type RenderOption = {
     link?: {
         linkColor: [number, number, number];
     };
-    pageBreakHandler?: () => void;
+    table?: UserOptions;
+    pageBreakHandler?: (doc: jsPDF) => void;
     endCursorYHandler: (y: number) => void;
 };
 
