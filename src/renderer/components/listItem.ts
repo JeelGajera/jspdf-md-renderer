@@ -2,9 +2,10 @@ import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
 import { getCharHight } from '../../utils/doc-helpers';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
-import renderInlineText from './inlineText';
 import { MdTokenType } from '../../enums/mdTokenType';
 import { RenderStore } from '../../store/renderStore';
+import { JustifiedTextRenderer } from '../../utils/justifiedTextRenderer';
+import { TextRenderer } from '../../utils/text-renderer';
 
 /**
  * Render a single list item, including bullets/numbering, inline text, and any nested lists.
@@ -23,12 +24,7 @@ const renderListItem = (
     start: number,
     ordered: boolean,
 ) => {
-    // We'll calculate a base indent so list items at the same level are aligned
-    const baseIndent = indentLevel * RenderStore.options.page.indent;
-    // The bullet or number for this item
-    const bullet = ordered ? `${start}. ` : '\u2022 ';
-
-    // If we are close to bottom, do a page break
+    // 1) Page break check
     if (
         RenderStore.Y + getCharHight(doc) >=
         RenderStore.options.page.maxContentHeight
@@ -36,34 +32,47 @@ const renderListItem = (
         HandlePageBreaks(doc);
     }
 
-    // 1) Print the bullet at (x + baseIndent, y)
-    doc.setFont(
-        RenderStore.options.font.regular.name,
-        RenderStore.options.font.regular.style,
-    );
-    doc.text(bullet, RenderStore.X + baseIndent, RenderStore.Y, {
-        baseline: 'top',
-    });
+    // 2) Configuration
+    const options = RenderStore.options;
+    const baseIndent = indentLevel * options.page.indent;
+    const bullet = ordered ? `${start}. ` : '\u2022 ';
+    const xLeft = options.page.xpading;
 
-    // 2) Move x forward by bullet width
+    // Reset X to left margin at start of item to ensure consistent bullet placement
+    RenderStore.updateX(xLeft, 'set');
+
+    // 3) Render Bullet
+    doc.setFont(options.font.regular.name, options.font.regular.style);
+    doc.text(bullet, xLeft + baseIndent, RenderStore.Y, { baseline: 'top' });
+
     const bulletWidth = doc.getTextWidth(bullet);
-    RenderStore.updateX(bulletWidth, 'add');
+    const contentX = xLeft + baseIndent + bulletWidth;
+    const textMaxWidth =
+        options.page.maxContentWidth - baseIndent - bulletWidth;
 
-    // 3) If we have nested items, render them. They might be inline text or sub-lists
+    // 4) Render items or content
     if (element.items && element.items.length > 0) {
-        // If the parent is "list_item", then sub-lists are truly nested => indentLevel + 1
-        // If the parent is "list", the sub-items are the same level => indentLevel
-        for (const subItem of element.items) {
-            // Check for page break before each sub-item
-            if (
-                RenderStore.Y + getCharHight(doc) >=
-                RenderStore.options.page.maxContentHeight
-            ) {
-                HandlePageBreaks(doc);
-            }
+        const inlineBuffer: ParsedElement[] = [];
 
+        const flushInlineBuffer = () => {
+            if (inlineBuffer.length > 0) {
+                JustifiedTextRenderer.renderStyledParagraph(
+                    doc,
+                    inlineBuffer,
+                    contentX,
+                    RenderStore.Y,
+                    textMaxWidth,
+                );
+                inlineBuffer.length = 0;
+                // Important: Text rendering updates X to the end of the line.
+                // We MUST reset it to the left margin for any subsequent block elements (like sub-lists).
+                RenderStore.updateX(xLeft, 'set');
+            }
+        };
+
+        for (const subItem of element.items) {
             if (subItem.type === MdTokenType.List) {
-                // A sub-list is always an extra level of indent
+                flushInlineBuffer();
                 parentElementRenderer(
                     subItem,
                     indentLevel + 1,
@@ -72,60 +81,29 @@ const renderListItem = (
                     subItem.ordered ?? false,
                 );
             } else if (subItem.type === MdTokenType.ListItem) {
-                // Same level if parent is a list,
-                // otherwise if the parent is a list_item, it's nested => indent + 1
-                const newIndentLevel =
-                    element.type === MdTokenType.List
-                        ? indentLevel
-                        : indentLevel + 1;
-
+                flushInlineBuffer();
                 parentElementRenderer(
                     subItem,
-                    newIndentLevel,
+                    indentLevel + 1,
                     true,
                     start,
                     ordered,
                 );
             } else {
-                // Inline content (e.g., emphasis, text, strong)
-                // Render on the same line (indented after bullet)
-                RenderStore.activateInlineLock();
-                renderInlineText(doc, subItem, baseIndent);
-                RenderStore.deactivateInlineLock();
+                inlineBuffer.push(subItem);
             }
-
-            // Move to next line after each sub-item (and reset x to left)
-            RenderStore.updateX(RenderStore.options.page.xpading);
-            RenderStore.updateY(getCharHight(doc), 'add');
         }
+        flushInlineBuffer();
     } else if (element.content) {
-        // handle text with line breaks page break & multiple lines texts
-        const bulletX = RenderStore.X + baseIndent;
-        const bulletWidth = doc.getTextWidth(bullet);
-        const textMaxWidth =
-            RenderStore.options.page.maxContentWidth - baseIndent - bulletWidth;
-        // Split the content into lines, accounting for the bullet only on the first line
-        const textLines = doc.splitTextToSize(element.content, textMaxWidth);
-        // Render first line with bullet
-        if (textLines.length > 0) {
-            doc.text(textLines[0], bulletX + bulletWidth, RenderStore.Y, {
-                baseline: 'top',
-                maxWidth: textMaxWidth,
-            });
-            // Render wrapped lines (if any)
-            for (let i = 1; i < textLines.length; i++) {
-                RenderStore.updateY(getCharHight(doc), 'add');
-                doc.text(textLines[i], bulletX + bulletWidth, RenderStore.Y, {
-                    baseline: 'top',
-                    maxWidth: textMaxWidth,
-                });
-            }
-            RenderStore.updateX(RenderStore.options.page.xmargin + baseIndent);
-            // Move the cursor forward by the text width
-            RenderStore.updateY(getCharHight(doc), 'add');
-            const contentWidth = doc.getTextWidth(element.content);
-            RenderStore.updateX(contentWidth, 'add');
-        }
+        const textAlignment = options.content?.textAlignment ?? 'left';
+        TextRenderer.renderText(
+            doc,
+            element.content,
+            contentX,
+            RenderStore.Y,
+            textMaxWidth,
+            textAlignment === 'justify',
+        );
     }
 };
 

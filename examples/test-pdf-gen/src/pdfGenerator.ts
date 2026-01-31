@@ -1,4 +1,4 @@
-import { MdTextRender, RenderOption } from "../../../dist";
+import { MdTextRender, RenderOption } from "../../../src/";
 import jsPDF from "jspdf";
 import { mdString } from "./md-text";
 
@@ -39,7 +39,7 @@ export const pdfGenerator = async () => {
     doc.rect(0, 0, width, 18, "F")
     doc.setFontSize(defaultHeadFontSize)
     doc.setTextColor(151, 166, 186)
-    doc.text("Sample Markdown Rendering Example", xpading, lineSpace*2, { align: "left" })
+    doc.text("Sample Markdown Rendering Example", xpading, lineSpace * 2, { align: "left" })
     doc.setTextColor(0, 0, 0)
     doc.setDrawColor(0, 0, 0)
     doc.setFontSize(defaultFontSize)
@@ -63,6 +63,9 @@ export const pdfGenerator = async () => {
             xmargin: xmargin,
             xpading: xpading
         },
+        content: {
+            textAlignment: "justify"
+        },
         endCursorYHandler: (endY) => { y = endY; },
         font: {
             bold: {
@@ -76,11 +79,16 @@ export const pdfGenerator = async () => {
             light: {
                 name: "",
                 style: ""
-            } 
+            }
         }
     }
     await MdTextRender(doc, mdString, options)
-    
+
+
+    // Verify End Cursor Y
+    doc.setDrawColor(255, 0, 0); // Red
+    doc.line(xpading, y, width - xpading, y);
+    doc.setDrawColor(0, 0, 0); // Reset to black
 
     const footerY = Math.min(y + 10, height - 20);
     doc.setFontSize(10);

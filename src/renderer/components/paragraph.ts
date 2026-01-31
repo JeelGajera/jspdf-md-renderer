@@ -1,12 +1,13 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { getCharWidth } from '../../utils/doc-helpers';
-import renderInlineText from './inlineText';
 import { RenderStore } from '../../store/renderStore';
+import { JustifiedTextRenderer } from '../../utils/justifiedTextRenderer';
 import { TextRenderer } from '../../utils/text-renderer';
 
 /**
- * Renders paragraph elements.
+ * Renders paragraph elements with proper text alignment.
+ * Handles mixed inline styles (bold, italic, codespan) and links.
+ * Respects user's textAlignment option from RenderStore.
  */
 const renderParagraph = (
     doc: jsPDF,
@@ -20,43 +21,77 @@ const renderParagraph = (
 ) => {
     RenderStore.activateInlineLock();
     doc.setFontSize(RenderStore.options.page.defaultFontSize);
-    const content = element.content;
-    const lineHeight =
-        doc.getTextDimensions('A').h *
-        RenderStore.options.page.defaultLineHeightFactor;
+
+    const maxWidth = RenderStore.options.page.maxContentWidth - indent;
+
     if (element?.items && element?.items.length > 0) {
-        let idx = 0;
-        for (const item of element?.items ?? []) {
-            if (['strong', 'em', 'text', 'codespan'].includes(item.type)) {
-                if (item.type !== 'text' && idx != 0) {
-                    RenderStore.updateX(getCharWidth(doc) * 1.5, 'add');
+        // Check if there are any non-inline items that need special handling
+        const hasNonInlineItems = element.items.some(
+            (item) =>
+                !['strong', 'em', 'text', 'codespan', 'link'].includes(
+                    item.type,
+                ),
+        );
+
+        if (hasNonInlineItems) {
+            // Mixed content: render inline items with JustifiedTextRenderer,
+            // delegate non-inline items to parentElementRenderer
+            const inlineBuffer: ParsedElement[] = [];
+
+            const flushInlineBuffer = () => {
+                if (inlineBuffer.length > 0) {
+                    JustifiedTextRenderer.renderStyledParagraph(
+                        doc,
+                        inlineBuffer,
+                        RenderStore.X + indent,
+                        RenderStore.Y,
+                        maxWidth,
+                    );
+                    inlineBuffer.length = 0;
                 }
-                renderInlineText(doc, item, indent);
-                if (item.type !== 'text' && idx != 0) {
-                    RenderStore.updateX(getCharWidth(doc), 'add');
+            };
+
+            for (const item of element.items) {
+                if (
+                    ['strong', 'em', 'text', 'codespan', 'link'].includes(
+                        item.type,
+                    )
+                ) {
+                    inlineBuffer.push(item);
+                } else {
+                    flushInlineBuffer();
+                    parentElementRenderer(item, indent, false);
                 }
-            } else {
-                parentElementRenderer(item, indent, false);
             }
-            idx++;
+            flushInlineBuffer();
+        } else {
+            // All items are inline: use JustifiedTextRenderer for optimal alignment
+            JustifiedTextRenderer.renderStyledParagraph(
+                doc,
+                element.items,
+                RenderStore.X + indent,
+                RenderStore.Y,
+                maxWidth,
+            );
         }
     } else {
-        // Use TextRenderer for robust multi-page handling
-        const maxWidth = RenderStore.options.page.maxContentWidth - indent;
-
-        // This handles breaking across pages automatically
-        TextRenderer.renderText(
-            doc,
-            content ?? '',
-            RenderStore.X + indent,
-            RenderStore.Y,
-            maxWidth,
-            true, // justify
-        );
+        // Simple text content without nested items
+        const content = element.content ?? '';
+        const textAlignment =
+            RenderStore.options.content?.textAlignment ?? 'left';
+        if (content.trim()) {
+            TextRenderer.renderText(
+                doc,
+                content,
+                RenderStore.X + indent,
+                RenderStore.Y,
+                maxWidth,
+                textAlignment === 'justify',
+            );
+            // TextRenderer already updates Y for each line rendered
+        }
     }
 
-    // Move to next line after paragraph
-    RenderStore.updateY(lineHeight, 'add');
     RenderStore.updateX(RenderStore.options.page.xpading);
     RenderStore.deactivateInlineLock();
 };

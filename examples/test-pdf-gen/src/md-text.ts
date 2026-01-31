@@ -47,8 +47,8 @@ This section showcases how to create simple and nested lists.
 - _Italic_ text using underscores.
 - **Bold** text using double asterisks.
 - __Bold__ text using double underscores.
-- ***Bold and Italic*** text using triple asterisks.
-- ___Bold and Italic___ text using triple underscores.
+- ***Bold and Italic***  text using triple asterisks.
+- ___Bold and Italic___  text using triple underscores.
 
 ### Blockquotes
 
@@ -114,5 +114,7 @@ const generatePDF = async () => {
 
 generatePDF();
 \`\`\`
+
+This is a paragraph with **bold text** and *italic text* and \`inline code\` and a [link](https://example.com) all mixed together in a justified paragraph that should distribute spacing evenly across multiple lines.
 
 `;

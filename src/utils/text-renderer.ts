@@ -23,7 +23,9 @@ export class TextRenderer {
     ) {
         // Use document splitTextToSize to handle wrapping
         const lines: string[] = doc.splitTextToSize(text, maxWidth);
-        const lineHeight = getCharHight(doc);
+        const charHeight = getCharHight(doc);
+        const lineHeight =
+            charHeight * RenderStore.options.page.defaultLineHeightFactor;
 
         let currentY = y;
 
@@ -41,32 +43,21 @@ export class TextRenderer {
 
             // Render line
             if (justify) {
-                // Use justifyText utility for this line
-                // But justifyText expects a full block. We need to check if it's the last line of paragraph.
-                // splitTextToSize doesn't tell us if it's a hard break or soft break.
-                // For simplified justification:
-                // If it's the last line of the split result, default align.
-                // Else, justify.
-
                 if (i === lines.length - 1) {
-                    doc.text(line, x, currentY);
+                    doc.text(line, x, currentY, { baseline: 'top' });
                 } else {
-                    // We can't easily use existing justifyText on a single pre-split line because
-                    // justifyText splits it again.
-                    // We should likely refactor justifyText or use a simplified justification here.
-                    // For now, let's reuse justifyText but we need to be careful.
-                    // Actually, the existing renderParagraph logic tries to justify the WHOLE block.
-                    // But dealing with page breaks mid-block is hard with that approach.
-
-                    // Alternative:
                     doc.text(line, x, currentY, {
                         maxWidth: maxWidth,
                         align: 'justify',
+                        baseline: 'top',
                     });
                 }
             } else {
-                doc.text(line, x, currentY);
+                doc.text(line, x, currentY, { baseline: 'top' });
             }
+
+            // Record the visual bottom of the text on this line
+            RenderStore.recordContentY(currentY + charHeight);
 
             currentY += lineHeight;
             RenderStore.updateY(lineHeight, 'add');

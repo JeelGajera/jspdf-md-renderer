@@ -29,6 +29,16 @@ export type RenderOption = {
     content?: {
         textAlignment: 'left' | 'right' | 'center' | 'justify';
     };
+    codespan?: {
+        /** Background color for inline code. Default: '#EEEEEE' */
+        backgroundColor?: string;
+        /** Padding around inline code text. Default: 0.5 */
+        padding?: number;
+        /** Whether to show background rectangle. Default: true */
+        showBackground?: boolean;
+        /** Font size scale factor for code. Default: 0.9 */
+        fontSizeScale?: number;
+    };
     link?: {
         linkColor: [number, number, number];
     };

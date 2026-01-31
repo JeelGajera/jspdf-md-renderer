@@ -2,12 +2,14 @@ import { Cursor, RenderOption } from '../types';
 
 export class RenderStore {
     private static cursor: Cursor = { x: 0, y: 0 };
+    private static lastContentY_: number = 0;
     private static options_: RenderOption;
     private static inlineLock: boolean = false;
 
     public static initialize(options: RenderOption) {
         this.options_ = options;
         this.cursor = { x: options.cursor.x, y: options.cursor.y };
+        this.lastContentY_ = options.cursor.y;
     }
 
     public static getCursor(): Cursor {
@@ -60,6 +62,24 @@ export class RenderStore {
         } else if (operation === 'add') {
             this.cursor.y += value;
         }
+    }
+
+    /**
+     * Records a Y position as the bottom of rendered content.
+     * This is useful for container components (like blockquotes) to know
+     * where their actual text content ends, ignoring any trailing margins.
+     * @param specificY Optional Y value to record. Defaults to current cursor Y.
+     */
+    public static recordContentY(specificY?: number) {
+        this.lastContentY_ =
+            specificY !== undefined ? specificY : this.cursor.y;
+    }
+
+    /**
+     * Gets the last Y position recorded as content bottom.
+     */
+    public static get lastContentY(): number {
+        return this.lastContentY_;
     }
 
     // Convenience methods to get individual x and y values
