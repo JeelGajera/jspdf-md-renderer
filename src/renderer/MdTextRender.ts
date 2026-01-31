@@ -3,7 +3,6 @@ import { MdTokenType } from '../enums/mdTokenType';
 import { MdTextParser } from '../parser/MdTextParser';
 import { ParsedElement } from '../types/parsedElement';
 import { RenderOption } from '../types/renderOption';
-import { HandlePageBreaks } from '../utils/handlePageBreak';
 import {
     renderHeading,
     renderHR,
@@ -18,7 +17,6 @@ import {
     renderImage,
     renderTable,
 } from './components';
-import { getCharHight } from '../utils/doc-helpers';
 import { RenderStore } from '../store/renderStore';
 import { prefetchImages } from '../utils/image-utils';
 import { validateOptions } from '../utils/options-validation';
@@ -51,17 +49,6 @@ export const MdTextRender = async (
         justify: boolean = true,
     ) => {
         const indent = indentLevel * validOptions.page.indent;
-        if (
-            RenderStore.Y +
-                doc.splitTextToSize(
-                    element.content ?? '',
-                    validOptions.page.maxContentWidth - indent,
-                ).length *
-                    getCharHight(doc) >=
-            validOptions.page.maxContentHeight
-        ) {
-            HandlePageBreaks(doc);
-        }
 
         switch (element.type) {
             case MdTokenType.Heading:

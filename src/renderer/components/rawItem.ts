@@ -1,9 +1,8 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
-import { HandlePageBreaks } from '../../utils/handlePageBreak';
-import { getCharHight } from '../../utils/doc-helpers';
-import { justifyText } from '../../utils/justifyText';
 import { RenderStore } from '../../store/renderStore';
+import { TextRenderer } from '../../utils/text-renderer';
+import { HandlePageBreaks } from '../../utils/handlePageBreak';
 
 const renderRawItem = (
     doc: jsPDF,
@@ -34,93 +33,77 @@ const renderRawItem = (
             );
         }
     } else {
-        const indent = indentLevel * RenderStore.options.page.indent;
+        const options = RenderStore.options;
+        const indent = indentLevel * options.page.indent;
         const bullet = hasRawBullet ? (ordered ? `${start}. ` : '\u2022 ') : '';
-        if (hasRawBullet && bullet) {
-            // Align all wrapped lines with the first line's text (after bullet)
-            const bulletWidth = doc.getTextWidth(bullet);
-            const textMaxWidth =
-                RenderStore.options.page.maxContentWidth - indent - bulletWidth;
-            const textLines = doc.splitTextToSize(
-                element.content || '',
-                textMaxWidth,
-            );
-            if (textLines.length > 0) {
-                // Render bullet
-                doc.text(bullet, RenderStore.X + indent, RenderStore.Y, {
-                    baseline: 'top',
-                });
-                // Render first line
-                doc.text(
-                    textLines[0],
-                    RenderStore.X + indent + bulletWidth,
-                    RenderStore.Y,
-                    {
-                        baseline: 'top',
-                        maxWidth: textMaxWidth,
-                    },
-                );
-                // Render wrapped lines
-                for (let i = 1; i < textLines.length; i++) {
-                    RenderStore.updateX(RenderStore.options.page.xpading);
-                    RenderStore.updateY(getCharHight(doc), 'add');
-                    doc.text(
-                        textLines[i],
-                        RenderStore.X + indent + bulletWidth,
-                        RenderStore.Y,
-                        {
-                            baseline: 'top',
-                            maxWidth: textMaxWidth - indent - bulletWidth,
-                        },
-                    );
-                }
-                // Update cursor position
-                RenderStore.updateY(getCharHight(doc), 'add');
-                RenderStore.updateX(RenderStore.options.page.xpading + indent);
-                const contentWidth = doc.getTextWidth(element.content || '');
-                RenderStore.updateX(contentWidth, 'add');
-            }
-        } else {
-            const lines = doc.splitTextToSize(
-                element.content || '',
-                RenderStore.options.page.maxContentWidth - indent,
-            );
-            if (
-                RenderStore.Y + lines.length * getCharHight(doc) >=
-                RenderStore.options.page.maxContentHeight
-            ) {
-                HandlePageBreaks(doc);
-            }
-            if (justify) {
-                const yPoint =
-                    justifyText(
-                        doc,
-                        element.content || '',
-                        RenderStore.X + indent,
-                        RenderStore.Y,
-                        RenderStore.options.page.maxContentWidth - indent,
-                        RenderStore.options.page.defaultLineHeightFactor,
-                    ).y +
-                    getCharHight(doc) * 0.5;
-                RenderStore.updateY(yPoint);
-                RenderStore.updateX(RenderStore.options.page.xpading);
-            } else {
-                doc.text(lines || '', RenderStore.X + indent, RenderStore.Y, {
-                    baseline: 'top',
-                });
-                RenderStore.updateX(
-                    doc.getTextWidth(element.content || ''),
-                    'add',
-                );
+        const content = element.content || '';
+        const xLeft = options.page.xpading;
+
+        if (!content && !bullet) return;
+
+        // Smart Whitespace Handling
+        // If content is pure whitespace, we check for newlines.
+        if (!content.trim() && !bullet) {
+            const newlines = (content.match(/\n/g) || []).length;
+            // We ignore single newlines (often artifacts between blocks)
+            // But we respect double newlines (intentional blank lines)
+            // Logic: add (newlines - 1) lines of space
+            if (newlines > 1) {
+                const linesToAdd = newlines - 1;
+                const lineHeight =
+                    doc.getTextDimensions('A').h *
+                    options.page.defaultLineHeightFactor;
+                const addedHeight = linesToAdd * lineHeight;
+
+                // Check page break
                 if (
-                    RenderStore.X >=
-                    RenderStore.options.page.xpading +
-                        RenderStore.options.page.maxContentWidth
+                    RenderStore.Y + addedHeight >
+                    options.page.maxContentHeight
                 ) {
                     HandlePageBreaks(doc);
+                } else {
+                    RenderStore.updateY(addedHeight, 'add');
+                    RenderStore.recordContentY(RenderStore.Y);
                 }
             }
+            return;
         }
+
+        // Reset X to left padding to ensure consistent alignment
+        RenderStore.updateX(xLeft, 'set');
+
+        if (hasRawBullet && bullet) {
+            const bulletWidth = doc.getTextWidth(bullet);
+            const textMaxWidth =
+                options.page.maxContentWidth - indent - bulletWidth;
+
+            doc.setFont(options.font.regular.name, options.font.regular.style);
+            doc.text(bullet, xLeft + indent, RenderStore.Y, {
+                baseline: 'top',
+            });
+
+            TextRenderer.renderText(
+                doc,
+                content,
+                xLeft + indent + bulletWidth,
+                RenderStore.Y,
+                textMaxWidth,
+                justify,
+            );
+        } else {
+            const textMaxWidth = options.page.maxContentWidth - indent;
+            TextRenderer.renderText(
+                doc,
+                content,
+                xLeft + indent,
+                RenderStore.Y,
+                textMaxWidth,
+                justify,
+            );
+        }
+
+        // Reset X after block completion
+        RenderStore.updateX(xLeft, 'set');
     }
 };
 

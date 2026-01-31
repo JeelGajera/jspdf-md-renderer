@@ -49,11 +49,11 @@ const renderBlockquote = (
         doc.line(barX, lineTop, barX, lineBottom);
     }
 
+    // Ensure the blockquote effectively "claims" the vertical space up to the cursor
+    RenderStore.recordContentY();
+
     // Restore page to endPage
     doc.setPage(endPage);
-
-    // Add some spacing after blockquote
-    RenderStore.updateY(options.page.lineSpace, 'add');
 };
 
 export default renderBlockquote;

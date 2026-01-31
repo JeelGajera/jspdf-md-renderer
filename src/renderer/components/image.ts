@@ -62,7 +62,8 @@ const renderImage = (
             finalHeight,
         );
 
-        RenderStore.updateY(finalHeight + options.page.lineSpace, 'add');
+        RenderStore.updateY(finalHeight, 'add');
+        RenderStore.recordContentY();
     } catch (e) {
         console.warn('Failed to render image', e);
     }
