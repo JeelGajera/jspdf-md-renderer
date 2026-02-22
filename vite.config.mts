@@ -6,15 +6,21 @@ export default defineConfig({
     build: {
         lib: {
             entry: resolve(__dirname, 'src/index.ts'),
-            formats: ['es', 'cjs'],
-            fileName: (format) => `index.${format === 'es' ? 'mjs' : 'js'}`,
+            name: 'JspdfMdRenderer',
+            formats: ['es', 'cjs', 'umd'],
+            fileName: (format) => {
+                if (format === 'es') return 'index.mjs';
+                if (format === 'cjs') return 'index.js';
+                return 'index.umd.js';
+            },
         },
         rollupOptions: {
-            external: ['jspdf', 'marked'],
+            external: ['jspdf', 'marked', 'jspdf-autotable'],
             output: {
                 globals: {
-                    jspdf: 'jsPDF',
+                    jspdf: 'jspdf',
                     marked: 'marked',
+                    'jspdf-autotable': 'jspdfAutoTable',
                 },
             },
         },
