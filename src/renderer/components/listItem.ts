@@ -75,7 +75,7 @@ const renderListItem = (
                 flushInlineBuffer();
                 parentElementRenderer(
                     subItem,
-                    indentLevel + 1,
+                    indentLevel,
                     true,
                     start,
                     subItem.ordered ?? false,
@@ -84,7 +84,7 @@ const renderListItem = (
                 flushInlineBuffer();
                 parentElementRenderer(
                     subItem,
-                    indentLevel + 1,
+                    indentLevel,
                     true,
                     start,
                     ordered,
