@@ -10,6 +10,7 @@ A jsPDF utility to render Markdown directly into formatted PDFs with custom desi
 
 - [Installation](#installation)
 - [Usage](#usage)
+- [Browser Runtime Usage](#browser-runtime-usage)
 - [API](#api)
 - [Examples](#examples)
 - [Contributing](#contributing)
@@ -123,6 +124,41 @@ const generatePDF = async () => {
 
 generatePDF();
 ```
+
+## Browser Runtime Usage
+
+### Option 1: Use with your app bundler (Vite/Webpack/Rollup)
+
+Install dependencies and import from modules as usual:
+
+```ts
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { MdTextRender } from 'jspdf-md-renderer';
+```
+
+### Option 2: Use directly via script tags (UMD)
+
+Load dependencies first, then load `jspdf-md-renderer` UMD bundle.
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@latest/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@latest/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-md-renderer@latest/dist/index.umd.js"></script>
+<script>
+  const { jsPDF } = window.jspdf;
+  const { MdTextRender } = window.JspdfMdRenderer;
+
+  (async () => {
+    const doc = new jsPDF();
+    await MdTextRender(doc, '# Hello from browser runtime');
+    doc.save('browser-runtime.pdf');
+  })();
+</script>
+```
+
+> Note: For script-tag usage you must include `marked`, `jspdf`, and `jspdf-autotable` before the renderer bundle.
 
 ## API
 
