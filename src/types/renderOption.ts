@@ -43,6 +43,10 @@ export type RenderOption = {
         linkColor: [number, number, number];
     };
     table?: UserOptions;
+    image?: {
+        /** Default alignment for images: 'left' | 'center' | 'right'. Default: 'left' */
+        defaultAlign?: 'left' | 'center' | 'right';
+    };
     pageBreakHandler?: (doc: jsPDF) => void;
     endCursorYHandler: (y: number) => void;
 };

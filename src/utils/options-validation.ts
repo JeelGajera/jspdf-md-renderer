@@ -20,6 +20,9 @@ const defaultOptions: Partial<RenderOption> = {
         regular: { name: 'helvetica', style: 'normal' },
         light: { name: 'helvetica', style: 'light' },
     },
+    image: {
+        defaultAlign: 'left',
+    },
 };
 
 export const validateOptions = (options: RenderOption): RenderOption => {
@@ -30,6 +33,7 @@ export const validateOptions = (options: RenderOption): RenderOption => {
     // Merge defaults
     const mergedPage = { ...defaultOptions.page, ...options.page };
     const mergedFont = { ...defaultOptions.font, ...options.font };
+    const mergedImage = { ...defaultOptions.image, ...options.image };
 
     // Ensure critical defaults if missing
     if (!mergedPage.maxContentWidth) mergedPage.maxContentWidth = 190;
@@ -39,5 +43,6 @@ export const validateOptions = (options: RenderOption): RenderOption => {
         ...options,
         page: mergedPage,
         font: mergedFont,
+        image: mergedImage,
     } as RenderOption;
 };
