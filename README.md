@@ -216,6 +216,40 @@ The following Markdown elements are currently supported by `jspdf-md-renderer`:
     ```markdown
     ![Alt text](https://example.com/image.png)
     ```
+    Images render at their **intrinsic (original) size** by default and scale down automatically if they exceed the available page width. You can control image dimensions and alignment using an optional attribute block `{...}` after the image syntax:
+
+    **Custom Attributes:**
+    | Attribute | Description | Example |
+    |-----------|-------------|---------|
+    | `width` or `w` | Image width in px | `{width=200}` or `{w=200}` |
+    | `height` or `h` | Image height in px | `{height=150}` or `{h=150}` |
+    | `align` | Alignment: `left`, `center`, `right` | `{align=center}` |
+
+    **Sizing Rules:**
+    - If only `width` is given, height is auto-calculated from aspect ratio
+    - If only `height` is given, width is auto-calculated from aspect ratio
+    - If both are given, the image uses exact dimensions (may distort if ratio differs)
+    - Images that exceed page bounds are always scaled down proportionally
+
+    **Examples:**
+    ```markdown
+    ![photo](https://example.com/photo.png)
+    ![photo](https://example.com/photo.png){width=200}
+    ![photo](https://example.com/photo.png){h=150 align=center}
+    ![photo](https://example.com/photo.png){width=200 height=150 align=right}
+    ```
+
+    **Global Default Alignment:**
+    You can set a default alignment for all images via the `image` option:
+    ```ts
+    const options = {
+        // ...other options
+        image: {
+            defaultAlign: 'center', // 'left' (default) | 'center' | 'right'
+        },
+    };
+    ```
+
 - **Inline Code**:
     ```markdown
     This is an `inline code` example.

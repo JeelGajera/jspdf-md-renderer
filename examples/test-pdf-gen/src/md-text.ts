@@ -117,4 +117,30 @@ generatePDF();
 
 This is a paragraph with **bold text** and *italic text* and \`inline code\` and a [link](https://example.com) all mixed together in a justified paragraph that should distribute spacing evenly across multiple lines.
 
+### Image Rendering
+
+Images render at their original size and scale down if they exceed the page width.
+
+![Default size image](https://picsum.photos/200/300)
+
+**Image with custom width (100px):**
+
+![Width only](https://picsum.photos/200/300){width=100}
+
+**Image with custom height (50px):**
+
+![Height only](https://picsum.photos/200/300){height=50}
+
+**Image aligned center:**
+
+![Center aligned](https://picsum.photos/200/300){w=120 align=center}
+
+**Image aligned right:**
+
+![Right aligned](https://picsum.photos/200/300){w=100 align=right}
+
+**Image with both width and height:**
+
+![Both dimensions](https://picsum.photos/200/300){width=350 height=450}
+
 `;

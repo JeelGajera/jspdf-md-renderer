@@ -2,6 +2,10 @@
 import { TokensList, marked } from 'marked';
 import { MdTokenType } from '../enums/mdTokenType';
 import { ParsedElement } from '../types/parsedElement';
+import {
+    preprocessImageAttributes,
+    parseImageAttrsFromHref,
+} from './imageExtension';
 
 /**
  * Parses markdown into tokens and converts to a custom parsed structure.
@@ -10,7 +14,12 @@ import { ParsedElement } from '../types/parsedElement';
  * @returns Parsed markdown elements.
  */
 export const MdTextParser = async (text: string): Promise<ParsedElement[]> => {
-    const tokens = await marked.lexer(text, { async: true, gfm: true });
+    // Pre-process: encode {width=N height=N align=X} into image URL fragments
+    const processedText = preprocessImageAttributes(text);
+    const tokens = await marked.lexer(processedText, {
+        async: true,
+        gfm: true,
+    });
     // console.log(tokens);
     return convertTokens(tokens);
 };
@@ -21,7 +30,7 @@ export const MdTextParser = async (text: string): Promise<ParsedElement[]> => {
  * @param tokens - The list of markdown tokens.
  * @returns Parsed elements in a custom structure.
  */
-const convertTokens = (tokens: TokensList): ParsedElement[] => {
+const convertTokens = (tokens: TokensList | any[]): ParsedElement[] => {
     const parsedElements: ParsedElement[] = [];
     tokens.forEach((token) => {
         try {
@@ -85,11 +94,18 @@ const tokenHandlers: Record<string, (token: any) => ParsedElement> = {
             })),
         ),
     }),
-    [MdTokenType.Image]: (token) => ({
-        type: MdTokenType.Image,
-        src: token.href,
-        alt: token.text,
-    }),
+    [MdTokenType.Image]: (token) => {
+        // Decode attributes from URL fragment and get clean URL
+        const { cleanHref, attrs } = parseImageAttrsFromHref(token.href);
+        return {
+            type: MdTokenType.Image,
+            src: cleanHref,
+            alt: token.text,
+            width: attrs.width,
+            height: attrs.height,
+            align: attrs.align,
+        };
+    },
     [MdTokenType.Link]: (token) => ({
         type: MdTokenType.Link,
         href: token.href,
