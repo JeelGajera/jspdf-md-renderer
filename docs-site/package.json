@@ -1,0 +1,19 @@
+{
+    "name": "jspdf-md-renderer-docs",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vitepress dev",
+        "build": "vitepress build",
+        "preview": "vitepress preview"
+    },
+    "devDependencies": {
+        "vitepress": "^1.5.0",
+        "vue": "^3.4.0"
+    },
+    "dependencies": {
+        "jspdf": "^4.2.0",
+        "jspdf-autotable": "^5.0.7",
+        "jspdf-md-renderer": "file:.."
+    }
+}
