@@ -30,6 +30,12 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install root deps
+        run: npm i
+      
+      - name: Build root package
+        run: npm run build
+
       - name: Install deps
         working-directory: docs-site
         run: npm i
