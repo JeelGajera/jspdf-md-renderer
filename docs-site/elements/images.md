@@ -19,6 +19,21 @@ Embed images directly in your PDF from URLs or base64 data.
 ![Logo](https://example.com/logo.png){h=150 align=right}
 ```
 
+## Inline vs Block Images
+
+Images can be rendered either as distinct blocks or inline with text. 
+
+- **Block Images:** If an image is the *only* element in a paragraph (i.e. on its own line), it will render as a standalone block. Block images support the `align` attribute (`left`, `center`, `right`).
+- **Inline Images:** If an image is mixed directly with text, the library automatically renders it inline, anchoring it to the text baseline so it flows naturally within the sentence. Inline images ignore the `align` attribute (since they follow the text flow) but fully support `width` and `height` adjustments.
+
+```markdown
+<!-- Block image -->
+![photo](https://picsum.photos/400/200){align=center}
+
+<!-- Inline image flow -->
+Here is an inline LaTeX equation ![LaTeX](https://latex.codecogs.com/svg.image?e%20%3D%20mc%5E2) placed right inside the text!
+```
+
 ## Custom Attributes
 
 Add an attribute block `{...}` immediately after the image syntax to control sizing and alignment:

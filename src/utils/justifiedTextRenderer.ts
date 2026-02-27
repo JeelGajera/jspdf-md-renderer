@@ -4,6 +4,7 @@ import { TextStyle, StyledWordInfo, StyledLine } from '../types/styledWordInfo';
 import { RenderStore } from '../store/renderStore';
 import { getCharHight } from './doc-helpers';
 import { HandlePageBreaks } from './handlePageBreak';
+import { calculateImageDimensions } from './image-utils';
 
 /**
  * JustifiedTextRenderer - Renders mixed inline elements with proper alignment.
@@ -150,6 +151,35 @@ export class JustifiedTextRenderer {
                     elHref,
                 );
                 result.push(...nested);
+            } else if (el.type === 'image') {
+                const maxH =
+                    RenderStore.options.page.maxContentHeight -
+                    RenderStore.options.page.topmargin;
+                const maxWidth =
+                    RenderStore.options.page.maxContentWidth -
+                    RenderStore.options.page.indent * 0; // we will keep it simple for inline
+                const docUnit = RenderStore.options.page.unit || 'mm';
+                const { finalWidth, finalHeight } = calculateImageDimensions(
+                    doc,
+                    el,
+                    maxWidth,
+                    maxH,
+                    docUnit,
+                );
+
+                result.push({
+                    text: '',
+                    width: finalWidth,
+                    style,
+                    isLink: elIsLink,
+                    href: elHref,
+                    linkColor: elIsLink
+                        ? RenderStore.options.link?.linkColor || [0, 0, 255]
+                        : undefined,
+                    isImage: true,
+                    imageElement: el,
+                    imageHeight: finalHeight,
+                });
             } else {
                 // Leaf node: get text content
                 const text = el.content || el.text || '';
@@ -222,6 +252,9 @@ export class JustifiedTextRenderer {
         let currentLine: StyledWordInfo[] = [];
         let currentTextWidth = 0; // Sum of word widths only
         let currentLineWidth = 0; // Including spaces for overflow check
+        let currentLineHeight =
+            getCharHight(doc) *
+            RenderStore.options.page.defaultLineHeightFactor;
 
         // Get space width (using normal font)
         const spaceWidth = doc.getTextWidth(' ');
@@ -232,6 +265,12 @@ export class JustifiedTextRenderer {
             const neededWidthWithSpace =
                 currentLine.length > 0 ? spaceWidth + word.width : word.width;
 
+            const itemHeight =
+                word.isImage && word.imageHeight
+                    ? word.imageHeight
+                    : getCharHight(doc) *
+                      RenderStore.options.page.defaultLineHeightFactor;
+
             if (
                 currentLineWidth + neededWidthWithSpace > maxWidth &&
                 currentLine.length > 0
@@ -241,15 +280,18 @@ export class JustifiedTextRenderer {
                     words: currentLine,
                     totalTextWidth: currentTextWidth,
                     isLastLine: false,
+                    lineHeight: currentLineHeight,
                 });
                 // Start new line with current word
                 currentLine = [word];
                 currentTextWidth = word.width;
                 currentLineWidth = word.width;
+                currentLineHeight = itemHeight;
             } else {
                 currentLine.push(word);
                 currentTextWidth += word.width;
                 currentLineWidth += neededWidthWithSpace;
+                currentLineHeight = Math.max(currentLineHeight, itemHeight);
             }
         }
 
@@ -259,6 +301,7 @@ export class JustifiedTextRenderer {
                 words: currentLine,
                 totalTextWidth: currentTextWidth,
                 isLastLine: true,
+                lineHeight: currentLineHeight,
             });
         }
 
@@ -286,32 +329,77 @@ export class JustifiedTextRenderer {
             doc.setTextColor(...(word.linkColor as [number, number, number]));
         }
 
-        // Draw codespan background if enabled
-        if (word.style === 'codespan') {
-            const codespanOpts = this.getCodespanOptions();
-            if (codespanOpts.showBackground) {
-                const h = getCharHight(doc);
-                const pad = codespanOpts.padding;
-                // For codespan (which is kept as a single phrase),
-                // use word.width to ensure background covers full text including charSpace
-                doc.setFillColor(codespanOpts.backgroundColor);
-                doc.rect(
-                    x - pad,
-                    y - pad,
-                    word.width + pad * 2,
-                    h + pad * 2,
-                    'F',
-                );
-                doc.setFillColor('#000000');
-            }
-        }
+        if (word.isImage && word.imageElement && word.imageElement.data) {
+            try {
+                // Draw inline image
+                let imgFormat = 'JPEG';
+                if (word.imageElement.data.startsWith('data:image/png'))
+                    imgFormat = 'PNG';
+                else if (word.imageElement.data.startsWith('data:image/webp'))
+                    imgFormat = 'WEBP';
+                else if (word.imageElement.data.startsWith('data:image/gif'))
+                    imgFormat = 'GIF';
+                else if (word.imageElement.src) {
+                    const urlWithoutQuery = word.imageElement.src
+                        .split('?')[0]
+                        .split('#')[0];
+                    const ext = urlWithoutQuery.split('.').pop()?.toUpperCase();
+                    if (
+                        ext &&
+                        ['PNG', 'JPEG', 'JPG', 'WEBP', 'GIF'].includes(ext)
+                    ) {
+                        imgFormat = ext === 'JPG' ? 'JPEG' : ext;
+                    }
+                }
 
-        // Draw text
-        doc.text(word.text, x, y, { baseline: 'top' });
+                if (word.width > 0 && (word.imageHeight || 0) > 0) {
+                    const imgH = word.imageHeight || 0;
+                    const imgY = y - imgH;
+
+                    doc.addImage(
+                        word.imageElement.data,
+                        imgFormat,
+                        x,
+                        imgY,
+                        word.width,
+                        imgH,
+                    );
+                }
+            } catch (e) {
+                console.warn('Failed to render inline image', e);
+            }
+        } else {
+            // Draw codespan background if enabled
+            if (word.style === 'codespan') {
+                const codespanOpts = this.getCodespanOptions();
+                if (codespanOpts.showBackground) {
+                    const h = getCharHight(doc);
+                    const pad = codespanOpts.padding;
+                    // For codespan (which is kept as a single phrase),
+                    // use word.width to ensure background covers full text including charSpace
+                    doc.setFillColor(codespanOpts.backgroundColor);
+                    doc.rect(
+                        x - pad,
+                        y - pad,
+                        word.width + pad * 2,
+                        h + pad * 2,
+                        'F',
+                    );
+                    doc.setFillColor('#000000');
+                }
+            }
+
+            // Draw text
+            // Text is aligned to bottom of the line box to naturally sit on the baseline with images
+            doc.text(word.text, x, y, { baseline: 'top' });
+        }
 
         // Add link annotation if needed
         if (word.isLink && word.href) {
-            const h = getCharHight(doc) / 2;
+            const h =
+                word.isImage && word.imageHeight
+                    ? word.imageHeight
+                    : getCharHight(doc);
             doc.link(x, y, word.width, h, { url: word.href });
         }
 
@@ -366,9 +454,30 @@ export class JustifiedTextRenderer {
 
         // Render each word
         let currentX = startX;
+        // Text height used for baseline alignment
+        const textHeight =
+            getCharHight(doc) *
+            RenderStore.options.page.defaultLineHeightFactor;
+
         for (let i = 0; i < words.length; i++) {
-            this.renderWord(doc, words[i], currentX, y);
-            currentX += words[i].width;
+            const word = words[i];
+
+            // Calculate y-offset for baseline alignment
+            // If the element is tall (e.g., an image), its top starts at y
+            // If the element is short (e.g., normal text), it drops down to share the baseline with the tallest element
+            let drawY = y;
+            const elementHeight =
+                word.isImage && word.imageHeight
+                    ? word.imageHeight
+                    : textHeight;
+
+            // Align to bottom (baseline) of the tallest element in the line
+            if (elementHeight < line.lineHeight) {
+                drawY = y + (line.lineHeight - elementHeight);
+            }
+
+            this.renderWord(doc, word, currentX, drawY);
+            currentX += word.width;
             if (i < words.length - 1) {
                 currentX += wordSpacing;
             }
@@ -405,16 +514,12 @@ export class JustifiedTextRenderer {
         // Break into lines
         const lines = this.breakIntoLines(doc, words, maxWidth);
 
-        const lineHeight =
-            getCharHight(doc) *
-            RenderStore.options.page.defaultLineHeightFactor;
-
         let currentY = y;
 
         for (const line of lines) {
             // Check for page break
             if (
-                currentY + lineHeight >
+                currentY + line.lineHeight >
                 RenderStore.options.page.maxContentHeight
             ) {
                 HandlePageBreaks(doc);
@@ -432,10 +537,10 @@ export class JustifiedTextRenderer {
             );
 
             // Record the visual bottom of the text on this line
-            RenderStore.recordContentY(currentY + getCharHight(doc));
+            RenderStore.recordContentY(currentY + line.lineHeight);
 
-            currentY += lineHeight;
-            RenderStore.updateY(lineHeight, 'add');
+            currentY += line.lineHeight;
+            RenderStore.updateY(line.lineHeight, 'add');
         }
 
         // Update X position to end of last line for any inline continuation

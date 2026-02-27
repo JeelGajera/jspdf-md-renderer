@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitepress'
+import { defineConfig } from 'vitepress';
 
 export default defineConfig({
     base: '/jspdf-md-renderer',
@@ -9,8 +9,21 @@ export default defineConfig({
     head: [
         ['link', { rel: 'icon', href: '/jspdf-md-renderer/favicon.ico' }],
         ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
-        ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
-        ['link', { href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap', rel: 'stylesheet' }],
+        [
+            'link',
+            {
+                rel: 'preconnect',
+                href: 'https://fonts.gstatic.com',
+                crossorigin: '',
+            },
+        ],
+        [
+            'link',
+            {
+                href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+                rel: 'stylesheet',
+            },
+        ],
     ],
 
     themeConfig: {
@@ -23,7 +36,10 @@ export default defineConfig({
             { text: 'Elements', link: '/elements/headings' },
             { text: 'Examples', link: '/examples/resume' },
             { text: 'Playground', link: '/playground/' },
-            { text: 'npm', link: 'https://www.npmjs.com/package/jspdf-md-renderer' },
+            {
+                text: 'npm',
+                link: 'https://www.npmjs.com/package/jspdf-md-renderer',
+            },
         ],
 
         sidebar: {
@@ -31,7 +47,10 @@ export default defineConfig({
                 {
                     text: 'Guide',
                     items: [
-                        { text: 'Getting Started', link: '/guide/getting-started' },
+                        {
+                            text: 'Getting Started',
+                            link: '/guide/getting-started',
+                        },
                         { text: 'Installation', link: '/guide/installation' },
                         { text: 'Basic Usage', link: '/guide/basic-usage' },
                         { text: 'Browser Usage', link: '/guide/browser-usage' },
@@ -61,7 +80,10 @@ export default defineConfig({
                         { text: 'Tables', link: '/elements/tables' },
                         { text: 'Code Blocks', link: '/elements/code-blocks' },
                         { text: 'Blockquotes', link: '/elements/blockquotes' },
-                        { text: 'Horizontal Rules', link: '/elements/horizontal-rules' },
+                        {
+                            text: 'Horizontal Rules',
+                            link: '/elements/horizontal-rules',
+                        },
                     ],
                 },
             ],
@@ -72,26 +94,34 @@ export default defineConfig({
                         { text: 'Resume / CV', link: '/examples/resume' },
                         { text: 'Invoice', link: '/examples/invoice' },
                         { text: 'Technical Report', link: '/examples/report' },
-                        { text: 'Custom Fonts', link: '/examples/custom-fonts' },
+                        {
+                            text: 'Custom Fonts',
+                            link: '/examples/custom-fonts',
+                        },
                     ],
                 },
             ],
         },
 
         socialLinks: [
-            { icon: 'github', link: 'https://github.com/JeelGajera/jspdf-md-renderer' },
+            {
+                icon: 'github',
+                link: 'https://github.com/JeelGajera/jspdf-md-renderer',
+            },
         ],
 
         editLink: {
-            pattern: 'https://github.com/JeelGajera/jspdf-md-renderer/edit/master/docs-site/:path',
+            pattern:
+                'https://github.com/JeelGajera/jspdf-md-renderer/edit/master/docs-site/:path',
             text: 'Edit this page on GitHub',
         },
 
         footer: {
             message: 'Released under the MIT License.',
-            copyright: 'Copyright © <a href="https://github.com/JeelGajera" target="_blank" rel="noopener">Jeel Gajera</a>',
+            copyright:
+                'Copyright © <a href="https://github.com/JeelGajera" target="_blank" rel="noopener">Jeel Gajera</a>',
         },
 
         search: { provider: 'local' },
     },
-})
+});

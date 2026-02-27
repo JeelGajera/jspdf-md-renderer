@@ -1,116 +1,140 @@
 :root {
-  --vp-font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --vp-font-family-base:
+        'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        sans-serif;
 
-  /* Minimal monochrome brand colors for light mode */
-  --vp-c-brand-1: #222222;
-  --vp-c-brand-2: #444444;
-  --vp-c-brand-3: #666666;
-  --vp-c-brand-soft: rgba(34, 34, 34, 0.08);
+    /* Minimal monochrome brand colors for light mode */
+    --vp-c-brand-1: #222222;
+    --vp-c-brand-2: #444444;
+    --vp-c-brand-3: #666666;
+    --vp-c-brand-soft: rgba(34, 34, 34, 0.08);
 
-  --vp-button-brand-bg: #222222;
-  --vp-button-brand-hover-bg: #444444;
-  --vp-button-brand-text: #ffffff;
+    --vp-button-brand-bg: #222222;
+    --vp-button-brand-hover-bg: #444444;
+    --vp-button-brand-text: #ffffff;
 
-  --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(135deg, #111111 10%, #666666 50%, #111111 100%);
+    --vp-home-hero-name-color: transparent;
+    --vp-home-hero-name-background: linear-gradient(
+        135deg,
+        #111111 10%,
+        #666666 50%,
+        #111111 100%
+    );
 
-  /* Hero Logo Glow - Light Mode */
-  --vp-home-hero-image-background-image: linear-gradient(-45deg, #f7df1e 20%, #e22b2b 80%);
-  --vp-home-hero-image-filter: blur(44px);
+    /* Hero Logo Glow - Light Mode */
+    --vp-home-hero-image-background-image: linear-gradient(
+        -45deg,
+        #f7df1e 20%,
+        #e22b2b 80%
+    );
+    --vp-home-hero-image-filter: blur(44px);
 }
 
 .dark {
-  /* Minimal monochrome brand colors for dark mode */
-  --vp-c-brand-1: #eeeeee;
-  --vp-c-brand-2: #cccccc;
-  --vp-c-brand-3: #aaaaaa;
+    /* Minimal monochrome brand colors for dark mode */
+    --vp-c-brand-1: #eeeeee;
+    --vp-c-brand-2: #cccccc;
+    --vp-c-brand-3: #aaaaaa;
 
-  --vp-button-brand-bg: #eeeeee;
-  --vp-button-brand-hover-bg: #cccccc;
-  --vp-button-brand-text: #111111;
-  --vp-button-brand-active-bg: #ffffff;
+    --vp-button-brand-bg: #eeeeee;
+    --vp-button-brand-hover-bg: #cccccc;
+    --vp-button-brand-text: #111111;
+    --vp-button-brand-active-bg: #ffffff;
 
-  --vp-home-hero-name-background: linear-gradient(135deg, #ffffff 10%, #aaaaaa 50%, #ffffff 100%);
+    --vp-home-hero-name-background: linear-gradient(
+        135deg,
+        #ffffff 10%,
+        #aaaaaa 50%,
+        #ffffff 100%
+    );
 
-  /* Hero Logo Glow - Dark Mode */
-  --vp-home-hero-image-background-image: linear-gradient(-45deg, #f7df1e 20%, #e22b2b 80%);
-  --vp-home-hero-image-filter: blur(60px);
+    /* Hero Logo Glow - Dark Mode */
+    --vp-home-hero-image-background-image: linear-gradient(
+        -45deg,
+        #f7df1e 20%,
+        #e22b2b 80%
+    );
+    --vp-home-hero-image-filter: blur(60px);
 }
 
 /* Base override to ensure the background shapes correctly behind the image */
 .image-bg {
-  transform: scale(1.1);
-  opacity: 0.6;
+    transform: scale(1.1);
+    opacity: 0.6;
 }
 
 .dark .image-bg {
-  opacity: 0.8;
+    opacity: 0.8;
 }
 
 /* Header Navbar Logo Glow */
 .VPNavBarTitle img {
-  filter: drop-shadow(0 0 6px rgba(247, 223, 30, 0.5)) drop-shadow(0 0 8px rgba(226, 43, 43, 0.4));
-  transition: filter 0.3s ease;
+    filter: drop-shadow(0 0 6px rgba(247, 223, 30, 0.5))
+        drop-shadow(0 0 8px rgba(226, 43, 43, 0.4));
+    transition: filter 0.3s ease;
 }
 
 .dark .VPNavBarTitle img {
-  filter: drop-shadow(0 0 8px rgba(247, 223, 30, 0.6)) drop-shadow(0 0 10px rgba(226, 43, 43, 0.5));
+    filter: drop-shadow(0 0 8px rgba(247, 223, 30, 0.6))
+        drop-shadow(0 0 10px rgba(226, 43, 43, 0.5));
 }
 
 /* Modern Intuitive Slick Cards / Hover Effects */
 .VPFeature {
-  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-  border-radius: 12px;
-  border: 1px solid var(--vp-c-bg-soft) !important;
-  background-color: var(--vp-c-bg-soft) !important;
+    transition:
+        transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+        box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    border-radius: 12px;
+    border: 1px solid var(--vp-c-bg-soft) !important;
+    background-color: var(--vp-c-bg-soft) !important;
 }
 
 .VPFeature:hover {
-  transform: translateY(-4px) !important;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08) !important;
-  border-color: var(--vp-c-brand-3) !important;
+    transform: translateY(-4px) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08) !important;
+    border-color: var(--vp-c-brand-3) !important;
 }
 
 .dark .VPFeature:hover {
-  box-shadow: 0 12px 32px rgba(255, 255, 255, 0.04) !important;
-  border-color: var(--vp-c-brand-3) !important;
+    box-shadow: 0 12px 32px rgba(255, 255, 255, 0.04) !important;
+    border-color: var(--vp-c-brand-3) !important;
 }
 
 /* Beautiful custom selection color */
 ::selection {
-  background: var(--vp-c-brand-soft);
-  color: var(--vp-c-brand-1);
+    background: var(--vp-c-brand-soft);
+    color: var(--vp-c-brand-1);
 }
 
 /* Playground Full Width Display */
 .custom-playground-page .VPDoc .container {
-  max-width: 1400px !important;
-  margin: 0 auto;
+    max-width: 1400px !important;
+    margin: 0 auto;
 }
 
 @media (min-width: 960px) {
-  .custom-playground-page .VPDoc {
-    padding-left: 24px;
-    padding-right: 24px;
-    width: 100%;
-  }
+    .custom-playground-page .VPDoc {
+        padding-left: 24px;
+        padding-right: 24px;
+        width: 100%;
+    }
 }
 
 .custom-playground-page .VPDoc .content {
-  max-width: 100% !important;
+    max-width: 100% !important;
 }
 
 .custom-playground-page .vp-doc {
-  max-width: 100% !important;
+    max-width: 100% !important;
 }
 
 /* Ensure sidebars don't shrink the space */
 .custom-playground-page .VPDoc.has-aside .content {
-  max-width: 100% !important;
+    max-width: 100% !important;
 }
 
 /* Make Playground wider and centered */
 .custom-playground-page .playground-container {
-  width: 100% !important;
-  max-width: 1400px !important;
+    width: 100% !important;
+    max-width: 1400px !important;
 }
