@@ -43,7 +43,7 @@
     "bugs": {
         "url": "https://github.com/JeelGajera/jspdf-md-renderer/issues"
     },
-    "homepage": "https://github.com/JeelGajera/jspdf-md-renderer#readme",
+    "homepage": "https://jeelgajera.github.io/jspdf-md-renderer/",
     "dependencies": {
         "jspdf": "^4.2.0",
         "jspdf-autotable": "^5.0.2",

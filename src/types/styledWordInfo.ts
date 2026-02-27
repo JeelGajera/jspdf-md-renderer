@@ -1,3 +1,5 @@
+import { ParsedElement } from './parsedElement';
+
 /**
  * Enhanced word info types for styled text justification.
  * These types allow tracking font styles per word for proper justified rendering.
@@ -26,6 +28,12 @@ export interface StyledWordInfo {
     href?: string;
     /** Optional link color override */
     linkColor?: number[];
+    /** Whether this is an inline image */
+    isImage?: boolean;
+    /** The image parsed element */
+    imageElement?: ParsedElement;
+    /** The height of the image to reserve */
+    imageHeight?: number;
 }
 
 /**
@@ -38,4 +46,6 @@ export interface StyledLine {
     totalTextWidth: number;
     /** Last line of paragraph shouldn't be fully justified */
     isLastLine: boolean;
+    /** Line height (max of text height and inline image heights) */
+    lineHeight: number;
 }

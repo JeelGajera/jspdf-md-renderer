@@ -2,11 +2,7 @@ import { jsPDF } from 'jspdf';
 import { ParsedElement } from '../../types';
 import { RenderStore } from '../../store/renderStore';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
-
-/**
- * Standard DPI for web/screen pixels.
- */
-const DEFAULT_DPI = 96;
+import { calculateImageDimensions } from '../../utils/image-utils';
 
 /**
  * Detects the image format from element data and source.
@@ -20,31 +16,20 @@ const detectImageFormat = (element: ParsedElement): string => {
         )
             return 'JPEG';
         if (element.data.startsWith('data:image/webp')) return 'WEBP';
+        if (element.data.startsWith('data:image/webp')) return 'WEBP';
         if (element.data.startsWith('data:image/gif')) return 'GIF';
     }
-    return element.src?.split('.').pop()?.toUpperCase() || 'JPEG';
-};
 
-/**
- * Converts pixel values to the document's unit system.
- * Uses 96 DPI as the standard web pixel density.
- *
- * @param px - Value in pixels
- * @param unit - The document unit ('mm' | 'pt' | 'in' | 'px')
- * @returns Value in document units
- */
-const pxToDocUnit = (px: number, unit: string = 'mm'): number => {
-    switch (unit) {
-        case 'pt':
-            return (px * 72) / DEFAULT_DPI;
-        case 'in':
-            return px / DEFAULT_DPI;
-        case 'px':
-            return px;
-        case 'mm':
-        default:
-            return (px * 25.4) / DEFAULT_DPI;
+    // Fallback: extract extension from src, ignoring query parameters and hashes
+    if (element.src) {
+        const urlWithoutQuery = element.src.split('?')[0].split('#')[0];
+        const ext = urlWithoutQuery.split('.').pop()?.toUpperCase();
+        if (ext && ['PNG', 'JPEG', 'JPG', 'WEBP', 'GIF'].includes(ext)) {
+            return ext === 'JPG' ? 'JPEG' : ext;
+        }
     }
+
+    return 'JPEG'; // Default fallback format for jsPDF
 };
 
 /**
@@ -77,49 +62,15 @@ const renderImage = (
     let currentY = RenderStore.Y;
 
     try {
-        // Get intrinsic image dimensions (always in pixels)
-        const props = doc.getImageProperties(element.data);
-        const intrinsicPxW = props.width;
-        const intrinsicPxH = props.height;
-        const aspectRatio = intrinsicPxH > 0 ? intrinsicPxW / intrinsicPxH : 1;
-
-        // --- Determine final dimensions (in document units) ---
-        let finalWidth: number;
-        let finalHeight: number;
-
-        if (element.width && element.height) {
-            // Both specified (in px): convert to doc units
-            finalWidth = pxToDocUnit(element.width, docUnit);
-            finalHeight = pxToDocUnit(element.height, docUnit);
-        } else if (element.width) {
-            // Width only (in px): convert and calculate height from aspect ratio
-            finalWidth = pxToDocUnit(element.width, docUnit);
-            finalHeight = finalWidth / aspectRatio;
-        } else if (element.height) {
-            // Height only (in px): convert and calculate width from aspect ratio
-            finalHeight = pxToDocUnit(element.height, docUnit);
-            finalWidth = finalHeight * aspectRatio;
-        } else {
-            // No dimensions specified: convert intrinsic px to doc units
-            finalWidth = pxToDocUnit(intrinsicPxW, docUnit);
-            finalHeight = pxToDocUnit(intrinsicPxH, docUnit);
-        }
-
-        // --- Clamp to page bounds ---
-        // If image exceeds available width, scale down proportionally
-        if (finalWidth > maxWidth) {
-            const scale = maxWidth / finalWidth;
-            finalWidth = maxWidth;
-            finalHeight = finalHeight * scale;
-        }
-
-        // If image exceeds available content height, scale down proportionally
         const maxH = options.page.maxContentHeight - options.page.topmargin;
-        if (finalHeight > maxH) {
-            const scale = maxH / finalHeight;
-            finalHeight = maxH;
-            finalWidth = finalWidth * scale;
-        }
+
+        const { finalWidth, finalHeight } = calculateImageDimensions(
+            doc,
+            element,
+            maxWidth,
+            maxH,
+            docUnit,
+        );
 
         // --- Page break check ---
         if (currentY + finalHeight > options.page.maxContentHeight) {
@@ -148,14 +99,16 @@ const renderImage = (
         const imgFormat = detectImageFormat(element);
 
         // --- Draw ---
-        doc.addImage(
-            element.data,
-            imgFormat,
-            drawX,
-            currentY,
-            finalWidth,
-            finalHeight,
-        );
+        if (finalWidth > 0 && finalHeight > 0) {
+            doc.addImage(
+                element.data,
+                imgFormat,
+                drawX,
+                currentY,
+                finalWidth,
+                finalHeight,
+            );
+        }
 
         RenderStore.updateY(finalHeight, 'add');
         RenderStore.recordContentY();

@@ -42,7 +42,7 @@ const renderTable = (
             // update Y cursor
             RenderStore.setCursor({
                 x: RenderStore.X,
-                y: data.cell.y + 2 * options.page.lineSpace,
+                y: data.cell.y + data.cell.height + 2 * options.page.lineSpace,
             });
         },
     });

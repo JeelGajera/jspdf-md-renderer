@@ -25,12 +25,26 @@ const renderParagraph = (
     const maxWidth = RenderStore.options.page.maxContentWidth - indent;
 
     if (element?.items && element?.items.length > 0) {
+        // If it's just a single image, render as a block image
+        if (element.items.length === 1 && element.items[0].type === 'image') {
+            parentElementRenderer(element.items[0], indent, false);
+            RenderStore.updateX(RenderStore.options.page.xpading);
+            RenderStore.deactivateInlineLock();
+            return;
+        }
+
+        const inlineTypes = [
+            'strong',
+            'em',
+            'text',
+            'codespan',
+            'link',
+            'image',
+        ];
+
         // Check if there are any non-inline items that need special handling
         const hasNonInlineItems = element.items.some(
-            (item) =>
-                !['strong', 'em', 'text', 'codespan', 'link'].includes(
-                    item.type,
-                ),
+            (item) => !inlineTypes.includes(item.type),
         );
 
         if (hasNonInlineItems) {
@@ -52,11 +66,7 @@ const renderParagraph = (
             };
 
             for (const item of element.items) {
-                if (
-                    ['strong', 'em', 'text', 'codespan', 'link'].includes(
-                        item.type,
-                    )
-                ) {
+                if (inlineTypes.includes(item.type)) {
                     inlineBuffer.push(item);
                 } else {
                     flushInlineBuffer();
