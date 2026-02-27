@@ -1,0 +1,148 @@
+# jspdf-md-renderer — AI Agent Reference
+
+## Package
+- npm: jspdf-md-renderer
+- Version: 3.2.0
+- License: MIT
+- Repository: https://github.com/JeelGajera/jspdf-md-renderer
+
+## What it does
+Renders Markdown content directly into jsPDF PDF documents with full custom styling options.
+Built on top of jsPDF with marked.js for markdown parsing and jspdf-autotable for table rendering.
+
+## Installation
+```
+npm install jspdf-md-renderer
+```
+
+## Core API
+
+### MdTextRender(doc, text, options)
+Renders markdown into a jsPDF doc.
+- doc: jsPDF instance
+- text: string — raw markdown content
+- options: RenderOption (see below)
+- Returns: Promise<void>
+
+### MdTextParser(text)
+Parses markdown into structured tokens.
+- text: string — raw markdown content
+- Returns: Promise<ParsedElement[]>
+
+## RenderOption — Full Options Reference
+
+### cursor (required)
+- cursor.x: number — Starting X position
+- cursor.y: number — Starting Y position
+
+### page
+- page.format: string | number[] — Page format (default: 'a4')
+- page.unit: string — Unit: 'mm', 'pt', 'px', 'in'
+- page.orientation: string — 'portrait'/'p' or 'landscape'/'l' (default: 'p')
+- page.maxContentWidth: number — Max content width (default: 190)
+- page.maxContentHeight: number — Max height before page break (default: 277)
+- page.lineSpace: number — Spacing between elements (default: 1.5)
+- page.defaultLineHeightFactor: number — Line height factor (default: 1.2)
+- page.defaultFontSize: number — Body font size (default: 12)
+- page.defaultTitleFontSize: number — Heading font size (default: 14)
+- page.topmargin: number — New page top margin (default: 10)
+- page.xpading: number — Horizontal content padding (default: 10)
+- page.xmargin: number — Left margin (default: 10)
+- page.indent: number — Nested list indent per level (default: 10)
+
+### font
+- font.bold: { name: string, style: string } — Bold font (default: helvetica bold)
+- font.regular: { name: string, style: string } — Regular font (default: helvetica normal)
+- font.light: { name: string, style: string } — Light font (default: helvetica light)
+
+### content (optional)
+- content.textAlignment: 'left' | 'right' | 'center' | 'justify'
+
+### codespan (optional)
+- codespan.backgroundColor: string — Inline code bg (default: '#EEEEEE')
+- codespan.padding: number — Inline code padding (default: 0.5)
+- codespan.showBackground: boolean — Show background (default: true)
+- codespan.fontSizeScale: number — Code font scale (default: 0.9)
+
+### link (optional)
+- link.linkColor: [number, number, number] — RGB link color
+
+### table (optional)
+- Passes through to jspdf-autotable UserOptions
+
+### image (optional)
+- image.defaultAlign: 'left' | 'center' | 'right' (default: 'left')
+
+### Callbacks
+- endCursorYHandler: (y: number) => void — Required. Called with final Y position after rendering.
+- pageBreakHandler: (doc: jsPDF) => void — Optional. Called when new page is added.
+
+## Supported Markdown Elements
+- headings (# through ######)
+- paragraphs (plain text blocks)
+- lists (ordered 1., unordered -, nested, mixed)
+- horizontal rules (---, ***, ___)
+- bold (**text** or __text__)
+- italic (*text* or _text_)
+- bold-italic (***text***)
+- code blocks (fenced ```lang blocks)
+- inline code (`code`)
+- links ([text](url))
+- blockquotes (> text)
+- images (![alt](url) with optional attributes)
+- tables (GFM pipe tables)
+
+## Image Attribute Syntax
+```
+![alt](url){width=200 height=150 align=center}
+```
+Attributes: width/w (px), height/h (px), align (left|center|right)
+Sizing: width-only or height-only auto-calculates the other from aspect ratio.
+Images exceeding page width are scaled down proportionally.
+
+## UMD / Browser Usage
+Load scripts in order: marked → jspdf → jspdf-autotable → jspdf-md-renderer
+Access via: window.jspdf.jsPDF and window.JspdfMdRenderer.MdTextRender
+
+## Basic Example
+```javascript
+import { jsPDF } from 'jspdf';
+import { MdTextRender } from 'jspdf-md-renderer';
+
+const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+await MdTextRender(doc, '# Hello World', {
+  cursor: { x: 10, y: 10 },
+  page: { maxContentWidth: 190, maxContentHeight: 277, lineSpace: 1.5,
+    defaultLineHeightFactor: 1.2, defaultFontSize: 12, defaultTitleFontSize: 14,
+    topmargin: 10, xpading: 10, xmargin: 10, indent: 10 },
+  font: { bold: { name: 'helvetica', style: 'bold' },
+    regular: { name: 'helvetica', style: 'normal' },
+    light: { name: 'helvetica', style: 'light' } },
+  endCursorYHandler: (y) => console.log('End Y:', y),
+});
+doc.save('output.pdf');
+```
+
+## Docs Site Sections
+- /guide/getting-started — Quick start guide
+- /guide/installation — All install methods
+- /guide/basic-usage — Detailed usage guide
+- /guide/browser-usage — Browser-specific usage
+- /api/options — Full options reference
+- /api/MdTextRender — MdTextRender API
+- /api/MdTextParser — MdTextParser API
+- /elements/headings — Headings element
+- /elements/paragraphs — Paragraphs element
+- /elements/text-styles — Bold, italic, code
+- /elements/lists — Lists element
+- /elements/links — Links element
+- /elements/images — Images element
+- /elements/tables — Tables element
+- /elements/code-blocks — Code blocks element
+- /elements/blockquotes — Blockquotes element
+- /elements/horizontal-rules — Horizontal rules element
+- /examples/resume — Resume example
+- /examples/invoice — Invoice example
+- /examples/report — Technical report example
+- /examples/custom-fonts — Custom fonts guide
+- /playground — Interactive playground
