@@ -353,7 +353,11 @@ function downloadPDF() {
     border-radius: 12px;
     overflow: hidden;
     background: var(--vp-c-bg);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 10px 35px rgba(15, 23, 42, 0.08);
+}
+
+.dark .playground-container {
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
 }
 
 .playground-main {
@@ -380,6 +384,12 @@ function downloadPDF() {
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--vp-c-text-1);
+}
+
+.playground-editor .pane-header,
+.playground-preview .pane-header,
+.playground-options .pane-header {
+    backdrop-filter: blur(8px);
 }
 
 .pane-icon {
@@ -420,6 +430,30 @@ function downloadPDF() {
     background: var(--vp-c-bg);
     color: var(--vp-c-text-1);
     tab-size: 2;
+    caret-color: var(--vp-c-brand-1);
+    transition:
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.editor-textarea::selection {
+    background: rgba(59, 130, 246, 0.28);
+    color: inherit;
+    text-shadow: none;
+}
+
+.dark .editor-textarea {
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+.dark .editor-textarea::selection {
+    background: rgba(56, 189, 248, 0.42);
+    color: #f8fafc;
+}
+
+.editor-textarea:focus-visible {
+    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.55);
 }
 
 .playground-preview {
@@ -508,6 +542,20 @@ function downloadPDF() {
     background: var(--vp-c-bg);
     color: var(--vp-c-text-1);
     font-size: 0.8rem;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        background-color 0.2s ease;
+}
+
+.option-group select:hover {
+    border-color: var(--vp-c-brand-2);
+}
+
+.option-group select:focus-visible {
+    outline: none;
+    border-color: var(--vp-c-brand-1);
+    box-shadow: 0 0 0 2px var(--vp-c-brand-soft);
 }
 
 .btn {
@@ -540,6 +588,11 @@ function downloadPDF() {
     background: var(--vp-button-brand-hover-bg, #444);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
 }
 
 .dark .btn-primary:hover:not(:disabled) {

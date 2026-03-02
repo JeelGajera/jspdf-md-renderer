@@ -13,6 +13,9 @@
     --vp-button-brand-hover-bg: #444444;
     --vp-button-brand-text: #ffffff;
 
+    --vp-selection-bg: rgba(59, 130, 246, 0.28);
+    --vp-selection-text: #0b1220;
+
     --vp-home-hero-name-color: transparent;
     --vp-home-hero-name-background: linear-gradient(
         135deg,
@@ -40,6 +43,9 @@
     --vp-button-brand-hover-bg: #cccccc;
     --vp-button-brand-text: #111111;
     --vp-button-brand-active-bg: #ffffff;
+
+    --vp-selection-bg: rgba(56, 189, 248, 0.42);
+    --vp-selection-text: #f8fafc;
 
     --vp-home-hero-name-background: linear-gradient(
         135deg,
@@ -100,10 +106,23 @@
     border-color: var(--vp-c-brand-3) !important;
 }
 
-/* Beautiful custom selection color */
-::selection {
-    background: var(--vp-c-brand-soft);
-    color: var(--vp-c-brand-1);
+/* Improved global text selection contrast */
+::selection,
+::-moz-selection {
+    background: var(--vp-selection-bg);
+    color: var(--vp-selection-text);
+    text-shadow: none;
+}
+
+/* Keep selection visible in form controls/contenteditable too */
+input::selection,
+textarea::selection,
+[contenteditable='true']::selection,
+input::-moz-selection,
+textarea::-moz-selection,
+[contenteditable='true']::-moz-selection {
+    background: var(--vp-selection-bg);
+    color: var(--vp-selection-text);
 }
 
 /* Playground Full Width Display */

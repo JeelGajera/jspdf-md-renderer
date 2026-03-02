@@ -1,8 +1,6 @@
 name: Deploy Docs to GitHub Pages
 
 on:
-    release:
-        types: [published]
     push:
         branches: [master]
         paths:
