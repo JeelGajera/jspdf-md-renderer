@@ -3,6 +3,31 @@ import autoTable from 'jspdf-autotable';
 import { ParsedElement } from '../../types';
 import { RenderStore } from '../../store/renderStore';
 
+type AutoTableFn = typeof autoTable;
+
+const resolveAutoTable = (): AutoTableFn => {
+    const autoTableCandidate = autoTable as unknown as {
+        default?: AutoTableFn;
+        autoTable?: AutoTableFn;
+    };
+
+    if (typeof autoTable === 'function') {
+        return autoTable;
+    }
+
+    if (typeof autoTableCandidate.default === 'function') {
+        return autoTableCandidate.default;
+    }
+
+    if (typeof autoTableCandidate.autoTable === 'function') {
+        return autoTableCandidate.autoTable;
+    }
+
+    throw new Error(
+        'Could not resolve jspdf-autotable export. Expected a callable export.',
+    );
+};
+
 const renderTable = (
     doc: jsPDF,
     element: ParsedElement,
@@ -24,7 +49,7 @@ const renderTable = (
     // User options
     const userTableOptions = options.table || {};
 
-    autoTable(doc, {
+    resolveAutoTable()(doc, {
         head: head,
         body: body,
         startY: RenderStore.Y,
