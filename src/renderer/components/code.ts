@@ -7,8 +7,6 @@ const renderCodeBlock = (
     doc: jsPDF,
     element: ParsedElement,
     indentLevel: number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    hasRawBullet: boolean,
 ) => {
     // Save current font state
     const savedFont = doc.getFont();

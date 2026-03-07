@@ -38,7 +38,10 @@
         "pdf",
         "renderer"
     ],
-    "author": "Jeel Gajera <jeelgajera200@gmail.com>",
+    "author": {
+        "name": "Jeel Gajera",
+        "url": "https://github.com/JeelGajera"
+    },
     "license": "MIT",
     "bugs": {
         "url": "https://github.com/JeelGajera/jspdf-md-renderer/issues"

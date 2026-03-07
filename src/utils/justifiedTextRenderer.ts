@@ -354,7 +354,9 @@ export class JustifiedTextRenderer {
 
                 if (word.width > 0 && (word.imageHeight || 0) > 0) {
                     const imgH = word.imageHeight || 0;
-                    const imgY = y - imgH;
+                    // Draw image at the same Y as text (top-aligned),
+                    // since text uses baseline: 'top'
+                    const imgY = y;
 
                     doc.addImage(
                         word.imageElement.data,
@@ -471,8 +473,12 @@ export class JustifiedTextRenderer {
                     ? word.imageHeight
                     : textHeight;
 
-            // Align to bottom (baseline) of the tallest element in the line
-            if (elementHeight < line.lineHeight) {
+            if (word.isImage) {
+                // Images: top-align within the line
+                drawY = y;
+            } else if (elementHeight < line.lineHeight) {
+                // Text: bottom-align so text baseline sits at the bottom
+                // of the tallest element (the image)
                 drawY = y + (line.lineHeight - elementHeight);
             }
 
