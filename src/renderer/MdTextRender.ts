@@ -45,8 +45,6 @@ export const MdTextRender = async (
         hasRawBullet: boolean = false,
         start: number = 0,
         ordered: boolean = false,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        justify: boolean = true,
     ) => {
         const indent = indentLevel * validOptions.page.indent;
 
@@ -74,7 +72,7 @@ export const MdTextRender = async (
                 renderHR(doc);
                 break;
             case MdTokenType.Code:
-                renderCodeBlock(doc, element, indentLevel, hasRawBullet);
+                renderCodeBlock(doc, element, indentLevel);
                 break;
             case MdTokenType.Strong:
             case MdTokenType.Em:
@@ -103,7 +101,7 @@ export const MdTextRender = async (
                     renderElement,
                     start,
                     ordered,
-                    validOptions.page.defaultFontSize > 0, // Using validOptions here if needed, or just true for justify
+                    validOptions.content?.textAlignment === 'justify',
                 );
                 break;
             default:
