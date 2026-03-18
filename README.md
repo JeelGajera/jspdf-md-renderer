@@ -264,8 +264,11 @@ The following Markdown elements are currently supported by `jspdf-md-renderer`:
 
 ## Examples
 
-Output of above basic Example => [Sample Generated PDF](examples/test-pdf-gen/markdown_rendering_example.pdf)
-You can find more examples in the [examples](examples/test-pdf-gen) directory.
+You can explore complete rendered examples in the documentation site:
+- [Resume example](https://jeelgajera.github.io/jspdf-md-renderer/examples/resume)
+- [Invoice example](https://jeelgajera.github.io/jspdf-md-renderer/examples/invoice)
+- [Technical report example](https://jeelgajera.github.io/jspdf-md-renderer/examples/report)
+- [Custom fonts guide](https://jeelgajera.github.io/jspdf-md-renderer/examples/custom-fonts)
 
 ## Contributing
 
