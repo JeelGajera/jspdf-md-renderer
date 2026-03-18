@@ -12,7 +12,7 @@
         "vue": "^3.5.30"
     },
     "dependencies": {
-        "jspdf": "^4.2.0",
+        "jspdf": "^4.2.1",
         "jspdf-autotable": "^5.0.7",
         "jspdf-md-renderer": "file:.."
     }
