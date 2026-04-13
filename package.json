@@ -50,7 +50,7 @@
     "dependencies": {
         "jspdf": "^4.2.1",
         "jspdf-autotable": "^5.0.2",
-        "marked": "^17.0.3"
+        "marked": "^18.0.0"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
