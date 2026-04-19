@@ -10,40 +10,37 @@ const renderHeading = (
     doc: jsPDF,
     element: ParsedElement,
     indent: number,
+    store: RenderStore,
     parentElementRenderer: (
         element: ParsedElement,
         indentLevel: number,
+        store: RenderStore,
         hasRawBullet?: boolean,
     ) => void,
 ) => {
     const size = 6 - (element?.depth ?? 0) > 0 ? 6 - (element?.depth ?? 0) : 1;
-    doc.setFontSize(RenderStore.options.page.defaultFontSize + size);
+    doc.setFontSize(store.options.page.defaultFontSize + size);
 
     if (element?.items && element?.items.length > 0) {
         for (const item of element?.items ?? []) {
-            parentElementRenderer(item, indent, false);
+            parentElementRenderer(item, indent, store, false);
         }
     } else {
         const charHeight = getCharHight(doc);
-        doc.text(
-            element?.content ?? '',
-            RenderStore.X + indent,
-            RenderStore.Y,
-            {
-                align: 'left',
-                maxWidth: RenderStore.options.page.maxContentWidth - indent,
-                baseline: 'top',
-            },
-        );
+        doc.text(element?.content ?? '', store.X + indent, store.Y, {
+            align: 'left',
+            maxWidth: store.options.page.maxContentWidth - indent,
+            baseline: 'top',
+        });
 
         // Record visual bottom and then advance by exactly charHeight (ultra-tight)
         // This ensures minimal gap before the next element
-        RenderStore.recordContentY(RenderStore.Y + charHeight);
-        RenderStore.updateY(charHeight, 'add');
+        store.recordContentY(store.Y + charHeight);
+        store.updateY(getCharHight(doc), 'add');
     }
     // Reset font size to default after heading
-    doc.setFontSize(RenderStore.options.page.defaultFontSize);
-    RenderStore.updateX(RenderStore.options.page.xpading, 'set');
+    doc.setFontSize(store.options.page.defaultFontSize);
+    store.updateX(store.options.page.xpading, 'set');
 };
 
 export default renderHeading;

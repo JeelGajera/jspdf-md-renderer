@@ -34,6 +34,10 @@ export interface StyledWordInfo {
     imageElement?: ParsedElement;
     /** The height of the image to reserve */
     imageHeight?: number;
+    /** Marks a hard line break */
+    isBr?: boolean;
+    /** Whether this word was followed by whitespace in the source Markdown */
+    hasTrailingSpace?: boolean;
 }
 
 /**

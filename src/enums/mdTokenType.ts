@@ -17,4 +17,5 @@ export enum MdTokenType {
     TableCell = 'table_cell',
     Raw = 'raw',
     Text = 'text',
+    Br = 'br',
 }

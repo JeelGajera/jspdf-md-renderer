@@ -142,4 +142,24 @@ const tokenHandlers: Record<string, (token: any) => ParsedElement> = {
         content: token.text,
         items: token.tokens ? convertTokens(token.tokens) : [],
     }),
+    [MdTokenType.Html]: (token) => {
+        const rawHtml = String(token.raw ?? token.text ?? '').trim();
+        const isInlineBreakTag = /^<br\s*\/?>$/i.test(rawHtml);
+
+        if (isInlineBreakTag) {
+            return {
+                type: MdTokenType.Br,
+                content: '\n',
+            };
+        }
+
+        return {
+            type: MdTokenType.Raw,
+            content: token.raw ?? token.text ?? '',
+        };
+    },
+    [MdTokenType.Br]: () => ({
+        type: MdTokenType.Br,
+        content: '\n',
+    }),
 };

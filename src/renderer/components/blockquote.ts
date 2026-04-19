@@ -6,14 +6,19 @@ const renderBlockquote = (
     doc: jsPDF,
     element: ParsedElement,
     indentLevel: number,
-    renderElement: (element: ParsedElement, indentLevel: number) => void,
+    store: RenderStore,
+    renderElement: (
+        element: ParsedElement,
+        indentLevel: number,
+        store: RenderStore,
+    ) => void,
 ) => {
-    const options = RenderStore.options;
+    const options = store.options;
 
     // Increase indent for blockquote content
     const blockquoteIndent = indentLevel + 1;
-    const currentX = RenderStore.X + indentLevel * options.page.indent;
-    const currentY = RenderStore.Y;
+    const currentX = store.X + indentLevel * options.page.indent;
+    const currentY = store.Y;
 
     // Draw vertical bar for blockquote
     const barX = currentX + options.page.indent / 2;
@@ -26,11 +31,11 @@ const renderBlockquote = (
     // Render children
     if (element.items && element.items.length > 0) {
         element.items.forEach((item) => {
-            renderElement(item, blockquoteIndent);
+            renderElement(item, blockquoteIndent, store);
         });
     }
 
-    const endY = RenderStore.Y;
+    const endY = store.Y;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const endPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
 
@@ -50,7 +55,7 @@ const renderBlockquote = (
     }
 
     // Ensure the blockquote effectively "claims" the vertical space up to the cursor
-    RenderStore.recordContentY();
+    store.recordContentY();
 
     // Restore page to endPage
     doc.setPage(endPage);

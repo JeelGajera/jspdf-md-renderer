@@ -8,16 +8,18 @@ export class TextRenderer {
      * Renders text with automatic line wrapping and page breaking.
      * @param doc jsPDF instance
      * @param text Text to render
-     * @param x X coordinate (if not provided, uses RenderStore.X)
-     * @param y Y coordinate (if not provided, uses RenderStore.Y)
+     * @param store RenderStore instance to use
+     * @param x X coordinate (if not provided, uses store.X)
+     * @param y Y coordinate (if not provided, uses store.Y)
      * @param maxWidth Max width for text wrapping
      * @param justify Whether to justify the text
      */
     static renderText(
         doc: jsPDF,
         text: string,
-        x: number = RenderStore.X,
-        y: number = RenderStore.Y,
+        store: RenderStore,
+        x: number = store.X,
+        y: number = store.Y,
         maxWidth: number,
         justify: boolean = false,
     ) {
@@ -25,7 +27,7 @@ export class TextRenderer {
         const lines: string[] = doc.splitTextToSize(text, maxWidth);
         const charHeight = getCharHight(doc);
         const lineHeight =
-            charHeight * RenderStore.options.page.defaultLineHeightFactor;
+            charHeight * store.options.page.defaultLineHeightFactor;
 
         let currentY = y;
 
@@ -33,12 +35,9 @@ export class TextRenderer {
             const line = lines[i];
 
             // Check if we need a page break
-            if (
-                currentY + lineHeight >
-                RenderStore.options.page.maxContentHeight
-            ) {
-                HandlePageBreaks(doc);
-                currentY = RenderStore.Y; // Update currentY to new page top
+            if (currentY + lineHeight > store.options.page.maxContentHeight) {
+                HandlePageBreaks(doc, store);
+                currentY = store.Y; // Update currentY to new page top
             }
 
             // Render line
@@ -57,10 +56,10 @@ export class TextRenderer {
             }
 
             // Record the visual bottom of the text on this line
-            RenderStore.recordContentY(currentY + charHeight);
+            store.recordContentY(currentY + charHeight);
 
             currentY += lineHeight;
-            RenderStore.updateY(lineHeight, 'add');
+            store.updateY(lineHeight, 'add');
         }
 
         return currentY;

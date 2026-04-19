@@ -14,9 +14,11 @@ const renderListItem = (
     doc: jsPDF,
     element: ParsedElement,
     indentLevel: number,
+    store: RenderStore,
     parentElementRenderer: (
         element: ParsedElement,
         indentLevel: number,
+        store: RenderStore,
         hasRawBullet?: boolean,
         start?: number,
         ordered?: boolean,
@@ -25,25 +27,22 @@ const renderListItem = (
     ordered: boolean,
 ) => {
     // 1) Page break check
-    if (
-        RenderStore.Y + getCharHight(doc) >=
-        RenderStore.options.page.maxContentHeight
-    ) {
-        HandlePageBreaks(doc);
+    if (store.Y + getCharHight(doc) >= store.options.page.maxContentHeight) {
+        HandlePageBreaks(doc, store);
     }
 
     // 2) Configuration
-    const options = RenderStore.options;
+    const options = store.options;
     const baseIndent = indentLevel * options.page.indent;
     const bullet = ordered ? `${start}. ` : '\u2022 ';
     const xLeft = options.page.xpading;
 
     // Reset X to left margin at start of item to ensure consistent bullet placement
-    RenderStore.updateX(xLeft, 'set');
+    store.updateX(xLeft, 'set');
 
     // 3) Render Bullet
     doc.setFont(options.font.regular.name, options.font.regular.style);
-    doc.text(bullet, xLeft + baseIndent, RenderStore.Y, { baseline: 'top' });
+    doc.text(bullet, xLeft + baseIndent, store.Y, { baseline: 'top' });
 
     const bulletWidth = doc.getTextWidth(bullet);
     const contentX = xLeft + baseIndent + bulletWidth;
@@ -60,13 +59,14 @@ const renderListItem = (
                     doc,
                     inlineBuffer,
                     contentX,
-                    RenderStore.Y,
+                    store.Y,
                     textMaxWidth,
+                    store,
                 );
                 inlineBuffer.length = 0;
                 // Important: Text rendering updates X to the end of the line.
                 // We MUST reset it to the left margin for any subsequent block elements (like sub-lists).
-                RenderStore.updateX(xLeft, 'set');
+                store.updateX(xLeft, 'set');
             }
         };
 
@@ -76,6 +76,7 @@ const renderListItem = (
                 parentElementRenderer(
                     subItem,
                     indentLevel,
+                    store,
                     true,
                     start,
                     subItem.ordered ?? false,
@@ -85,6 +86,7 @@ const renderListItem = (
                 parentElementRenderer(
                     subItem,
                     indentLevel,
+                    store,
                     true,
                     start,
                     ordered,
@@ -99,8 +101,9 @@ const renderListItem = (
         TextRenderer.renderText(
             doc,
             element.content,
+            store,
             contentX,
-            RenderStore.Y,
+            store.Y,
             textMaxWidth,
             textAlignment === 'justify',
         );

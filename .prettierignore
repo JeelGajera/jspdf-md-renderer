@@ -8,3 +8,6 @@ test
 examples
 **/*.md
 **/*.html
+
+.graphyn
+.venv

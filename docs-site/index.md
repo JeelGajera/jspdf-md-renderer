@@ -41,23 +41,29 @@ features:
   - icon: 📄
     title: Auto Page Breaks
     details: Content that overflows the page is automatically continued on a new page with proper cursor tracking.
+  - icon: 🧵
+    title: Concurrency Safe
+    details: Safely render multiple PDF documents simultaneously. No shared global state means perfect isolation.
+  - icon: { src: /icons/ts.svg}
+    title: TypeScript Ready
+    details: Written in TypeScript with full type definitions. Enjoy excellent autocompletion and type-safety in your IDE.
   - icon: 🔗
     title: Built on jsPDF
     details: Integrates seamlessly with existing jsPDF workflows and plugins like jspdf-autotable.
 ---
 
-<div style="display: flex; justify-content: center; gap: 12px; margin-top: 3rem; margin-bottom: 2rem; flex-wrap: wrap;">
+<div style="display: flex; justify-content: center; gap: 10px; margin-top: 2rem; margin-bottom: 2rem; flex-wrap: wrap;">
   <a href="https://www.npmjs.com/package/jspdf-md-renderer">
-    <img src="https://img.shields.io/npm/v/jspdf-md-renderer.svg?style=for-the-badge&color=333" alt="npm version" />
+    <img src="https://img.shields.io/npm/v/jspdf-md-renderer.svg?style=for-the-badge&color=cb3837" alt="npm version" />
   </a>
   <a href="https://www.npmjs.com/package/jspdf-md-renderer">
-    <img src="https://img.shields.io/npm/dm/jspdf-md-renderer.svg?style=for-the-badge&color=555" alt="Downloads" />
+    <img src="https://img.shields.io/npm/dm/jspdf-md-renderer.svg?style=for-the-badge&color=47a1ff" alt="Downloads" />
   </a>
   <a href="https://opensource.org/licenses/MIT">
-    <img src="https://img.shields.io/badge/License-MIT-777.svg?style=for-the-badge" alt="License: MIT" />
+    <img src="https://img.shields.io/badge/License-MIT-4c1.svg?style=for-the-badge" alt="License: MIT" />
   </a>
   <a href="https://github.com/JeelGajera/jspdf-md-renderer">
-    <img src="https://img.shields.io/github/stars/JeelGajera/jspdf-md-renderer?style=for-the-badge&color=222" alt="GitHub Stars" />
+    <img src="https://img.shields.io/github/stars/JeelGajera/jspdf-md-renderer?style=for-the-badge&color=eac54f" alt="GitHub Stars" />
   </a>
 </div>
 
@@ -75,12 +81,23 @@ const doc = new jsPDF()
 
 await MdTextRender(doc, '# Hello World\n\nRendered with **jspdf-md-renderer**!', {
   cursor: { x: 10, y: 10 },
-  page: { maxContentWidth: 190, maxContentHeight: 277, lineSpace: 1.5,
-    defaultLineHeightFactor: 1.2, defaultFontSize: 12, defaultTitleFontSize: 14,
-    topmargin: 10, xpading: 10, xmargin: 10, indent: 10 },
-  font: { bold: { name: 'helvetica', style: 'bold' },
+  page: { 
+    maxContentWidth: 190, 
+    maxContentHeight: 277, 
+    lineSpace: 1.5,
+    defaultLineHeightFactor: 1.2, 
+    defaultFontSize: 12, 
+    defaultTitleFontSize: 14,
+    topmargin: 10, 
+    xpading: 10, 
+    xmargin: 10, 
+    indent: 10 
+  },
+  font: { 
+    bold: { name: 'helvetica', style: 'bold' },
     regular: { name: 'helvetica', style: 'normal' },
-    light: { name: 'helvetica', style: 'light' } },
+    light: { name: 'helvetica', style: 'light' } 
+  },
   endCursorYHandler: (y) => console.log('Ended at Y:', y),
 })
 
@@ -93,6 +110,7 @@ doc.save('output.pdf')
 |---------|--------|--------|
 | Headings | `# H1` to `###### H6` | ✅ |
 | Paragraphs | Plain text | ✅ |
+| Line Breaks | `<br>` tags | ✅ |
 | Bold / Italic | `**bold**` / `*italic*` | ✅ |
 | Lists | `-` unordered, `1.` ordered, nested | ✅ |
 | Links | `[text](url)` | ✅ |

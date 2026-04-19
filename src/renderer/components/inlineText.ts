@@ -10,6 +10,7 @@ const renderInlineText = (
     doc: jsPDF,
     element: ParsedElement,
     indent: number,
+    store: RenderStore,
 ) => {
     // Save current font settings
     const currentFont = doc.getFont().fontName;
@@ -43,19 +44,19 @@ const renderInlineText = (
         // Set font style
         if (style === 'bold') {
             doc.setFont(
-                RenderStore.options.font.bold.name &&
-                    RenderStore.options.font.bold.name !== ''
-                    ? RenderStore.options.font.bold.name
+                store.options.font.bold.name &&
+                    store.options.font.bold.name !== ''
+                    ? store.options.font.bold.name
                     : currentFont,
-                RenderStore.options.font.bold.style || 'bold',
+                store.options.font.bold.style || 'bold',
             );
         } else if (style === 'italic') {
-            doc.setFont(RenderStore.options.font.regular.name, 'italic');
+            doc.setFont(store.options.font.regular.name, 'italic');
         } else if (style === 'bolditalic') {
             doc.setFont(
-                RenderStore.options.font.bold.name &&
-                    RenderStore.options.font.bold.name !== ''
-                    ? RenderStore.options.font.bold.name
+                store.options.font.bold.name &&
+                    store.options.font.bold.name !== ''
+                    ? store.options.font.bold.name
                     : currentFont,
                 'bolditalic',
             );
@@ -63,15 +64,12 @@ const renderInlineText = (
             doc.setFont('courier', 'normal');
             doc.setFontSize(currentFontSize * 0.9); // Slightly smaller for code
         } else {
-            doc.setFont(
-                RenderStore.options.font.regular.name,
-                currentFontStyle,
-            );
+            doc.setFont(store.options.font.regular.name, currentFontStyle);
         }
 
         // Calculate available width for text
         const availableWidth =
-            RenderStore.options.page.maxContentWidth - indent - RenderStore.X;
+            store.options.page.maxContentWidth - indent - store.X;
 
         // Split text into lines
         const textLines = doc.splitTextToSize(text, availableWidth);
@@ -80,7 +78,7 @@ const renderInlineText = (
         const codePadding = 1;
         const codeBgColor = '#EEEEEE';
 
-        if (RenderStore.isInlineLockActive) {
+        if (store.isInlineLockActive) {
             // Inline lock: always render inline, only break if width exceeded
             for (let i = 0; i < textLines.length; i++) {
                 if (isCodeSpan) {
@@ -91,8 +89,8 @@ const renderInlineText = (
                     doc.setFillColor(codeBgColor);
                     // Draw rect slightly larger
                     doc.roundedRect(
-                        RenderStore.X + indent - codePadding,
-                        RenderStore.Y - codePadding,
+                        store.X + indent - codePadding,
+                        store.Y - codePadding,
                         lineWidth + codePadding * 2,
                         lineHeight + codePadding * 2,
                         2,
@@ -102,21 +100,18 @@ const renderInlineText = (
                     doc.setFillColor('#000000'); // Reset fill
                 }
 
-                doc.text(textLines[i], RenderStore.X + indent, RenderStore.Y, {
+                doc.text(textLines[i], store.X + indent, store.Y, {
                     baseline: 'top',
                     maxWidth: availableWidth,
                 });
-                RenderStore.updateX(
+                store.updateX(
                     doc.getTextDimensions(textLines[i]).w +
                         (isCodeSpan ? codePadding * 2 : 1),
                     'add',
                 );
                 if (i < textLines.length - 1) {
-                    RenderStore.updateY(getCharHight(doc), 'add');
-                    RenderStore.updateX(
-                        RenderStore.options.page.xpading,
-                        'set',
-                    );
+                    store.updateY(getCharHight(doc), 'add');
+                    store.updateX(store.options.page.xpading, 'set');
                 }
             }
         } else {
@@ -130,10 +125,8 @@ const renderInlineText = (
                     const h = getCharHight(doc);
                     doc.setFillColor(codeBgColor);
                     doc.roundedRect(
-                        RenderStore.X +
-                            (indent >= 2 ? indent + 2 : 0) -
-                            codePadding,
-                        RenderStore.Y - codePadding,
+                        store.X + (indent >= 2 ? indent + 2 : 0) - codePadding,
+                        store.Y - codePadding,
                         w + codePadding * 2,
                         h + codePadding * 2,
                         2,
@@ -145,22 +138,22 @@ const renderInlineText = (
 
                 doc.text(
                     firstLine,
-                    RenderStore.X +
+                    store.X +
                         (indent >= 2 ? indent + 2 * spaceMultiplier(style) : 0),
-                    RenderStore.Y,
+                    store.Y,
                     {
                         baseline: 'top',
                         maxWidth: availableWidth,
                     },
                 );
-                RenderStore.updateX(RenderStore.options.page.xpading + indent);
-                RenderStore.updateY(getCharHight(doc), 'add');
+                store.updateX(store.options.page.xpading + indent);
+                store.updateY(getCharHight(doc), 'add');
 
                 // Rest lines
                 const maxWidthForRest =
-                    RenderStore.options.page.maxContentWidth -
+                    store.options.page.maxContentWidth -
                     indent -
-                    RenderStore.options.page.xpading;
+                    store.options.page.xpading;
                 const restLines = doc.splitTextToSize(
                     restContent,
                     maxWidthForRest,
@@ -171,8 +164,8 @@ const renderInlineText = (
                         const h = getCharHight(doc);
                         doc.setFillColor(codeBgColor);
                         doc.roundedRect(
-                            RenderStore.X + getCharWidth(doc) - codePadding,
-                            RenderStore.Y - codePadding,
+                            store.X + getCharWidth(doc) - codePadding,
+                            store.Y - codePadding,
                             w + codePadding * 2,
                             h + codePadding * 2,
                             2,
@@ -182,15 +175,10 @@ const renderInlineText = (
                         doc.setFillColor('#000000');
                     }
 
-                    doc.text(
-                        line,
-                        RenderStore.X + getCharWidth(doc),
-                        RenderStore.Y,
-                        {
-                            baseline: 'top',
-                            maxWidth: maxWidthForRest,
-                        },
-                    );
+                    doc.text(line, store.X + getCharWidth(doc), store.Y, {
+                        baseline: 'top',
+                        maxWidth: maxWidthForRest,
+                    });
                 });
             } else {
                 if (isCodeSpan) {
@@ -198,8 +186,8 @@ const renderInlineText = (
                     const h = getCharHight(doc);
                     doc.setFillColor(codeBgColor);
                     doc.roundedRect(
-                        RenderStore.X + indent - codePadding,
-                        RenderStore.Y - codePadding,
+                        store.X + indent - codePadding,
+                        store.Y - codePadding,
                         w + codePadding * 2,
                         h + codePadding * 2,
                         2,
@@ -209,11 +197,11 @@ const renderInlineText = (
                     doc.setFillColor('#000000');
                 }
 
-                doc.text(text, RenderStore.X + indent, RenderStore.Y, {
+                doc.text(text, store.X + indent, store.Y, {
                     baseline: 'top',
                     maxWidth: availableWidth,
                 });
-                RenderStore.updateX(
+                store.updateX(
                     doc.getTextDimensions(text).w +
                         (indent >= 2 ? text.split(' ').length + 2 : 2) *
                             spaceMultiplier(style) *
