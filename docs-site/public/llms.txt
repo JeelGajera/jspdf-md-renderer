@@ -2,7 +2,7 @@
 
 ## Package
 - npm: jspdf-md-renderer
-- Version: 3.2.0
+- Version: latest
 - License: MIT
 - Repository: https://github.com/JeelGajera/jspdf-md-renderer
 
@@ -80,6 +80,7 @@ Parses markdown into structured tokens.
 ## Supported Markdown Elements
 - headings (# through ######)
 - paragraphs (plain text blocks)
+- line breaks (<br> tags)
 - lists (ordered 1., unordered -, nested, mixed)
 - horizontal rules (---, ***, ___)
 - bold (**text** or __text__)

@@ -20,6 +20,17 @@ the page width.
 This is the second paragraph.
 ```
 
+## Line Breaks
+
+To create a hard line break without starting a new paragraph (which avoids the `page.lineSpace` gap), you can use the HTML `<br>` tag.
+
+```markdown
+This is line one.<br>
+This is line two directly below it.
+```
+
+Note: Standard Markdown double-spaces at the end of a line are also supported by the underlying parser and will be converted to line breaks automatically.
+
 ## How It Renders
 
 - Uses `page.defaultFontSize` and `font.regular`

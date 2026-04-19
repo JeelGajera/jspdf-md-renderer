@@ -6,15 +6,17 @@ const renderList = (
     doc: jsPDF,
     element: ParsedElement,
     indentLevel: number,
+    store: RenderStore,
     parentElementRenderer: (
         element: ParsedElement,
         indentLevel: number,
+        store: RenderStore,
         hasRawBullet?: boolean,
         start?: number,
         ordered?: boolean,
     ) => void,
 ) => {
-    doc.setFontSize(RenderStore.options.page.defaultFontSize);
+    doc.setFontSize(store.options.page.defaultFontSize);
     for (const [i, point] of element?.items?.entries() ?? []) {
         const _start = element.ordered
             ? (element.start ?? 0) + i
@@ -22,6 +24,7 @@ const renderList = (
         parentElementRenderer(
             point,
             indentLevel + 1,
+            store,
             true,
             _start,
             element.ordered,

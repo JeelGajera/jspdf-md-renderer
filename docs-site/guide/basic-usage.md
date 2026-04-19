@@ -133,6 +133,23 @@ await MdTextRender(doc, longMarkdown, {
 })
 ```
 
+## Parallel Rendering
+
+The renderer is fully **concurrency-safe**. You can safely render multiple documents simultaneously without state bleeding. This is ideal for bulk report generation or server-side workflows:
+
+```ts
+const markdownFiles = ['report-1.md', 'report-2.md']
+const renderJobs = markdownFiles.map(async (file) => {
+  const content = await fetchMarkdown(file)
+  const doc = new jsPDF()
+  await MdTextRender(doc, content, options)
+  return doc
+})
+
+const results = await Promise.all(renderJobs)
+// results contains multiple independent PDF instances
+```
+
 ## Optional Configuration
 
 These optional sections can be added to the options object:

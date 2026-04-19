@@ -49,17 +49,18 @@ const renderImage = (
     doc: jsPDF,
     element: ParsedElement,
     indentLevel: number,
+    store: RenderStore,
 ) => {
     if (!element.data) {
         return;
     }
 
-    const options = RenderStore.options;
+    const options = store.options;
     const docUnit = options.page.unit || 'mm';
     const indent = indentLevel * options.page.indent;
     const maxWidth = options.page.maxContentWidth - indent;
-    const pageLeftX = RenderStore.X + indent;
-    let currentY = RenderStore.Y;
+    const pageLeftX = store.X + indent;
+    let currentY = store.Y;
 
     try {
         const maxH = options.page.maxContentHeight - options.page.topmargin;
@@ -74,8 +75,8 @@ const renderImage = (
 
         // --- Page break check ---
         if (currentY + finalHeight > options.page.maxContentHeight) {
-            HandlePageBreaks(doc);
-            currentY = RenderStore.Y;
+            HandlePageBreaks(doc, store);
+            currentY = store.Y;
         }
 
         // --- Alignment ---
@@ -110,8 +111,8 @@ const renderImage = (
             );
         }
 
-        RenderStore.updateY(finalHeight, 'add');
-        RenderStore.recordContentY();
+        store.updateY(finalHeight, 'add');
+        store.recordContentY();
     } catch (e) {
         console.warn('Failed to render image', e);
     }

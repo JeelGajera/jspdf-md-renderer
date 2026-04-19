@@ -48,11 +48,25 @@ flowchart LR
   D --> E[Call endCursorYHandler]
 ```
 
-1. **Validate options** — merges user options with defaults
+1. **Initialize store** — creates a fresh, isolated `RenderStore` instance for this rendering process
 2. **Parse markdown** — tokenizes the markdown string via `MdTextParser`
 3. **Prefetch images** — loads all images to determine their dimensions
 4. **Render elements** — iterates through parsed tokens, dispatching to the appropriate renderer (heading, paragraph, list, table, image, etc.)
 5. **Callback** — calls `endCursorYHandler` with the final Y cursor position
+
+## Concurrency
+
+`MdTextRender` is fully thread-safe and safe for concurrent use. Because it uses an instance-based state management system (`RenderStore`), you can render multiple documents in parallel using `Promise.all()` without any state bleeding between documents.
+
+This is particularly useful for server-side PDF generation or bulk processing:
+
+```ts
+const documents = ['# Doc 1', '# Doc 2', '# Doc 3']
+await Promise.all(documents.map(md => {
+  const doc = new jsPDF()
+  return MdTextRender(doc, md, options)
+}))
+```
 
 ## Usage
 

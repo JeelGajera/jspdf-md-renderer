@@ -8,10 +8,12 @@ const renderRawItem = (
     doc: jsPDF,
     element: ParsedElement,
     indentLevel: number,
+    store: RenderStore,
     hasRawBullet: boolean,
     parentElementRenderer: (
         element: ParsedElement,
         indentLevel: number,
+        store: RenderStore,
         hasRawBullet?: boolean,
         start?: number,
         ordered?: boolean,
@@ -26,6 +28,7 @@ const renderRawItem = (
             parentElementRenderer(
                 item,
                 indentLevel,
+                store,
                 hasRawBullet,
                 start,
                 ordered,
@@ -33,7 +36,7 @@ const renderRawItem = (
             );
         }
     } else {
-        const options = RenderStore.options;
+        const options = store.options;
         const indent = indentLevel * options.page.indent;
         const bullet = hasRawBullet ? (ordered ? `${start}. ` : '\u2022 ') : '';
         const content = element.content || '';
@@ -56,21 +59,18 @@ const renderRawItem = (
                 const addedHeight = linesToAdd * lineHeight;
 
                 // Check page break
-                if (
-                    RenderStore.Y + addedHeight >
-                    options.page.maxContentHeight
-                ) {
-                    HandlePageBreaks(doc);
+                if (store.Y + addedHeight > options.page.maxContentHeight) {
+                    HandlePageBreaks(doc, store);
                 } else {
-                    RenderStore.updateY(addedHeight, 'add');
-                    RenderStore.recordContentY(RenderStore.Y);
+                    store.updateY(addedHeight, 'add');
+                    store.recordContentY(store.Y);
                 }
             }
             return;
         }
 
         // Reset X to left padding to ensure consistent alignment
-        RenderStore.updateX(xLeft, 'set');
+        store.updateX(xLeft, 'set');
 
         if (hasRawBullet && bullet) {
             const bulletWidth = doc.getTextWidth(bullet);
@@ -78,15 +78,16 @@ const renderRawItem = (
                 options.page.maxContentWidth - indent - bulletWidth;
 
             doc.setFont(options.font.regular.name, options.font.regular.style);
-            doc.text(bullet, xLeft + indent, RenderStore.Y, {
+            doc.text(bullet, xLeft + indent, store.Y, {
                 baseline: 'top',
             });
 
             TextRenderer.renderText(
                 doc,
                 content,
+                store,
                 xLeft + indent + bulletWidth,
-                RenderStore.Y,
+                store.Y,
                 textMaxWidth,
                 justify,
             );
@@ -95,15 +96,16 @@ const renderRawItem = (
             TextRenderer.renderText(
                 doc,
                 content,
+                store,
                 xLeft + indent,
-                RenderStore.Y,
+                store.Y,
                 textMaxWidth,
                 justify,
             );
         }
 
         // Reset X after block completion
-        RenderStore.updateX(xLeft, 'set');
+        store.updateX(xLeft, 'set');
     }
 };
 

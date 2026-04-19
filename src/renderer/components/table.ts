@@ -32,12 +32,13 @@ const renderTable = (
     doc: jsPDF,
     element: ParsedElement,
     indentLevel: number,
+    store: RenderStore,
 ) => {
     if (!element.header || !element.rows) {
         return;
     }
 
-    const options = RenderStore.options;
+    const options = store.options;
     const marginLeft = options.page.xmargin + indentLevel * options.page.indent;
 
     // Prepare data
@@ -52,7 +53,7 @@ const renderTable = (
     resolveAutoTable()(doc, {
         head: head,
         body: body,
-        startY: RenderStore.Y,
+        startY: store.Y,
         margin: { left: marginLeft, right: options.page.xmargin },
         ...userTableOptions,
         didDrawPage: (data) => {
@@ -64,13 +65,16 @@ const renderTable = (
             if (userTableOptions.didDrawCell) {
                 userTableOptions.didDrawCell(data);
             }
-            // update Y cursor
-            RenderStore.setCursor({
-                x: RenderStore.X,
-                y: data.cell.y + data.cell.height + 2 * options.page.lineSpace,
-            });
         },
     });
+
+    const finalY = (doc as jsPDF & { lastAutoTable?: { finalY: number } })
+        .lastAutoTable?.finalY;
+    if (typeof finalY === 'number') {
+        store.updateY(finalY + options.page.lineSpace, 'set');
+        store.updateX(options.page.xpading, 'set');
+        store.recordContentY();
+    }
 };
 
 export default renderTable;

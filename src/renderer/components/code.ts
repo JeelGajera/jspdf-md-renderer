@@ -7,6 +7,7 @@ const renderCodeBlock = (
     doc: jsPDF,
     element: ParsedElement,
     indentLevel: number,
+    store: RenderStore,
 ) => {
     // Save current font state
     const savedFont = doc.getFont();
@@ -14,11 +15,11 @@ const renderCodeBlock = (
 
     // Set code font BEFORE measurements to ensure proper width/height calculation
     doc.setFont('courier', 'normal');
-    const codeFontSize = RenderStore.options.page.defaultFontSize * 0.9;
+    const codeFontSize = store.options.page.defaultFontSize * 0.9;
     doc.setFontSize(codeFontSize);
 
-    const indent = indentLevel * RenderStore.options.page.indent;
-    const maxWidth = RenderStore.options.page.maxContentWidth - indent - 8; // Account for internal padding
+    const indent = indentLevel * store.options.page.indent;
+    const maxWidth = store.options.page.maxContentWidth - indent - 8; // Account for internal padding
 
     // Calculate line height using jsPDF's internal method for consistency
     const lineHeightFactor = doc.getLineHeightFactor();
@@ -60,8 +61,7 @@ const renderCodeBlock = (
     let currentLineIndex = 0;
 
     while (currentLineIndex < lines.length) {
-        const availableHeight =
-            RenderStore.options.page.maxContentHeight - RenderStore.Y;
+        const availableHeight = store.options.page.maxContentHeight - store.Y;
         const remainingLines = lines.length - currentLineIndex;
 
         // Calculate how many lines fit on this page (accounting for padding)
@@ -69,7 +69,7 @@ const renderCodeBlock = (
         let linesToRenderCount = Math.floor(effectiveAvailable / lineHeight);
 
         if (linesToRenderCount <= 0) {
-            HandlePageBreaks(doc);
+            HandlePageBreaks(doc, store);
             continue;
         }
 
@@ -88,16 +88,16 @@ const renderCodeBlock = (
         const textBlockHeight = linesToRenderCount * lineHeight;
 
         if (isFirstChunk) {
-            RenderStore.updateY(padding, 'add');
+            store.updateY(padding, 'add');
         }
 
         // Draw Background
         doc.setFillColor(bgColor);
         doc.setDrawColor(drawColor);
         doc.roundedRect(
-            RenderStore.X,
-            RenderStore.Y - padding,
-            RenderStore.options.page.maxContentWidth,
+            store.X,
+            store.Y - padding,
+            store.options.page.maxContentWidth,
             textBlockHeight +
                 (isFirstChunk ? padding : 0) +
                 (isLastChunk ? padding : 0),
@@ -113,11 +113,11 @@ const renderCodeBlock = (
             doc.setTextColor('#666666');
             doc.text(
                 element.lang,
-                RenderStore.X +
-                    RenderStore.options.page.maxContentWidth -
+                store.X +
+                    store.options.page.maxContentWidth -
                     doc.getTextWidth(element.lang) -
                     4,
-                RenderStore.Y,
+                store.Y,
                 { baseline: 'top' },
             );
             doc.setFontSize(savedCodeFontSize);
@@ -125,27 +125,27 @@ const renderCodeBlock = (
         }
 
         // Render code text line by line
-        let yPos = RenderStore.Y;
+        let yPos = store.Y;
         for (const line of linesToRender) {
-            doc.text(line, RenderStore.X + 4, yPos, { baseline: 'top' });
+            doc.text(line, store.X + 4, yPos, { baseline: 'top' });
             yPos += lineHeight;
         }
 
         // Update Y cursor by exact amount rendered
-        RenderStore.updateY(textBlockHeight, 'add');
+        store.updateY(textBlockHeight, 'add');
 
         // Record visual bottom (including potential bottom padding)
-        RenderStore.recordContentY(RenderStore.Y + (isLastChunk ? padding : 0));
+        store.recordContentY(store.Y + (isLastChunk ? padding : 0));
 
         if (isLastChunk) {
-            RenderStore.updateY(padding, 'add');
+            store.updateY(padding, 'add');
         }
 
         currentLineIndex += linesToRenderCount;
 
         // If we still have lines, break to next page
         if (currentLineIndex < lines.length) {
-            HandlePageBreaks(doc);
+            HandlePageBreaks(doc, store);
         }
     }
 

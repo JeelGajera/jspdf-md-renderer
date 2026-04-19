@@ -3,6 +3,7 @@ import { ParsedElement } from '../../types/parsedElement';
 import { RenderStore } from '../../store/renderStore';
 import { JustifiedTextRenderer } from '../../utils/justifiedTextRenderer';
 import { TextRenderer } from '../../utils/text-renderer';
+import { MdTokenType } from '../../enums/mdTokenType';
 
 /**
  * Renders paragraph elements with proper text alignment.
@@ -13,33 +14,36 @@ const renderParagraph = (
     doc: jsPDF,
     element: ParsedElement,
     indent: number,
+    store: RenderStore,
     parentElementRenderer: (
         element: ParsedElement,
         indentLevel: number,
+        store: RenderStore,
         hasRawBullet?: boolean,
     ) => void,
 ) => {
-    RenderStore.activateInlineLock();
-    doc.setFontSize(RenderStore.options.page.defaultFontSize);
+    store.activateInlineLock();
+    doc.setFontSize(store.options.page.defaultFontSize);
 
-    const maxWidth = RenderStore.options.page.maxContentWidth - indent;
+    const maxWidth = store.options.page.maxContentWidth - indent;
 
     if (element?.items && element?.items.length > 0) {
         // If it's just a single image, render as a block image
         if (element.items.length === 1 && element.items[0].type === 'image') {
-            parentElementRenderer(element.items[0], indent, false);
-            RenderStore.updateX(RenderStore.options.page.xpading);
-            RenderStore.deactivateInlineLock();
+            parentElementRenderer(element.items[0], indent, store, false);
+            store.updateX(store.options.page.xpading);
+            store.deactivateInlineLock();
             return;
         }
 
-        const inlineTypes = [
-            'strong',
-            'em',
-            'text',
-            'codespan',
-            'link',
-            'image',
+        const inlineTypes: string[] = [
+            MdTokenType.Strong,
+            MdTokenType.Em,
+            MdTokenType.Text,
+            MdTokenType.CodeSpan,
+            MdTokenType.Link,
+            MdTokenType.Image,
+            MdTokenType.Br,
         ];
 
         // Check if there are any non-inline items that need special handling
@@ -57,9 +61,10 @@ const renderParagraph = (
                     JustifiedTextRenderer.renderStyledParagraph(
                         doc,
                         inlineBuffer,
-                        RenderStore.X + indent,
-                        RenderStore.Y,
+                        store.X + indent,
+                        store.Y,
                         maxWidth,
+                        store,
                     );
                     inlineBuffer.length = 0;
                 }
@@ -70,7 +75,7 @@ const renderParagraph = (
                     inlineBuffer.push(item);
                 } else {
                     flushInlineBuffer();
-                    parentElementRenderer(item, indent, false);
+                    parentElementRenderer(item, indent, store, false);
                 }
             }
             flushInlineBuffer();
@@ -79,22 +84,23 @@ const renderParagraph = (
             JustifiedTextRenderer.renderStyledParagraph(
                 doc,
                 element.items,
-                RenderStore.X + indent,
-                RenderStore.Y,
+                store.X + indent,
+                store.Y,
                 maxWidth,
+                store,
             );
         }
     } else {
         // Simple text content without nested items
         const content = element.content ?? '';
-        const textAlignment =
-            RenderStore.options.content?.textAlignment ?? 'left';
+        const textAlignment = store.options.content?.textAlignment ?? 'left';
         if (content.trim()) {
             TextRenderer.renderText(
                 doc,
                 content,
-                RenderStore.X + indent,
-                RenderStore.Y,
+                store,
+                store.X + indent,
+                store.Y,
                 maxWidth,
                 textAlignment === 'justify',
             );
@@ -102,8 +108,8 @@ const renderParagraph = (
         }
     }
 
-    RenderStore.updateX(RenderStore.options.page.xpading);
-    RenderStore.deactivateInlineLock();
+    store.updateX(store.options.page.xpading);
+    store.deactivateInlineLock();
 };
 
 export default renderParagraph;

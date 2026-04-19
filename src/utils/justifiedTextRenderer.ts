@@ -18,9 +18,9 @@ import { calculateImageDimensions } from './image-utils';
  * - Codespan background rendering
  */
 export class JustifiedTextRenderer {
-    // Default codespan styling (can be overridden via RenderStore.options.codespan)
-    private static getCodespanOptions() {
-        const opts = RenderStore.options.codespan ?? {};
+    // Default codespan styling (can be overridden via store.options.codespan)
+    private static getCodespanOptions(store: RenderStore) {
+        const opts = store.options.codespan ?? {};
         return {
             backgroundColor: opts.backgroundColor ?? '#EEEEEE',
             padding: opts.padding ?? 0.5,
@@ -32,17 +32,21 @@ export class JustifiedTextRenderer {
     /**
      * Apply font style to the jsPDF document.
      */
-    private static applyStyle(doc: jsPDF, style: TextStyle): void {
+    private static applyStyle(
+        doc: jsPDF,
+        style: TextStyle,
+        store: RenderStore,
+    ): void {
         const currentFont = doc.getFont().fontName;
         const currentFontSize = doc.getFontSize();
 
         // Helper to get font name with fallback
         const getBoldFont = () => {
-            const boldName = RenderStore.options.font.bold?.name;
+            const boldName = store.options.font.bold?.name;
             return boldName && boldName !== '' ? boldName : currentFont;
         };
         const getRegularFont = () => {
-            const regularName = RenderStore.options.font.regular?.name;
+            const regularName = store.options.font.regular?.name;
             return regularName && regularName !== ''
                 ? regularName
                 : currentFont;
@@ -52,7 +56,7 @@ export class JustifiedTextRenderer {
             case 'bold':
                 doc.setFont(
                     getBoldFont(),
-                    RenderStore.options.font.bold?.style || 'bold',
+                    store.options.font.bold?.style || 'bold',
                 );
                 break;
             case 'italic':
@@ -64,7 +68,8 @@ export class JustifiedTextRenderer {
             case 'codespan':
                 doc.setFont('courier', 'normal');
                 doc.setFontSize(
-                    currentFontSize * this.getCodespanOptions().fontSizeScale,
+                    currentFontSize *
+                        this.getCodespanOptions(store).fontSizeScale,
                 );
                 break;
             default:
@@ -82,11 +87,12 @@ export class JustifiedTextRenderer {
         doc: jsPDF,
         text: string,
         style: TextStyle,
+        store: RenderStore,
     ): number {
         const savedFont = doc.getFont();
         const savedSize = doc.getFontSize();
 
-        this.applyStyle(doc, style);
+        this.applyStyle(doc, style, store);
         const baseWidth = doc.getTextWidth(text);
 
         // Account for character spacing: jsPDF adds charSpace after EACH character
@@ -130,6 +136,7 @@ export class JustifiedTextRenderer {
     static flattenToWords(
         doc: jsPDF,
         elements: ParsedElement[],
+        store: RenderStore,
         parentStyle: TextStyle = 'normal',
         isLink: boolean = false,
         href?: string,
@@ -146,6 +153,7 @@ export class JustifiedTextRenderer {
                 const nested = this.flattenToWords(
                     doc,
                     el.items,
+                    store,
                     style,
                     elIsLink,
                     elHref,
@@ -153,12 +161,12 @@ export class JustifiedTextRenderer {
                 result.push(...nested);
             } else if (el.type === 'image') {
                 const maxH =
-                    RenderStore.options.page.maxContentHeight -
-                    RenderStore.options.page.topmargin;
+                    store.options.page.maxContentHeight -
+                    store.options.page.topmargin;
                 const maxWidth =
-                    RenderStore.options.page.maxContentWidth -
-                    RenderStore.options.page.indent * 0; // we will keep it simple for inline
-                const docUnit = RenderStore.options.page.unit || 'mm';
+                    store.options.page.maxContentWidth -
+                    store.options.page.indent * 0; // we will keep it simple for inline
+                const docUnit = store.options.page.unit || 'mm';
                 const { finalWidth, finalHeight } = calculateImageDimensions(
                     doc,
                     el,
@@ -174,19 +182,30 @@ export class JustifiedTextRenderer {
                     isLink: elIsLink,
                     href: elHref,
                     linkColor: elIsLink
-                        ? RenderStore.options.link?.linkColor || [0, 0, 255]
+                        ? store.options.link?.linkColor || [0, 0, 255]
                         : undefined,
                     isImage: true,
                     imageElement: el,
                     imageHeight: finalHeight,
+                });
+            } else if (el.type === 'br') {
+                result.push({
+                    text: '',
+                    width: 0,
+                    style,
+                    isBr: true,
                 });
             } else {
                 // Leaf node: get text content
                 const text = el.content || el.text || '';
                 if (!text) continue;
 
-                // For codespan, keep the entire content as a single unit (don't split into words)
-                // This ensures the background covers all text including spaces between words
+                // Check if this text block STARTS with a space. If it does, we must
+                // apply it to the LAST word we processed so they don't fuse.
+                if (/^\s/.test(text) && result.length > 0) {
+                    result[result.length - 1].hasTrailingSpace = true;
+                }
+
                 if (style === 'codespan') {
                     const trimmedText = text.trim();
                     if (trimmedText) {
@@ -196,41 +215,47 @@ export class JustifiedTextRenderer {
                                 doc,
                                 trimmedText,
                                 style,
+                                store,
                             ),
                             style,
                             isLink: elIsLink,
                             href: elHref,
                             linkColor: elIsLink
-                                ? RenderStore.options.link?.linkColor || [
-                                      0, 0, 255,
-                                  ]
+                                ? store.options.link?.linkColor || [0, 0, 255]
                                 : undefined,
+                            hasTrailingSpace: /\s$/.test(text), // Check if original code block ended in a space
                         });
                     }
                     continue;
                 }
 
-                // Split into words (preserving the knowledge of surrounding whitespace)
-                const words = text.split(/\s+/).filter((w) => w.length > 0);
-
-                // If text is ONLY whitespace, it acts as a word boundary marker
-                // We handle this by ensuring the previous and next words aren't joined
-                if (words.length === 0) {
-                    // Mark that there should be separation (handled by normal space width in rendering)
-                    continue;
-                }
+                // Split into words, ignoring spaces
+                const words = text
+                    .trim()
+                    .split(/\s+/)
+                    .filter((w) => w.length > 0);
 
                 for (let i = 0; i < words.length; i++) {
-                    const word = words[i];
+                    const isLastWord = i === words.length - 1;
+                    // The word has a trailing space if it's NOT the last word in the string,
+                    // OR if it IS the last word, but the original string ended with a space.
+                    const hasTrailingSpace = !isLastWord || /\s$/.test(text);
+
                     result.push({
-                        text: word,
-                        width: this.measureWordWidth(doc, word, style),
+                        text: words[i],
+                        width: this.measureWordWidth(
+                            doc,
+                            words[i],
+                            style,
+                            store,
+                        ),
                         style,
                         isLink: elIsLink,
                         href: elHref,
                         linkColor: elIsLink
-                            ? RenderStore.options.link?.linkColor || [0, 0, 255]
+                            ? store.options.link?.linkColor || [0, 0, 255]
                             : undefined,
+                        hasTrailingSpace: hasTrailingSpace,
                     });
                 }
             }
@@ -247,35 +272,55 @@ export class JustifiedTextRenderer {
         doc: jsPDF,
         words: StyledWordInfo[],
         maxWidth: number,
+        store: RenderStore,
     ): StyledLine[] {
         const lines: StyledLine[] = [];
         let currentLine: StyledWordInfo[] = [];
         let currentTextWidth = 0; // Sum of word widths only
         let currentLineWidth = 0; // Including spaces for overflow check
         let currentLineHeight =
-            getCharHight(doc) *
-            RenderStore.options.page.defaultLineHeightFactor;
+            getCharHight(doc) * store.options.page.defaultLineHeightFactor;
 
         // Get space width (using normal font)
         const spaceWidth = doc.getTextWidth(' ');
 
         for (let i = 0; i < words.length; i++) {
             const word = words[i];
-            // For overflow check, we need to include space before word (if not first word)
-            const neededWidthWithSpace =
-                currentLine.length > 0 ? spaceWidth + word.width : word.width;
+
+            // For overflow check, we need to include space if the previous word had one
+            const prevWord = currentLine[currentLine.length - 1];
+            const neededWidthWithSpace = prevWord?.hasTrailingSpace
+                ? spaceWidth + word.width
+                : word.width;
 
             const itemHeight =
                 word.isImage && word.imageHeight
                     ? word.imageHeight
                     : getCharHight(doc) *
-                      RenderStore.options.page.defaultLineHeightFactor;
+                      store.options.page.defaultLineHeightFactor;
+
+            if (word.isBr) {
+                // Force a hard line break
+                lines.push({
+                    words: currentLine,
+                    totalTextWidth: currentTextWidth,
+                    isLastLine: true,
+                    lineHeight: currentLineHeight,
+                });
+                currentLine = [];
+                currentTextWidth = 0;
+                currentLineWidth = 0;
+                currentLineHeight =
+                    getCharHight(doc) *
+                    store.options.page.defaultLineHeightFactor;
+                continue;
+            }
 
             if (
                 currentLineWidth + neededWidthWithSpace > maxWidth &&
                 currentLine.length > 0
             ) {
-                // Push current line with correct totalTextWidth (no spaces)
+                // Push current line
                 lines.push({
                     words: currentLine,
                     totalTextWidth: currentTextWidth,
@@ -316,13 +361,14 @@ export class JustifiedTextRenderer {
         word: StyledWordInfo,
         x: number,
         y: number,
+        store: RenderStore,
     ): void {
         const savedFont = doc.getFont();
         const savedSize = doc.getFontSize();
         const savedColor = doc.getTextColor();
 
         // Apply style
-        this.applyStyle(doc, word.style);
+        this.applyStyle(doc, word.style, store);
 
         // Handle link color
         if (word.isLink && word.linkColor) {
@@ -373,7 +419,7 @@ export class JustifiedTextRenderer {
         } else {
             // Draw codespan background if enabled
             if (word.style === 'codespan') {
-                const codespanOpts = this.getCodespanOptions();
+                const codespanOpts = this.getCodespanOptions(store);
                 if (codespanOpts.showBackground) {
                     const h = getCharHight(doc);
                     const pad = codespanOpts.padding;
@@ -420,6 +466,7 @@ export class JustifiedTextRenderer {
         x: number,
         y: number,
         maxWidth: number,
+        store: RenderStore,
         alignment: 'left' | 'right' | 'center' | 'justify' = 'left',
     ): void {
         const { words, totalTextWidth, isLastLine } = line;
@@ -432,8 +479,15 @@ export class JustifiedTextRenderer {
         let startX = x;
         let wordSpacing = normalSpaceWidth;
 
-        const lineWidthWithNormalSpaces =
-            totalTextWidth + (words.length - 1) * normalSpaceWidth;
+        // Calculate line width with normal spaces, only where requested
+        let lineWidthWithNormalSpaces = totalTextWidth;
+        let expandableSpacesCount = 0;
+        for (let i = 0; i < words.length - 1; i++) {
+            if (words[i].hasTrailingSpace) {
+                lineWidthWithNormalSpaces += normalSpaceWidth;
+                expandableSpacesCount++;
+            }
+        }
 
         switch (alignment) {
             case 'right':
@@ -443,9 +497,9 @@ export class JustifiedTextRenderer {
                 startX = x + (maxWidth - lineWidthWithNormalSpaces) / 2;
                 break;
             case 'justify':
-                if (!isLastLine && words.length > 1) {
+                if (!isLastLine && expandableSpacesCount > 0) {
                     const extraSpace = maxWidth - totalTextWidth;
-                    wordSpacing = extraSpace / (words.length - 1);
+                    wordSpacing = extraSpace / expandableSpacesCount;
                 }
                 break;
             case 'left':
@@ -458,8 +512,7 @@ export class JustifiedTextRenderer {
         let currentX = startX;
         // Text height used for baseline alignment
         const textHeight =
-            getCharHight(doc) *
-            RenderStore.options.page.defaultLineHeightFactor;
+            getCharHight(doc) * store.options.page.defaultLineHeightFactor;
 
         for (let i = 0; i < words.length; i++) {
             const word = words[i];
@@ -482,9 +535,9 @@ export class JustifiedTextRenderer {
                 drawY = y + (line.lineHeight - elementHeight);
             }
 
-            this.renderWord(doc, word, currentX, drawY);
+            this.renderWord(doc, word, currentX, drawY, store);
             currentX += word.width;
-            if (i < words.length - 1) {
+            if (i < words.length - 1 && word.hasTrailingSpace) {
                 currentX += wordSpacing;
             }
         }
@@ -492,14 +545,15 @@ export class JustifiedTextRenderer {
 
     /**
      * Main entry point: Render a paragraph with mixed inline elements.
-     * Respects user's textAlignment option from RenderStore.
+     * Respects user's textAlignment option from store.
      *
      * @param doc jsPDF instance
      * @param elements Array of ParsedElement (inline items in a paragraph)
      * @param x Starting X coordinate
      * @param y Starting Y coordinate
      * @param maxWidth Maximum width for text wrapping
-     * @param alignment Optional alignment override (defaults to RenderStore option)
+     * @param store RenderStore instance to use
+     * @param alignment Optional alignment override (defaults to store option)
      */
     static renderStyledParagraph(
         doc: jsPDF,
@@ -507,18 +561,19 @@ export class JustifiedTextRenderer {
         x: number,
         y: number,
         maxWidth: number,
+        store: RenderStore,
         alignment?: 'left' | 'right' | 'center' | 'justify',
     ): void {
         // Use provided alignment or fall back to user options, default to 'left'
         const textAlignment =
-            alignment ?? RenderStore.options.content?.textAlignment ?? 'left';
+            alignment ?? store.options.content?.textAlignment ?? 'left';
 
         // Flatten elements to words
-        const words = this.flattenToWords(doc, elements);
+        const words = this.flattenToWords(doc, elements, store);
         if (words.length === 0) return;
 
         // Break into lines
-        const lines = this.breakIntoLines(doc, words, maxWidth);
+        const lines = this.breakIntoLines(doc, words, maxWidth, store);
 
         let currentY = y;
 
@@ -526,10 +581,10 @@ export class JustifiedTextRenderer {
             // Check for page break
             if (
                 currentY + line.lineHeight >
-                RenderStore.options.page.maxContentHeight
+                store.options.page.maxContentHeight
             ) {
-                HandlePageBreaks(doc);
-                currentY = RenderStore.Y;
+                HandlePageBreaks(doc, store);
+                currentY = store.Y;
             }
 
             // Render the line with proper alignment
@@ -539,23 +594,31 @@ export class JustifiedTextRenderer {
                 x,
                 currentY,
                 maxWidth,
+                store,
                 textAlignment,
             );
 
             // Record the visual bottom of the text on this line
-            RenderStore.recordContentY(currentY + line.lineHeight);
+            store.recordContentY(currentY + line.lineHeight);
 
             currentY += line.lineHeight;
-            RenderStore.updateY(line.lineHeight, 'add');
+            store.updateY(line.lineHeight, 'add');
         }
 
         // Update X position to end of last line for any inline continuation
         const lastLine = lines[lines.length - 1];
         if (lastLine) {
+            let actualSpacesCount = 0;
+            for (let i = 0; i < lastLine.words.length - 1; i++) {
+                if (lastLine.words[i].hasTrailingSpace) {
+                    actualSpacesCount++;
+                }
+            }
+
             const lastLineWidth =
                 lastLine.totalTextWidth +
-                (lastLine.words.length - 1) * doc.getTextWidth(' ');
-            RenderStore.updateX(x + lastLineWidth, 'set');
+                actualSpacesCount * doc.getTextWidth(' ');
+            store.updateX(x + lastLineWidth, 'set');
         }
     }
 
@@ -568,7 +631,8 @@ export class JustifiedTextRenderer {
         x: number,
         y: number,
         maxWidth: number,
+        store: RenderStore,
     ): void {
-        this.renderStyledParagraph(doc, elements, x, y, maxWidth);
+        this.renderStyledParagraph(doc, elements, x, y, maxWidth, store);
     }
 }
