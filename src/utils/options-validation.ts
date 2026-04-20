@@ -19,6 +19,7 @@ const defaultOptions: Partial<RenderOption> = {
         bold: { name: 'helvetica', style: 'bold' },
         regular: { name: 'helvetica', style: 'normal' },
         light: { name: 'helvetica', style: 'light' },
+        code: { name: 'courier', style: 'normal' },
     },
     image: {
         defaultAlign: 'left',

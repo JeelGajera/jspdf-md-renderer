@@ -61,7 +61,8 @@ const renderInlineText = (
                 'bolditalic',
             );
         } else if (style === 'codespan') {
-            doc.setFont('courier', 'normal');
+            const codeFont = store.options.font.code || { name: 'courier', style: 'normal' };
+            doc.setFont(codeFont.name, codeFont.style);
             doc.setFontSize(currentFontSize * 0.9); // Slightly smaller for code
         } else {
             doc.setFont(store.options.font.regular.name, currentFontStyle);

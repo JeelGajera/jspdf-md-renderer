@@ -39,6 +39,7 @@ const options: RenderOption = {
     bold: { name: 'helvetica', style: 'bold' },
     regular: { name: 'helvetica', style: 'normal' },
     light: { name: 'helvetica', style: 'light' },
+    code: { name: 'courier', style: 'normal' },
   },
   endCursorYHandler: (y) => console.log('End Y:', y),
 }
@@ -85,6 +86,8 @@ Font configuration for different text weights.
 | `font.regular.style` | `string` | `'normal'` | Font style for regular text |
 | `font.light.name` | `string` | `'helvetica'` | Font family name for light text |
 | `font.light.style` | `string` | `'light'` | Font style for light text |
+| `font.code.name` | `string` | `'courier'` | Font family name for code blocks |
+| `font.code.style` | `string` | `'normal'` | Font style for code blocks |
 
 ::: tip Custom Fonts
 To use custom fonts, first register them with jsPDF using `doc.addFont()`, then reference them in the font config:
@@ -97,6 +100,7 @@ const options = {
     bold: { name: 'MyFont', style: 'bold' },
     regular: { name: 'MyFont', style: 'normal' },
     light: { name: 'MyFont', style: 'normal' },
+    code: { name: 'MyFont', style: 'normal' },
   },
   // ...
 }
@@ -221,6 +225,7 @@ type RenderOption = {
     bold: { name: string; style: string }
     regular: { name: string; style: string }
     light: { name: string; style: string }
+    code?: { name: string; style: string }
   }
   content?: { textAlignment: 'left' | 'right' | 'center' | 'justify' }
   codespan?: {

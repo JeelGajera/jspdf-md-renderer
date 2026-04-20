@@ -66,7 +66,8 @@ export class JustifiedTextRenderer {
                 doc.setFont(getBoldFont(), 'bolditalic');
                 break;
             case 'codespan':
-                doc.setFont('courier', 'normal');
+                const codeFont = store.options.font.code || { name: 'courier', style: 'normal' };
+                doc.setFont(codeFont.name, codeFont.style);
                 doc.setFontSize(
                     currentFontSize *
                         this.getCodespanOptions(store).fontSizeScale,
