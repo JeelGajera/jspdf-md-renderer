@@ -25,6 +25,7 @@ export type RenderOption = {
         bold: FontItem;
         regular: FontItem;
         light: FontItem;
+        code?: FontItem;
     };
     content?: {
         textAlignment: 'left' | 'right' | 'center' | 'justify';

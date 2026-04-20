@@ -14,7 +14,8 @@ const renderCodeBlock = (
     const savedFontSize = doc.getFontSize();
 
     // Set code font BEFORE measurements to ensure proper width/height calculation
-    doc.setFont('courier', 'normal');
+    const codeFont = store.options.font.code || { name: 'courier', style: 'normal' };
+    doc.setFont(codeFont.name, codeFont.style);
     const codeFontSize = store.options.page.defaultFontSize * 0.9;
     doc.setFontSize(codeFontSize);
 

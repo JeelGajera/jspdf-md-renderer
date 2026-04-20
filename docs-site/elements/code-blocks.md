@@ -2,7 +2,7 @@
 title: Code Blocks
 description: How fenced code blocks are rendered in jspdf-md-renderer.
 llm_summary: |
-  Fenced code blocks (triple backtick) are rendered with monospace font on a light background.
+  Fenced code blocks (triple backtick) are rendered using the font.code mapping on a light background.
   Language identifier is parsed but not used for syntax highlighting. Code preserves whitespace and formatting.
 ---
 
@@ -32,6 +32,8 @@ function hello() {
 
 | Option | Effect |
 |--------|--------|
+| `font.code` | The font family and style used for code (defaults to courier) |
+| `codespan` | Styling parameters mapped to all code blocks and inline spans |
 | `page.defaultFontSize` | Base font size (code may be slightly smaller) |
 | `page.maxContentWidth` | Maximum width of the code block |
 | `page.lineSpace` | Spacing around the code block |

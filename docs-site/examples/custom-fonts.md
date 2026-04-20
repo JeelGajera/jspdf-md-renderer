@@ -39,6 +39,9 @@ doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold')
 
 doc.addFileToVFS('Roboto-Italic.ttf', robotoItalicBase64)
 doc.addFont('Roboto-Italic.ttf', 'Roboto', 'italic')
+
+doc.addFileToVFS('FiraCode-Regular.ttf', firaCodeBase64)
+doc.addFont('FiraCode-Regular.ttf', 'FiraCode', 'normal')
 ```
 
 ### 3. Use in Options
@@ -64,6 +67,7 @@ const options = {
     bold: { name: 'Roboto', style: 'bold' },
     regular: { name: 'Roboto', style: 'normal' },
     light: { name: 'Roboto', style: 'normal' }, // Use regular if no light variant
+    code: { name: 'FiraCode', style: 'normal' },
   },
   endCursorYHandler: (y) => console.log('End Y:', y),
 }
@@ -78,7 +82,7 @@ doc.save('custom-font-document.pdf')
 import { jsPDF } from 'jspdf'
 import { MdTextRender } from 'jspdf-md-renderer'
 // Import your font data (base64 encoded TTF)
-import { robotoRegular, robotoBold } from './fonts'
+import { robotoRegular, robotoBold, firaCode } from './fonts'
 
 async function generateWithCustomFonts() {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
@@ -88,6 +92,8 @@ async function generateWithCustomFonts() {
   doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal')
   doc.addFileToVFS('Roboto-Bold.ttf', robotoBold)
   doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold')
+  doc.addFileToVFS('FiraCode-Regular.ttf', firaCode)
+  doc.addFont('FiraCode-Regular.ttf', 'FiraCode', 'normal')
 
   const markdown = `
 # Custom Font Demo
@@ -121,6 +127,7 @@ This document uses **Roboto** instead of the default Helvetica.
       bold: { name: 'Roboto', style: 'bold' },
       regular: { name: 'Roboto', style: 'normal' },
       light: { name: 'Roboto', style: 'normal' },
+      code: { name: 'FiraCode', style: 'normal' },
     },
     endCursorYHandler: () => {},
   })
@@ -130,10 +137,11 @@ This document uses **Roboto** instead of the default Helvetica.
 ```
 
 ::: tip Font Weight Mapping
-The `font` option maps to three weights:
+The `font` option maps to specific usage targets:
 - **`bold`** — used for headings, `**bold**` text, and list markers
 - **`regular`** — used for body text, paragraphs, and list items
 - **`light`** — used for lighter text elements (falls back to regular if not available)
+- **`code`** — used for fenced code blocks and inline codespans
 :::
 
 ::: warning Font Availability
