@@ -8,9 +8,9 @@
         "strict": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
-        "isolatedModules": true
+        "isolatedModules": true,
+        "types": ["node"]
     },
     "include": ["src"],
-    "exclude": ["node_modules", "dist", "examples", "test"],
-    "types": ["node"]
+    "exclude": ["node_modules", "dist", "examples", "test"]
 }
