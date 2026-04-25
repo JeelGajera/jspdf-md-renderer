@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
 import { RenderStore } from '../../store/renderStore';
 import { getCharHight } from '../../utils/doc-helpers';
+import { JustifiedTextRenderer } from '../../utils/justifiedTextRenderer';
 
 /**
  * Renders heading elements.
@@ -22,9 +23,24 @@ const renderHeading = (
     doc.setFontSize(store.options.page.defaultFontSize + size);
 
     if (element?.items && element?.items.length > 0) {
-        for (const item of element?.items ?? []) {
-            parentElementRenderer(item, indent, store, false);
-        }
+        // Use JustifiedTextRenderer to render mixed styled items correctly
+        // We temporarily override the defaultLineHeightFactor to 1.0 to match the 
+        // ultra-tight spacing of unstyled headings.
+        const originalLineHeightFactor = store.options.page.defaultLineHeightFactor;
+        store.options.page.defaultLineHeightFactor = 1.0;
+
+        JustifiedTextRenderer.renderStyledParagraph(
+            doc,
+            element.items,
+            store.X + indent,
+            store.Y,
+            store.options.page.maxContentWidth - indent,
+            store,
+            'left'
+        );
+
+        // Restore original line height factor
+        store.options.page.defaultLineHeightFactor = originalLineHeightFactor;
     } else {
         const charHeight = getCharHight(doc);
         doc.text(element?.content ?? '', store.X + indent, store.Y, {

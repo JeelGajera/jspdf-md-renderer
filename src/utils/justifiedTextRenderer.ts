@@ -230,34 +230,50 @@ export class JustifiedTextRenderer {
                     continue;
                 }
 
-                // Split into words, ignoring spaces
-                const words = text
-                    .trim()
-                    .split(/\s+/)
-                    .filter((w) => w.length > 0);
+                // Split into words, honoring newlines as hard breaks
+                const lines = text.split('\n');
+                
+                for (let partIndex = 0; partIndex < lines.length; partIndex++) {
+                    const lineStr = lines[partIndex];
+                    
+                    const words = lineStr
+                        .trim()
+                        .split(/[ \t\r\v\f]+/)
+                        .filter((w) => w.length > 0);
 
-                for (let i = 0; i < words.length; i++) {
-                    const isLastWord = i === words.length - 1;
-                    // The word has a trailing space if it's NOT the last word in the string,
-                    // OR if it IS the last word, but the original string ended with a space.
-                    const hasTrailingSpace = !isLastWord || /\s$/.test(text);
+                    for (let i = 0; i < words.length; i++) {
+                        const isLastWord = i === words.length - 1;
+                        // The word has a trailing space if it's NOT the last word in the string,
+                        // OR if it IS the last word, but the original line string ended with a space.
+                        const hasTrailingSpace = !isLastWord || /[ \t\r\v\f]$/.test(lineStr);
 
-                    result.push({
-                        text: words[i],
-                        width: this.measureWordWidth(
-                            doc,
-                            words[i],
+                        result.push({
+                            text: words[i],
+                            width: this.measureWordWidth(
+                                doc,
+                                words[i],
+                                style,
+                                store,
+                            ),
                             style,
-                            store,
-                        ),
-                        style,
-                        isLink: elIsLink,
-                        href: elHref,
-                        linkColor: elIsLink
-                            ? store.options.link?.linkColor || [0, 0, 255]
-                            : undefined,
-                        hasTrailingSpace: hasTrailingSpace,
-                    });
+                            isLink: elIsLink,
+                            href: elHref,
+                            linkColor: elIsLink
+                                ? store.options.link?.linkColor || [0, 0, 255]
+                                : undefined,
+                            hasTrailingSpace: hasTrailingSpace,
+                        });
+                    }
+                    
+                    // If not the last line, insert a break
+                    if (partIndex < lines.length - 1) {
+                        result.push({
+                            text: '',
+                            width: 0,
+                            style,
+                            isBr: true,
+                        });
+                    }
                 }
             }
         }
