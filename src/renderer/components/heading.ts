@@ -1,61 +1,74 @@
+// src/renderer/components/heading.ts
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
 import { RenderStore } from '../../store/renderStore';
+import { renderInlineContent, renderPlainText } from '../../layout';
 import { getCharHight } from '../../utils/doc-helpers';
-import { JustifiedTextRenderer } from '../../utils/justifiedTextRenderer';
+import { breakIfOverflow } from '../../utils/handlePageBreak';
 
-/**
- * Renders heading elements.
- */
 const renderHeading = (
     doc: jsPDF,
     element: ParsedElement,
     indent: number,
     store: RenderStore,
-    parentElementRenderer: (
-        element: ParsedElement,
-        indentLevel: number,
-        store: RenderStore,
-        hasRawBullet?: boolean,
-    ) => void,
 ) => {
-    const size = 6 - (element?.depth ?? 0) > 0 ? 6 - (element?.depth ?? 0) : 1;
-    doc.setFontSize(store.options.page.defaultFontSize + size);
+    const savedColor = doc.getTextColor();
+    const depth = element?.depth ?? 1;
+    const headingKey = `h${depth}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+    const fontSize =
+        store.options.heading?.[headingKey] ??
+        store.options.page.defaultFontSize;
+    const headingColor =
+        store.options.heading?.[`${headingKey}Color`] ??
+        store.options.heading?.color ??
+        '#000000';
 
-    if (element?.items && element?.items.length > 0) {
-        // Use JustifiedTextRenderer to render mixed styled items correctly
-        // We temporarily override the defaultLineHeightFactor to 1.0 to match the 
-        // ultra-tight spacing of unstyled headings.
-        const originalLineHeightFactor = store.options.page.defaultLineHeightFactor;
-        store.options.page.defaultLineHeightFactor = 1.0;
+    const savedSize = doc.getFontSize();
+    doc.setFontSize(fontSize);
+    doc.setFont(
+        store.options.font.bold.name,
+        store.options.font.bold.style || 'bold',
+    );
+    doc.setTextColor(headingColor);
 
-        JustifiedTextRenderer.renderStyledParagraph(
+    breakIfOverflow(doc, store, getCharHight(doc) * 1.8);
+
+    const maxWidth = store.options.page.maxContentWidth - indent;
+
+    if (element.items && element.items.length > 0) {
+        renderInlineContent(
             doc,
             element.items,
             store.X + indent,
             store.Y,
-            store.options.page.maxContentWidth - indent,
+            maxWidth,
             store,
-            'left'
+            { alignment: 'left', trimLastLine: true },
         );
-
-        // Restore original line height factor
-        store.options.page.defaultLineHeightFactor = originalLineHeightFactor;
     } else {
-        const charHeight = getCharHight(doc);
-        doc.text(element?.content ?? '', store.X + indent, store.Y, {
-            align: 'left',
-            maxWidth: store.options.page.maxContentWidth - indent,
-            baseline: 'top',
-        });
-
-        // Record visual bottom and then advance by exactly charHeight (ultra-tight)
-        // This ensures minimal gap before the next element
-        store.recordContentY(store.Y + charHeight);
-        store.updateY(getCharHight(doc), 'add');
+        renderPlainText(
+            doc,
+            element?.content ?? '',
+            store.X + indent,
+            store.Y,
+            maxWidth,
+            store,
+            { alignment: 'left', trimLastLine: true },
+        );
     }
-    // Reset font size to default after heading
-    doc.setFontSize(store.options.page.defaultFontSize);
+
+    const bottomSpacing =
+        store.options.heading?.bottomSpacing ??
+        store.options.spacing?.afterHeading ??
+        2;
+    store.updateY(bottomSpacing, 'add');
+
+    doc.setFontSize(savedSize);
+    doc.setFont(
+        store.options.font.regular.name,
+        store.options.font.regular.style,
+    );
+    doc.setTextColor(savedColor);
     store.updateX(store.options.page.xpading, 'set');
 };
 

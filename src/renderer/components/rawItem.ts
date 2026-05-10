@@ -1,8 +1,9 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
 import { RenderStore } from '../../store/renderStore';
-import { TextRenderer } from '../../utils/text-renderer';
-import { HandlePageBreaks } from '../../utils/handlePageBreak';
+import { breakIfOverflow } from '../../utils/handlePageBreak';
+import { getCharHight } from '../../utils/doc-helpers';
+import { renderPlainText } from '../../layout';
 
 const renderRawItem = (
     doc: jsPDF,
@@ -38,7 +39,12 @@ const renderRawItem = (
     } else {
         const options = store.options;
         const indent = indentLevel * options.page.indent;
-        const bullet = hasRawBullet ? (ordered ? `${start}. ` : '\u2022 ') : '';
+        const listOpts = store.options.list ?? {};
+        const bullet = hasRawBullet
+            ? ordered
+                ? `${start}. `
+                : (listOpts.bulletChar ?? '\u2022 ')
+            : '';
         const content = element.content || '';
         const xLeft = options.page.xpading;
 
@@ -54,17 +60,13 @@ const renderRawItem = (
             if (newlines > 1) {
                 const linesToAdd = newlines - 1;
                 const lineHeight =
-                    doc.getTextDimensions('A').h *
-                    options.page.defaultLineHeightFactor;
+                    getCharHight(doc) * options.page.defaultLineHeightFactor;
                 const addedHeight = linesToAdd * lineHeight;
 
                 // Check page break
-                if (store.Y + addedHeight > options.page.maxContentHeight) {
-                    HandlePageBreaks(doc, store);
-                } else {
-                    store.updateY(addedHeight, 'add');
-                    store.recordContentY(store.Y);
-                }
+                breakIfOverflow(doc, store, addedHeight);
+                store.updateY(addedHeight, 'add');
+                store.recordContentY(store.Y);
             }
             return;
         }
@@ -82,25 +84,25 @@ const renderRawItem = (
                 baseline: 'top',
             });
 
-            TextRenderer.renderText(
+            renderPlainText(
                 doc,
                 content,
-                store,
                 xLeft + indent + bulletWidth,
                 store.Y,
                 textMaxWidth,
-                justify,
+                store,
+                { alignment: justify ? 'justify' : 'left' },
             );
         } else {
             const textMaxWidth = options.page.maxContentWidth - indent;
-            TextRenderer.renderText(
+            renderPlainText(
                 doc,
                 content,
-                store,
                 xLeft + indent,
                 store.Y,
                 textMaxWidth,
-                justify,
+                store,
+                { alignment: justify ? 'justify' : 'left' },
             );
         }
 

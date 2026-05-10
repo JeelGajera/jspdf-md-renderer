@@ -74,6 +74,8 @@ const tokenHandlers: Record<string, (token: any) => ParsedElement> = {
     [MdTokenType.ListItem]: (token) => ({
         type: MdTokenType.ListItem,
         content: token.text,
+        task: token.task ?? false,
+        checked: token.checked ?? false,
         items: token.tokens ? convertTokens(token.tokens) : [],
     }),
     [MdTokenType.Code]: (token) => ({
@@ -143,19 +145,44 @@ const tokenHandlers: Record<string, (token: any) => ParsedElement> = {
         items: token.tokens ? convertTokens(token.tokens) : [],
     }),
     [MdTokenType.Html]: (token) => {
-        const rawHtml = String(token.raw ?? token.text ?? '').trim();
-        const isInlineBreakTag = /^<br\s*\/?>$/i.test(rawHtml);
+        const raw = String(token.raw ?? token.text ?? '').trim();
 
-        if (isInlineBreakTag) {
-            return {
-                type: MdTokenType.Br,
-                content: '\n',
-            };
+        if (/^<br\s*\/?>$/i.test(raw)) {
+            return { type: MdTokenType.Br, content: '\n' };
+        }
+
+        // Support common inline HTML tags by mapping them to known types
+        const inlineTagMap: Record<string, string> = {
+            strong: MdTokenType.Strong,
+            b: MdTokenType.Strong,
+            em: MdTokenType.Em,
+            i: MdTokenType.Em,
+        };
+
+        const inlineMatch = raw.match(/^<(\w+)[^>]*>(.*?)<\/\1>$/is);
+        if (inlineMatch) {
+            const tag = inlineMatch[1].toLowerCase();
+            const innerText = inlineMatch[2];
+            const mappedType = inlineTagMap[tag];
+            if (mappedType) {
+                return { type: mappedType, content: innerText };
+            }
+        }
+
+        if (/^<(s|del)[^>]*>(.*?)<\/(s|del)>$/is.test(raw)) {
+            const textMatch = raw.match(/>([^<]+)</);
+            return { type: MdTokenType.Raw, content: textMatch?.[1] ?? raw };
+        }
+
+        // Unknown HTML: render as raw text, strip tags
+        const strippedText = raw.replace(/<[^>]+>/g, '').trim();
+        if (strippedText) {
+            return { type: MdTokenType.Raw, content: strippedText };
         }
 
         return {
             type: MdTokenType.Raw,
-            content: token.raw ?? token.text ?? '',
+            content: '',
         };
     },
     [MdTokenType.Br]: () => ({

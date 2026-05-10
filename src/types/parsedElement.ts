@@ -22,4 +22,8 @@ export type ParsedElement = {
     // Intrinsic image dimensions (set during prefetch via getImageProperties)
     naturalWidth?: number;
     naturalHeight?: number;
+    /** Whether this list item is a task (checkbox) item */
+    task?: boolean;
+    /** Whether the task checkbox is checked */
+    checked?: boolean;
 };

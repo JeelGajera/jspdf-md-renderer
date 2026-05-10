@@ -2,8 +2,10 @@ import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
 import { getCharHight, getCharWidth } from '../../utils/doc-helpers';
 import { RenderStore } from '../../store/renderStore';
+import { breakIfOverflow } from '../../utils/handlePageBreak';
 
 /**
+ * @deprecated — use renderInlineContent from layout engine directly.
  * Renders inline text elements (Strong, Em, and Text) with proper inline styling.
  */
 const renderInlineText = (
@@ -61,7 +63,10 @@ const renderInlineText = (
                 'bolditalic',
             );
         } else if (style === 'codespan') {
-            const codeFont = store.options.font.code || { name: 'courier', style: 'normal' };
+            const codeFont = store.options.font.code || {
+                name: 'courier',
+                style: 'normal',
+            };
             doc.setFont(codeFont.name, codeFont.style);
             doc.setFontSize(currentFontSize * 0.9); // Slightly smaller for code
         } else {
@@ -82,6 +87,7 @@ const renderInlineText = (
         if (store.isInlineLockActive) {
             // Inline lock: always render inline, only break if width exceeded
             for (let i = 0; i < textLines.length; i++) {
+                breakIfOverflow(doc, store, getCharHight(doc));
                 if (isCodeSpan) {
                     const lineWidth =
                         doc.getTextWidth(textLines[i]) + getCharWidth(doc);
