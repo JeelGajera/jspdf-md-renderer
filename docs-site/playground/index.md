@@ -1,15 +1,20 @@
 ---
 title: Playground
-description: Interactive playground — write markdown and preview the generated PDF in real-time.
+description: Interactive playground with Markdown editor + RenderOption JSON editor and live PDF preview.
 aside: false
 pageClass: custom-playground-page
 llm_summary: |
-  Interactive playground page that embeds the Playground Vue component. Users can write
-  markdown, adjust render options, and preview the generated PDF output in real-time.
+  Interactive playground with two input tabs: Markdown and RenderOption JSON.
+  Users can validate JSON options, generate PDF preview, and download output.
 ---
 
 # Interactive Playground
 
-Write markdown in the editor, adjust options, and click **Generate PDF** to see the output.
+Use the two tabs on the left:
+
+- `Markdown` tab: write your markdown document.
+- `Render Options (JSON)` tab: provide custom `RenderOption` JSON.
+
+Then click **Generate PDF** to preview, or **Validate Options** to check your JSON input quickly.
 
 <Playground />

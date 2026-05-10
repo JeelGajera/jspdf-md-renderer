@@ -3,17 +3,56 @@
         <div class="playground-container">
             <div class="playground-main">
                 <div class="playground-editor">
-                    <div class="pane-header py-1">
-                        <span class="pane-icon">📝</span>
-                        <span>Markdown Editor</span>
+                    <div class="pane-header">
+                        <span class="pane-icon">🧪</span>
+                        <span>Playground Input</span>
+                        <div class="tab-group">
+                            <button
+                                class="tab-btn"
+                                :class="{ active: activeTab === 'markdown' }"
+                                @click="activeTab = 'markdown'"
+                            >
+                                Markdown
+                            </button>
+                            <button
+                                class="tab-btn"
+                                :class="{ active: activeTab === 'options' }"
+                                @click="activeTab = 'options'"
+                            >
+                                Render Options (JSON)
+                            </button>
+                        </div>
                     </div>
+
                     <textarea
+                        v-if="activeTab === 'markdown'"
                         v-model="mdContent"
                         class="editor-textarea"
                         spellcheck="false"
                         placeholder="Type your markdown here..."
                     ></textarea>
+
+                    <div v-else class="options-pane">
+                        <div class="options-help">
+                            Provide a partial or full
+                            <code>RenderOption</code> object in JSON. It is
+                            merged with playground defaults before rendering.
+                        </div>
+                        <textarea
+                            v-model="optionsJson"
+                            class="editor-textarea options-textarea"
+                            spellcheck="false"
+                            placeholder='{ "heading": { "h1": 28 } }'
+                        ></textarea>
+                        <div v-if="optionsStatusError" class="options-error">
+                            {{ optionsStatusError }}
+                        </div>
+                        <div v-else-if="optionsStatusText" class="options-ok">
+                            {{ optionsStatusText }}
+                        </div>
+                    </div>
                 </div>
+
                 <div class="playground-preview">
                     <div class="pane-header">
                         <span class="pane-icon">📄</span>
@@ -22,11 +61,11 @@
                             <button
                                 class="btn btn-primary"
                                 @click="generatePDF"
-                                :disabled="generating"
+                                :disabled="generating || !validationState.valid"
                             >
                                 {{
                                     generating
-                                        ? '⏳ Generating...'
+                                        ? 'Generating...'
                                         : 'Generate PDF'
                                 }}
                             </button>
@@ -39,6 +78,7 @@
                             </button>
                         </div>
                     </div>
+
                     <div class="preview-frame">
                         <iframe
                             v-if="pdfBlobUrl"
@@ -49,137 +89,13 @@
                         <div v-else class="preview-placeholder">
                             <div class="placeholder-content">
                                 <span class="placeholder-icon">📄</span>
-                                <p>
-                                    Click <strong>Generate PDF</strong> to see
-                                    your preview
-                                </p>
+                                <p>Generate PDF to preview output.</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div v-if="!hideOptions" class="playground-options">
-                <div class="pane-header">
-                    <span class="pane-icon">⚙️</span>
-                    <span>Render Options</span>
-                </div>
-                <div class="options-grid">
-                    <div class="option-group">
-                        <label
-                            >Font Size
-                            <span class="option-val"
-                                >{{ opts.defaultFontSize }}pt</span
-                            ></label
-                        >
-                        <input
-                            type="range"
-                            v-model.number="opts.defaultFontSize"
-                            min="8"
-                            max="24"
-                            step="1"
-                        />
-                    </div>
-                    <div class="option-group">
-                        <label
-                            >Title Font Size
-                            <span class="option-val"
-                                >{{ opts.defaultTitleFontSize }}pt</span
-                            ></label
-                        >
-                        <input
-                            type="range"
-                            v-model.number="opts.defaultTitleFontSize"
-                            min="10"
-                            max="30"
-                            step="1"
-                        />
-                    </div>
-                    <div class="option-group">
-                        <label
-                            >Line Spacing
-                            <span class="option-val">{{
-                                opts.lineSpace
-                            }}</span></label
-                        >
-                        <input
-                            type="range"
-                            v-model.number="opts.lineSpace"
-                            min="1"
-                            max="10"
-                            step="0.5"
-                        />
-                    </div>
-                    <div class="option-group">
-                        <label
-                            >X Padding
-                            <span class="option-val"
-                                >{{ opts.xpading }}mm</span
-                            ></label
-                        >
-                        <input
-                            type="range"
-                            v-model.number="opts.xpading"
-                            min="5"
-                            max="40"
-                            step="1"
-                        />
-                    </div>
-                    <div class="option-group">
-                        <label
-                            >Top Margin
-                            <span class="option-val"
-                                >{{ opts.topmargin }}mm</span
-                            ></label
-                        >
-                        <input
-                            type="range"
-                            v-model.number="opts.topmargin"
-                            min="5"
-                            max="40"
-                            step="1"
-                        />
-                    </div>
-                    <div class="option-group">
-                        <label
-                            >Indent
-                            <span class="option-val"
-                                >{{ opts.indent }}mm</span
-                            ></label
-                        >
-                        <input
-                            type="range"
-                            v-model.number="opts.indent"
-                            min="4"
-                            max="20"
-                            step="1"
-                        />
-                    </div>
-                    <div class="option-group">
-                        <label>Orientation</label>
-                        <select v-model="opts.orientation">
-                            <option value="p">Portrait</option>
-                            <option value="l">Landscape</option>
-                        </select>
-                    </div>
-                    <div class="option-group">
-                        <label>Text Alignment</label>
-                        <select v-model="opts.textAlignment">
-                            <option value="left">Left</option>
-                            <option value="center">Center</option>
-                            <option value="right">Right</option>
-                            <option value="justify">Justify</option>
-                        </select>
-                    </div>
-                    <div class="option-group">
-                        <label>Image Alignment</label>
-                        <select v-model="opts.imageAlign">
-                            <option value="left">Left</option>
-                            <option value="center">Center</option>
-                            <option value="right">Right</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
+
             <div v-if="errorMsg" class="playground-error">
                 ⚠️ {{ errorMsg }}
             </div>
@@ -188,11 +104,11 @@
 </template>
 
 <script setup>
-import { ref, onBeforeUnmount, onMounted } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { validateOptions } from 'jspdf-md-renderer';
 
 const props = defineProps({
     defaultMd: { type: String, default: '' },
-    defaultOptions: { type: Object, default: () => ({}) },
     hideOptions: { type: Boolean, default: false },
 });
 
@@ -232,24 +148,34 @@ doc.save('output.pdf');
 *Powered by jspdf-md-renderer*
 `;
 
+const DEFAULT_JSON_OPTIONS = {
+    page: {
+        defaultFontSize: 11,
+        lineSpace: 3,
+    },
+    heading: {
+        h1: 24,
+        h2: 20,
+        bottomSpacing: 2,
+    },
+    spacing: {
+        afterParagraph: 3,
+        afterHeading: 0,
+    },
+    footer: {
+        showPageNumbers: true,
+        align: 'right',
+    },
+};
+
+const activeTab = ref('markdown');
 const mdContent = ref(props.defaultMd || DEFAULT_MD);
+const optionsJson = ref(JSON.stringify(DEFAULT_JSON_OPTIONS, null, 2));
+
 const pdfBlobUrl = ref(null);
 const pdfBlob = ref(null);
 const generating = ref(false);
 const errorMsg = ref('');
-
-const opts = ref({
-    defaultFontSize: 12,
-    defaultTitleFontSize: 14,
-    lineSpace: 1.5,
-    xpading: 10,
-    topmargin: 10,
-    indent: 10,
-    orientation: 'p',
-    textAlignment: 'left',
-    imageAlign: 'left',
-    ...props.defaultOptions,
-});
 
 function cleanup() {
     if (pdfBlobUrl.value) {
@@ -259,14 +185,106 @@ function cleanup() {
 }
 
 onBeforeUnmount(cleanup);
-
-// Auto-generate on mount for pages with embedded playground
 onMounted(() => {
     if (props.defaultMd) {
-        // Small delay to ensure CDN scripts are loaded
-        setTimeout(() => generatePDF(), 500);
+        setTimeout(() => generatePDF(), 250);
     }
 });
+
+function deepMerge(target, source) {
+    const output = { ...target };
+    for (const [key, value] of Object.entries(source || {})) {
+        if (
+            value &&
+            typeof value === 'object' &&
+            !Array.isArray(value) &&
+            typeof output[key] === 'object' &&
+            output[key] !== null
+        ) {
+            output[key] = deepMerge(output[key], value);
+        } else {
+            output[key] = value;
+        }
+    }
+    return output;
+}
+
+function parseUserOptions() {
+    const parsed = JSON.parse(optionsJson.value || '{}');
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('Options must be a JSON object.');
+    }
+    return parsed;
+}
+
+const baseOptions = {
+    cursor: { x: 10, y: 10 },
+    page: {
+        format: 'a4',
+        unit: 'mm',
+        orientation: 'portrait',
+        maxContentWidth: 190,
+        maxContentHeight: 287,
+        lineSpace: 3,
+        defaultLineHeightFactor: 1.4,
+        defaultFontSize: 11,
+        defaultTitleFontSize: 14,
+        topmargin: 10,
+        xpading: 10,
+        xmargin: 10,
+        indent: 8,
+    },
+    font: {
+        bold: { name: 'helvetica', style: 'bold' },
+        regular: { name: 'helvetica', style: 'normal' },
+        light: { name: 'helvetica', style: 'light' },
+        code: { name: 'courier', style: 'normal' },
+    },
+    endCursorYHandler: () => {},
+};
+
+const validationState = computed(() => {
+    try {
+        const userOptions = parseUserOptions();
+        const renderOptions = deepMerge(baseOptions, userOptions);
+        validateOptions(renderOptions);
+        return {
+            valid: true,
+            renderOptions,
+            error: '',
+        };
+    } catch (err) {
+        return {
+            valid: false,
+            renderOptions: null,
+            error: err.message || 'Invalid options.',
+        };
+    }
+});
+
+const optionsStatusText = computed(() =>
+    validationState.value.valid ? 'Options look valid.' : '',
+);
+
+const optionsStatusError = computed(() =>
+    validationState.value.valid ? '' : validationState.value.error,
+);
+
+async function createRenderOptions() {
+    if (!validationState.value.valid || !validationState.value.renderOptions) {
+        return null;
+    }
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF({
+        unit: 'mm',
+        format: validationState.value.renderOptions.page.format,
+        orientation: validationState.value.renderOptions.page.orientation,
+    });
+    return {
+        doc,
+        renderOptions: validationState.value.renderOptions,
+    };
+}
 
 async function generatePDF() {
     generating.value = true;
@@ -274,52 +292,14 @@ async function generatePDF() {
     cleanup();
 
     try {
-        // Dynamically load to avoid SSR issues and use local bundle instead of CDN
-        const { jsPDF } = await import('jspdf');
+        const payload = await createRenderOptions();
+        if (!payload) {
+            throw new Error('Cannot generate PDF until options JSON is valid.');
+        }
+
+        const { doc, renderOptions } = payload;
         await import('jspdf-autotable');
         const { MdTextRender } = await import('jspdf-md-renderer');
-
-        const o = opts.value;
-        const isLandscape = o.orientation === 'l';
-        const pageWidth = isLandscape ? 297 : 210;
-        const pageHeight = isLandscape ? 210 : 297;
-        const maxContentWidth = pageWidth - 2 * o.xpading;
-
-        const doc = new jsPDF({
-            unit: 'mm',
-            format: 'a4',
-            orientation: o.orientation,
-        });
-
-        const renderOptions = {
-            cursor: { x: o.xpading, y: o.topmargin },
-            page: {
-                format: 'a4',
-                orientation: o.orientation,
-                maxContentWidth,
-                maxContentHeight: pageHeight,
-                lineSpace: o.lineSpace,
-                defaultLineHeightFactor: 1.2,
-                defaultFontSize: o.defaultFontSize,
-                defaultTitleFontSize: o.defaultTitleFontSize,
-                topmargin: o.topmargin,
-                xpading: o.xpading,
-                xmargin: o.xpading,
-                indent: o.indent,
-            },
-            font: {
-                bold: { name: 'helvetica', style: 'bold' },
-                regular: { name: 'helvetica', style: 'normal' },
-                light: { name: 'helvetica', style: 'light' },
-            },
-            content: {
-                textAlignment: o.textAlignment,
-            },
-            image: {
-                defaultAlign: o.imageAlign,
-            },
-            endCursorYHandler: () => {},
-        };
 
         await MdTextRender(doc, mdContent.value, renderOptions);
 
@@ -328,7 +308,7 @@ async function generatePDF() {
         pdfBlobUrl.value = URL.createObjectURL(blob);
     } catch (err) {
         console.error('PDF generation error:', err);
-        errorMsg.value = `Error: ${err.message || 'Failed to generate PDF'}`;
+        errorMsg.value = err.message || 'Failed to generate PDF';
     } finally {
         generating.value = false;
     }
@@ -347,30 +327,21 @@ function downloadPDF() {
 <style scoped>
 .playground-container {
     width: 100%;
-    max-width: 100%;
-    margin: 1.5rem 0;
     border: 1px solid var(--vp-c-divider);
     border-radius: 12px;
     overflow: hidden;
     background: var(--vp-c-bg);
-    box-shadow: 0 10px 35px rgba(15, 23, 42, 0.08);
-}
-
-.dark .playground-container {
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
 }
 
 .playground-main {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    min-height: clamp(600px, 80vh, 1200px);
-    height: 100%;
+    min-height: 680px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
     .playground-main {
         grid-template-columns: 1fr;
-        min-height: auto;
     }
 }
 
@@ -383,17 +354,6 @@ function downloadPDF() {
     border-bottom: 1px solid var(--vp-c-divider);
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--vp-c-text-1);
-}
-
-.playground-editor .pane-header,
-.playground-preview .pane-header,
-.playground-options .pane-header {
-    backdrop-filter: blur(8px);
-}
-
-.pane-icon {
-    font-size: 1rem;
 }
 
 .pane-actions {
@@ -402,13 +362,38 @@ function downloadPDF() {
     gap: 0.5rem;
 }
 
+.pane-icon {
+    font-size: 1rem;
+}
+
+.tab-group {
+    margin-left: auto;
+    display: flex;
+    gap: 0.4rem;
+}
+
+.tab-btn {
+    border: 1px solid var(--vp-c-divider);
+    background: var(--vp-c-bg);
+    color: var(--vp-c-text-2);
+    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.tab-btn.active {
+    color: var(--vp-c-brand-1);
+    border-color: var(--vp-c-brand-1);
+}
+
 .playground-editor {
     display: flex;
     flex-direction: column;
     border-right: 1px solid var(--vp-c-divider);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
     .playground-editor {
         border-right: none;
         border-bottom: 1px solid var(--vp-c-divider);
@@ -417,215 +402,140 @@ function downloadPDF() {
 
 .editor-textarea {
     flex: 1;
-    height: 100%;
-    min-height: 500px;
-    padding: 1rem;
+    min-height: 560px;
     border: none;
     outline: none;
     resize: none;
-    font-family:
-        'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-    font-size: 0.875rem;
-    line-height: 1.6;
+    padding: 1rem;
     background: var(--vp-c-bg);
     color: var(--vp-c-text-1);
-    tab-size: 2;
-    caret-color: var(--vp-c-brand-1);
-    transition:
-        background-color 0.2s ease,
-        box-shadow 0.2s ease;
+    font-family: 'SF Mono', Monaco, Consolas, 'Roboto Mono', monospace;
+    font-size: 0.86rem;
+    line-height: 1.55;
 }
 
-.editor-textarea::selection {
-    background: rgba(59, 130, 246, 0.28);
-    color: inherit;
-    text-shadow: none;
-}
-
-.dark .editor-textarea {
-    background: #0f172a;
-    color: #e2e8f0;
-}
-
-.dark .editor-textarea::selection {
-    background: rgba(56, 189, 248, 0.42);
-    color: #f8fafc;
-}
-
-.editor-textarea:focus-visible {
-    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.55);
-}
-
-.playground-preview {
+.options-pane {
     display: flex;
     flex-direction: column;
+    min-height: 560px;
+}
+
+.options-help {
+    padding: 0.75rem 1rem;
+    font-size: 0.78rem;
+    color: var(--vp-c-text-2);
+    border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.options-textarea {
+    min-height: 420px;
+}
+
+.options-error {
+    padding: 0.75rem 1rem;
+    color: #b91c1c;
+    background: #fef2f2;
+    border-top: 1px solid #fecaca;
+    font-size: 0.8rem;
+}
+
+.options-ok {
+    padding: 0.75rem 1rem;
+    color: #065f46;
+    background: #ecfdf5;
+    border-top: 1px solid #a7f3d0;
+    font-size: 0.8rem;
 }
 
 .preview-frame {
     flex: 1;
-    height: 100%;
-    min-height: 500px;
+    min-height: 560px;
 }
-
 .pdf-iframe {
     width: 100%;
     height: 100%;
-    min-height: 500px;
+    min-height: 560px;
     border: none;
     background: #f5f5f5;
 }
-
 .preview-placeholder {
+    min-height: 560px;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100%;
-    min-height: 500px;
     background: var(--vp-c-bg-soft);
 }
-
 .placeholder-content {
     text-align: center;
     color: var(--vp-c-text-3);
 }
-
 .placeholder-icon {
-    font-size: 3rem;
+    font-size: 2.5rem;
     display: block;
-    margin-bottom: 0.75rem;
-    opacity: 0.4;
-}
-
-.placeholder-content p {
-    font-size: 0.9rem;
-}
-
-.playground-options {
-    border-top: 1px solid var(--vp-c-divider);
-}
-
-.options-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-    padding: 1rem;
-}
-
-.option-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-}
-
-.option-group label {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--vp-c-text-2);
-    display: flex;
-    justify-content: space-between;
-}
-
-.option-val {
-    color: var(--vp-c-brand-1);
-    font-weight: 600;
-}
-
-.option-group input[type='range'] {
-    width: 100%;
-    accent-color: var(--vp-c-brand-1);
-}
-
-.option-group select {
-    padding: 0.35rem 0.5rem;
-    border: 1px solid var(--vp-c-divider);
-    border-radius: 6px;
-    background: var(--vp-c-bg);
-    color: var(--vp-c-text-1);
-    font-size: 0.8rem;
-    transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease,
-        background-color 0.2s ease;
-}
-
-.option-group select:hover {
-    border-color: var(--vp-c-brand-2);
-}
-
-.option-group select:focus-visible {
-    outline: none;
-    border-color: var(--vp-c-brand-1);
-    box-shadow: 0 0 0 2px var(--vp-c-brand-soft);
+    margin-bottom: 0.6rem;
+    opacity: 0.45;
 }
 
 .btn {
-    padding: 0.4rem 0.85rem;
-    border: none;
+    border: 1px solid var(--vp-c-divider);
     border-radius: 6px;
-    font-size: 0.8rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
 }
 
 .btn-primary {
-    background: var(--vp-button-brand-bg, #222);
-    color: #fff; /* Ensure text is white in light mode */
-}
-
-.dark .btn-primary {
-    background: #eeeeee !important;
-    color: #111111 !important; /* Force dark text in dark mode */
+    background: #1d4ed8;
+    color: #ffffff;
+    border-color: #1e40af;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .btn-primary:hover:not(:disabled) {
-    background: var(--vp-button-brand-hover-bg, #444);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: #1e40af;
+    border-color: #1d4ed8;
 }
 
-.btn:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+.dark .btn-primary {
+    background: #38bdf8;
+    color: #082f49;
+    border-color: #0ea5e9;
+    box-shadow: none;
 }
 
 .dark .btn-primary:hover:not(:disabled) {
-    background: #cccccc !important;
+    background: #7dd3fc;
+    border-color: #38bdf8;
 }
 
 .btn-secondary {
-    background: transparent;
+    background: var(--vp-c-bg);
     color: var(--vp-c-text-1);
-    border: 1px solid var(--vp-c-divider);
 }
 
-.btn-secondary:hover:not(:disabled) {
-    background: var(--vp-c-bg-mute);
-    transform: translateY(-1px);
+.btn:disabled {
+    opacity: 0.72;
+    cursor: not-allowed;
+}
+
+.btn-primary:disabled {
+    background: #cbd5e1;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+.dark .btn-primary:disabled {
+    background: #334155;
+    color: #94a3b8;
+    border-color: #475569;
 }
 
 .playground-error {
     padding: 0.75rem 1rem;
     background: #fef2f2;
     color: #991b1b;
-    font-size: 0.85rem;
     border-top: 1px solid #fecaca;
-}
-
-.dark .playground-error {
-    background: rgba(239, 68, 68, 0.1);
-    color: #fca5a5;
-    border-top-color: rgba(239, 68, 68, 0.2);
-}
-
-.py-1 {
-    padding-top: 1.2rem;
-    padding-bottom: 1.2rem;
+    font-size: 0.85rem;
 }
 </style>

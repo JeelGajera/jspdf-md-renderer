@@ -14,6 +14,8 @@ const renderBlockquote = (
     ) => void,
 ) => {
     const options = store.options;
+    const savedDrawColor = doc.getDrawColor();
+    const savedLineWidth = doc.getLineWidth();
 
     // Increase indent for blockquote content
     const blockquoteIndent = indentLevel + 1;
@@ -35,13 +37,16 @@ const renderBlockquote = (
         });
     }
 
-    const endY = store.Y;
+    const endY = store.lastContentY || store.Y;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const endPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
 
     // Draw the vertical bar across pages
-    doc.setDrawColor(100); // Gray color
-    doc.setLineWidth(1);
+    const bqOpts = store.options.blockquote ?? {};
+    const barColor = bqOpts.barColor ?? '#AAAAAA';
+    const barWidth = bqOpts.barWidth ?? 1;
+    doc.setDrawColor(barColor);
+    doc.setLineWidth(barWidth);
 
     for (let p = startPage; p <= endPage; p++) {
         doc.setPage(p);
@@ -59,6 +64,15 @@ const renderBlockquote = (
 
     // Restore page to endPage
     doc.setPage(endPage);
+
+    // Bottom spacing
+    const bqBottomSpacing =
+        bqOpts.bottomSpacing ??
+        options.spacing?.afterBlockquote ??
+        options.page.lineSpace;
+    store.updateY(bqBottomSpacing, 'add');
+    doc.setDrawColor(savedDrawColor);
+    doc.setLineWidth(savedLineWidth);
 };
 
 export default renderBlockquote;

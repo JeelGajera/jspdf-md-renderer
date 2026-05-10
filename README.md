@@ -2,6 +2,15 @@
 
 A jsPDF utility to render Markdown directly into formatted PDFs with custom designs.
 
+## What's New in v4
+
+- Unified inline layout engine for consistent wrapping/alignment.
+- Safe wrapping for long unbroken tokens (long URLs, long inline code).
+- Heading scale controls (`heading.h1` ... `heading.h6`).
+- Task list support (`- [x]` / `- [ ]`).
+- Header/footer + page numbers.
+- Spacing system (`spacing.*`) and richer style options (`codeBlock`, `blockquote`, `list`, `paragraph`).
+
 [![npm version](https://img.shields.io/npm/v/jspdf-md-renderer.svg)](https://www.npmjs.com/package/jspdf-md-renderer)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Downloads](https://img.shields.io/npm/dm/jspdf-md-renderer.svg)](https://www.npmjs.com/package/jspdf-md-renderer)
@@ -112,6 +121,25 @@ const generatePDF = async () => {
             bold: { name: 'helvetica', style: 'bold' },
             regular: { name: 'helvetica', style: 'normal' },
             light: { name: 'helvetica', style: 'light' },
+        },
+        heading: {
+            h1: 24,
+            h2: 20,
+            h3: 17,
+            h4: 15,
+            h5: 13,
+            h6: 12,
+            color: '#1A365D',
+        },
+        spacing: {
+            afterParagraph: 4,
+            afterHeading: 2,
+            afterCodeBlock: 4,
+            betweenListItems: 1,
+        },
+        footer: {
+            showPageNumbers: true,
+            align: 'right',
         },
         endCursorYHandler: (y) => {
             console.log('End cursor Y position:', y);
@@ -261,6 +289,38 @@ The following Markdown elements are currently supported by `jspdf-md-renderer`:
     | Row 1    | Data     | Value    |
     | Row 2    | Data     | Value    |
     ```
+
+## New Options (v4 quick reference)
+
+```ts
+const options = {
+  heading: { h1: 26, h2: 22, h3: 18, bottomSpacing: 3 },
+  list: { bulletChar: '• ', indentSize: 8, itemSpacing: 0 },
+  paragraph: { bottomSpacing: 3, color: '#111827' },
+  blockquote: { barColor: '#4A90D9', barWidth: 2, paddingLeft: 6 },
+  codeBlock: {
+    backgroundColor: '#F6F8FA',
+    borderColor: '#E1E4E8',
+    borderRadius: 3,
+    padding: 5,
+    showLanguageLabel: true,
+    textColor: '#111827',
+  },
+  spacing: {
+    afterHeading: 2,
+    afterParagraph: 4,
+    afterCodeBlock: 4,
+    afterBlockquote: 3,
+    afterImage: 2,
+    afterHR: 2,
+    betweenListItems: 0,
+    afterList: 3,
+    afterTable: 3,
+  },
+  header: { text: 'My Report', align: 'center', color: '#6b7280', fontSize: 9 },
+  footer: { showPageNumbers: true, align: 'right' },
+}
+```
 
 ## Examples
 

@@ -112,9 +112,10 @@ const renderImage = (
         }
 
         store.updateY(finalHeight, 'add');
+        store.updateY(store.options.spacing?.afterImage ?? 2, 'add');
         store.recordContentY();
     } catch (e) {
-        console.warn('Failed to render image', e);
+        console.warn('[jspdf-md-renderer] Failed to render image', e);
     }
 };
 

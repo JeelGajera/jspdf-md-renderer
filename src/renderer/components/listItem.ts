@@ -1,11 +1,10 @@
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
 import { getCharHight } from '../../utils/doc-helpers';
-import { HandlePageBreaks } from '../../utils/handlePageBreak';
+import { breakIfOverflow } from '../../utils/handlePageBreak';
 import { MdTokenType } from '../../enums/mdTokenType';
 import { RenderStore } from '../../store/renderStore';
-import { JustifiedTextRenderer } from '../../utils/justifiedTextRenderer';
-import { TextRenderer } from '../../utils/text-renderer';
+import { renderInlineContent, renderPlainText } from '../../layout';
 
 /**
  * Render a single list item, including bullets/numbering, inline text, and any nested lists.
@@ -27,27 +26,71 @@ const renderListItem = (
     ordered: boolean,
 ) => {
     // 1) Page break check
-    if (store.Y + getCharHight(doc) >= store.options.page.maxContentHeight) {
-        HandlePageBreaks(doc, store);
-    }
+    breakIfOverflow(doc, store, getCharHight(doc));
 
     // 2) Configuration
     const options = store.options;
-    const baseIndent = indentLevel * options.page.indent;
-    const bullet = ordered ? `${start}. ` : '\u2022 ';
+    const listOpts = store.options.list ?? {};
+    const indentSize = listOpts.indentSize ?? options.page.indent;
+    const baseIndent = indentLevel * indentSize;
+    const bullet = ordered ? `${start}. ` : (listOpts.bulletChar ?? '\u2022 ');
     const xLeft = options.page.xpading;
 
     // Reset X to left margin at start of item to ensure consistent bullet placement
     store.updateX(xLeft, 'set');
 
-    // 3) Render Bullet
+    // 3) Render Bullet or Checkbox
     doc.setFont(options.font.regular.name, options.font.regular.style);
-    doc.text(bullet, xLeft + baseIndent, store.Y, { baseline: 'top' });
 
-    const bulletWidth = doc.getTextWidth(bullet);
-    const contentX = xLeft + baseIndent + bulletWidth;
+    let contentX = xLeft + baseIndent;
+    let bulletWidth: number;
+
+    if (element.task) {
+        const cbSize = doc.getFontSize() * 0.5;
+        const cbX = xLeft + baseIndent;
+        const cbY = store.Y + (getCharHight(doc) - cbSize) / 2;
+
+        // Outer box
+        doc.setDrawColor('#555555');
+        doc.setLineWidth(0.4);
+        doc.rect(cbX, cbY, cbSize, cbSize);
+
+        // Checkmark if checked
+        if (element.checked) {
+            doc.setDrawColor('#2B6CB0');
+            doc.setLineWidth(0.5);
+            const pad = cbSize * 0.2;
+            doc.line(
+                cbX + pad,
+                cbY + cbSize * 0.55,
+                cbX + cbSize * 0.4,
+                cbY + cbSize - pad,
+            );
+            doc.line(
+                cbX + cbSize * 0.4,
+                cbY + cbSize - pad,
+                cbX + cbSize - pad,
+                cbY + pad,
+            );
+            doc.setDrawColor('#000000');
+        }
+
+        doc.setLineWidth(0.1);
+        bulletWidth = cbSize + 2; // Checkbox + gap
+    } else {
+        doc.text(bullet, xLeft + baseIndent, store.Y, { baseline: 'top' });
+        bulletWidth = doc.getTextWidth(bullet);
+    }
+
+    contentX += bulletWidth;
     const textMaxWidth =
         options.page.maxContentWidth - baseIndent - bulletWidth;
+
+    // Apply color for checked tasks
+    const originalTextColor = doc.getTextColor();
+    if (element.checked) {
+        doc.setTextColor(150, 150, 150);
+    }
 
     // 4) Render items or content
     if (element.items && element.items.length > 0) {
@@ -55,7 +98,7 @@ const renderListItem = (
 
         const flushInlineBuffer = () => {
             if (inlineBuffer.length > 0) {
-                JustifiedTextRenderer.renderStyledParagraph(
+                renderInlineContent(
                     doc,
                     inlineBuffer,
                     contentX,
@@ -64,8 +107,6 @@ const renderListItem = (
                     store,
                 );
                 inlineBuffer.length = 0;
-                // Important: Text rendering updates X to the end of the line.
-                // We MUST reset it to the left margin for any subsequent block elements (like sub-lists).
                 store.updateX(xLeft, 'set');
             }
         };
@@ -97,17 +138,18 @@ const renderListItem = (
         }
         flushInlineBuffer();
     } else if (element.content) {
-        const textAlignment = options.content?.textAlignment ?? 'left';
-        TextRenderer.renderText(
+        renderPlainText(
             doc,
             element.content,
-            store,
             contentX,
             store.Y,
             textMaxWidth,
-            textAlignment === 'justify',
+            store,
         );
     }
+
+    // Restore text color
+    doc.setTextColor(originalTextColor);
 };
 
 export default renderListItem;

@@ -12,15 +12,24 @@ const renderCodeBlock = (
     // Save current font state
     const savedFont = doc.getFont();
     const savedFontSize = doc.getFontSize();
+    const savedTextColor = doc.getTextColor();
+    const savedDrawColor = doc.getDrawColor();
+    const savedFillColor = doc.getFillColor();
 
     // Set code font BEFORE measurements to ensure proper width/height calculation
-    const codeFont = store.options.font.code || { name: 'courier', style: 'normal' };
+    const codeFont = store.options.font.code || {
+        name: 'courier',
+        style: 'normal',
+    };
     doc.setFont(codeFont.name, codeFont.style);
-    const codeFontSize = store.options.page.defaultFontSize * 0.9;
+    const codeOpts = store.options.codeBlock ?? {};
+    const codeFontSizeScale = codeOpts.fontSizeScale ?? 0.9;
+    const codeFontSize = store.options.page.defaultFontSize * codeFontSizeScale;
     doc.setFontSize(codeFontSize);
 
     const indent = indentLevel * store.options.page.indent;
-    const maxWidth = store.options.page.maxContentWidth - indent - 8; // Account for internal padding
+    const padding = codeOpts.padding ?? 4;
+    const maxWidth = store.options.page.maxContentWidth - indent - padding * 2;
 
     // Calculate line height using jsPDF's internal method for consistency
     const lineHeightFactor = doc.getLineHeightFactor();
@@ -29,7 +38,6 @@ const renderCodeBlock = (
 
     // Trim content to remove trailing whitespace/newlines that cause extra space
     const rawContent = element.code ?? '';
-    // Remove all trailing newlines/whitespace
     const content = rawContent.replace(/[\r\n\s]+$/, '');
 
     // Guard against empty content
@@ -39,15 +47,14 @@ const renderCodeBlock = (
         return;
     }
 
-    // Split into lines (now with correct courier font for width measurement)
+    // Split into lines
     const lines: string[] = doc.splitTextToSize(content, maxWidth);
 
-    // Remove trailing empty lines that can appear after splitTextToSize
+    // Remove trailing empty lines
     while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
         lines.pop();
     }
 
-    // Guard against no lines after filtering
     if (lines.length === 0) {
         doc.setFont(savedFont.fontName, savedFont.fontStyle);
         doc.setFontSize(savedFontSize);
@@ -55,9 +62,9 @@ const renderCodeBlock = (
     }
 
     // Config for code block
-    const padding = 4; // Fixed padding for code blocks
-    const bgColor = '#EEEEEE';
-    const drawColor = '#DDDDDD';
+    const bgColor = codeOpts.backgroundColor ?? '#F6F8FA';
+    const drawColor = codeOpts.borderColor ?? '#E1E4E8';
+    const radius = codeOpts.borderRadius ?? 2;
 
     let currentLineIndex = 0;
 
@@ -102,16 +109,20 @@ const renderCodeBlock = (
             textBlockHeight +
                 (isFirstChunk ? padding : 0) +
                 (isLastChunk ? padding : 0),
-            2,
-            2,
+            radius,
+            radius,
             'FD',
         );
 
         // Render Language Label (only on first chunk)
-        if (isFirstChunk && element.lang) {
+        if (
+            isFirstChunk &&
+            element.lang &&
+            codeOpts.showLanguageLabel !== false
+        ) {
             const savedCodeFontSize = doc.getFontSize();
             doc.setFontSize(10);
-            doc.setTextColor('#666666');
+            doc.setTextColor(codeOpts.labelColor ?? '#666666');
             doc.text(
                 element.lang,
                 store.X +
@@ -122,15 +133,17 @@ const renderCodeBlock = (
                 { baseline: 'top' },
             );
             doc.setFontSize(savedCodeFontSize);
-            doc.setTextColor('#000000');
+            doc.setTextColor(savedTextColor);
         }
 
         // Render code text line by line
         let yPos = store.Y;
+        doc.setTextColor(codeOpts.textColor ?? '#000000');
         for (const line of linesToRender) {
             doc.text(line, store.X + 4, yPos, { baseline: 'top' });
             yPos += lineHeight;
         }
+        doc.setTextColor(savedTextColor);
 
         // Update Y cursor by exact amount rendered
         store.updateY(textBlockHeight, 'add');
@@ -153,6 +166,10 @@ const renderCodeBlock = (
     // Restore font state
     doc.setFont(savedFont.fontName, savedFont.fontStyle);
     doc.setFontSize(savedFontSize);
+    doc.setTextColor(savedTextColor);
+    doc.setDrawColor(savedDrawColor);
+    doc.setFillColor(savedFillColor);
+    store.updateY(store.options.spacing?.afterCodeBlock ?? 3, 'add');
 };
 
 export default renderCodeBlock;

@@ -4,8 +4,8 @@ import { getCharHight, getCharWidth } from '../../utils/doc-helpers';
 import { RenderStore } from '../../store/renderStore';
 
 /**
+ * @deprecated — use renderInlineContent from layout engine directly.
  * Renders link elements with proper styling and URL handling.
- * Links are rendered in blue color and underlined to distinguish them from regular text.
  */
 const renderLink = (
     doc: jsPDF,

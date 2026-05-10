@@ -11,17 +11,17 @@ import {
     renderParagraph,
     renderRawItem,
     renderCodeBlock,
-    renderInlineText,
-    renderLink,
     renderBlockquote,
     renderImage,
     renderTable,
 } from './components';
+import { renderInlineContent } from '../layout';
 import { RenderStore } from '../store/renderStore';
 import { prefetchImages } from '../utils/image-utils';
 import { validateOptions } from '../utils/options-validation';
 import { getCharHight } from '../utils/doc-helpers';
 import { HandlePageBreaks } from '../utils/handlePageBreak';
+import { applyPageDecorations } from '../utils/pageDecorations';
 
 /**
  * Renders parsed markdown text into jsPDF document.
@@ -53,7 +53,7 @@ export const MdTextRender = async (
 
         switch (element.type) {
             case MdTokenType.Heading:
-                renderHeading(doc, element, indent, store, renderElement);
+                renderHeading(doc, element, indent, store);
                 break;
             case MdTokenType.Paragraph:
                 renderParagraph(doc, element, indent, store, renderElement);
@@ -81,10 +81,15 @@ export const MdTextRender = async (
             case MdTokenType.Strong:
             case MdTokenType.Em:
             case MdTokenType.CodeSpan:
-                renderInlineText(doc, element, indent, store);
-                break;
             case MdTokenType.Link:
-                renderLink(doc, element, indent, store);
+                renderInlineContent(
+                    doc,
+                    [element],
+                    store.X + indent,
+                    store.Y,
+                    validOptions.page.maxContentWidth - indent,
+                    store,
+                );
                 break;
             case MdTokenType.Blockquote:
                 renderBlockquote(
@@ -145,5 +150,6 @@ export const MdTextRender = async (
         renderElement(item, 0, store);
     }
 
+    applyPageDecorations(doc, validOptions);
     validOptions.endCursorYHandler(store.Y);
 };

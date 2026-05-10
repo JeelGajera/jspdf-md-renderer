@@ -17,8 +17,12 @@ const IMAGE_WITH_ATTRS_REGEX = /(!\[[^\]]*\]\()([^)]+)(\))\s*\{([^}]+)\}/g;
 
 /**
  * Regex to extract individual key=value pairs from the attribute block.
+ * Supports:
+ * - Bare values: width=200
+ * - Quoted values: width="200.5" or width='200'
+ * - Decimal values: width=200.5
  */
-const ATTR_PAIR_REGEX = /(\w+)\s*=\s*(\w+)/g;
+const ATTR_PAIR_REGEX = /(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)'|(\S+))/g;
 
 /** Valid alignment values */
 const VALID_ALIGNMENTS = ['left', 'center', 'right'] as const;
@@ -54,18 +58,18 @@ const parseRawAttributes = (attrString: string): ImageAttributes => {
 
     while ((match = ATTR_PAIR_REGEX.exec(attrString)) !== null) {
         const key = match[1].toLowerCase();
-        const value = match[2];
+        const value = (match[2] ?? match[3] ?? match[4] ?? '').trim();
 
         switch (key) {
             case 'width':
             case 'w': {
-                const num = parseInt(value, 10);
+                const num = parseFloat(value);
                 if (!isNaN(num) && num > 0) attrs.width = num;
                 break;
             }
             case 'height':
             case 'h': {
-                const num = parseInt(value, 10);
+                const num = parseFloat(value);
                 if (!isNaN(num) && num > 0) attrs.height = num;
                 break;
             }
@@ -137,12 +141,12 @@ export const parseImageAttrsFromHref = (
         const [key, value] = pair.split('=');
         switch (key) {
             case 'w': {
-                const num = parseInt(value, 10);
+                const num = parseFloat(value);
                 if (!isNaN(num) && num > 0) attrs.width = num;
                 break;
             }
             case 'h': {
-                const num = parseInt(value, 10);
+                const num = parseFloat(value);
                 if (!isNaN(num) && num > 0) attrs.height = num;
                 break;
             }

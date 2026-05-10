@@ -113,10 +113,10 @@ doc.save('output.pdf')
 | `list_item` | `renderListItem` | Individual list items |
 | `hr` | `renderHR` | Horizontal rules (`---`) |
 | `code` | `renderCodeBlock` | Fenced code blocks |
-| `strong` | `renderInlineText` | Bold text |
-| `em` | `renderInlineText` | Italic text |
-| `codespan` | `renderInlineText` | Inline code |
-| `link` | `renderLink` | Hyperlinks |
+| `strong` | `renderInlineContent` (layout engine) | Bold text |
+| `em` | `renderInlineContent` (layout engine) | Italic text |
+| `codespan` | `renderInlineContent` (layout engine) | Inline code |
+| `link` | `renderInlineContent` (layout engine) | Hyperlinks |
 | `blockquote` | `renderBlockquote` | Blockquotes |
 | `image` | `renderImage` | Images with optional attributes |
 | `table` | `renderTable` | GFM pipe tables |

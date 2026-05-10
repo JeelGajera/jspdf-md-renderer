@@ -1,42 +1,46 @@
+// src/renderer/components/paragraph.ts
 import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
 import { RenderStore } from '../../store/renderStore';
-import { JustifiedTextRenderer } from '../../utils/justifiedTextRenderer';
-import { TextRenderer } from '../../utils/text-renderer';
+import { renderInlineContent } from '../../layout';
 import { MdTokenType } from '../../enums/mdTokenType';
 
-/**
- * Renders paragraph elements with proper text alignment.
- * Handles mixed inline styles (bold, italic, codespan) and links.
- * Respects user's textAlignment option from RenderStore.
- */
 const renderParagraph = (
     doc: jsPDF,
     element: ParsedElement,
     indent: number,
     store: RenderStore,
     parentElementRenderer: (
-        element: ParsedElement,
-        indentLevel: number,
+        el: ParsedElement,
+        level: number,
         store: RenderStore,
         hasRawBullet?: boolean,
     ) => void,
 ) => {
-    store.activateInlineLock();
+    const indentLevel = indent / store.options.page.indent;
+    const savedColor = doc.getTextColor();
     doc.setFontSize(store.options.page.defaultFontSize);
-
+    doc.setFont(
+        store.options.font.regular.name,
+        store.options.font.regular.style,
+    );
+    doc.setTextColor(store.options.paragraph?.color ?? '#000000');
     const maxWidth = store.options.page.maxContentWidth - indent;
 
-    if (element?.items && element?.items.length > 0) {
-        // If it's just a single image, render as a block image
-        if (element.items.length === 1 && element.items[0].type === 'image') {
-            parentElementRenderer(element.items[0], indent, store, false);
+    if (element.items && element.items.length > 0) {
+        // Single block image: delegate to parent renderer
+        if (
+            element.items.length === 1 &&
+            element.items[0].type === MdTokenType.Image
+        ) {
+            parentElementRenderer(element.items[0], indentLevel, store, false);
             store.updateX(store.options.page.xpading);
-            store.deactivateInlineLock();
+            doc.setTextColor(savedColor);
             return;
         }
 
-        const inlineTypes: string[] = [
+        // Mixed content with block-level items
+        const inlineTypes = [
             MdTokenType.Strong,
             MdTokenType.Em,
             MdTokenType.Text,
@@ -45,71 +49,70 @@ const renderParagraph = (
             MdTokenType.Image,
             MdTokenType.Br,
         ];
-
-        // Check if there are any non-inline items that need special handling
-        const hasNonInlineItems = element.items.some(
-            (item) => !inlineTypes.includes(item.type),
+        const hasBlockItems = element.items.some(
+            (item) => !inlineTypes.includes(item.type as MdTokenType),
         );
 
-        if (hasNonInlineItems) {
-            // Mixed content: render inline items with JustifiedTextRenderer,
-            // delegate non-inline items to parentElementRenderer
+        if (hasBlockItems) {
             const inlineBuffer: ParsedElement[] = [];
-
-            const flushInlineBuffer = () => {
+            const flush = () => {
                 if (inlineBuffer.length > 0) {
-                    JustifiedTextRenderer.renderStyledParagraph(
+                    renderInlineContent(
                         doc,
                         inlineBuffer,
                         store.X + indent,
                         store.Y,
                         maxWidth,
                         store,
+                        { trimLastLine: true },
                     );
                     inlineBuffer.length = 0;
                 }
             };
-
             for (const item of element.items) {
-                if (inlineTypes.includes(item.type)) {
+                if (inlineTypes.includes(item.type as MdTokenType)) {
                     inlineBuffer.push(item);
                 } else {
-                    flushInlineBuffer();
-                    parentElementRenderer(item, indent, store, false);
+                    flush();
+                    parentElementRenderer(item, indentLevel, store, false);
                 }
             }
-            flushInlineBuffer();
+            flush();
         } else {
-            // All items are inline: use JustifiedTextRenderer for optimal alignment
-            JustifiedTextRenderer.renderStyledParagraph(
+            renderInlineContent(
                 doc,
                 element.items,
                 store.X + indent,
                 store.Y,
                 maxWidth,
                 store,
+                { trimLastLine: true },
             );
         }
-    } else {
-        // Simple text content without nested items
-        const content = element.content ?? '';
-        const textAlignment = store.options.content?.textAlignment ?? 'left';
-        if (content.trim()) {
-            TextRenderer.renderText(
-                doc,
-                content,
-                store,
-                store.X + indent,
-                store.Y,
-                maxWidth,
-                textAlignment === 'justify',
-            );
-            // TextRenderer already updates Y for each line rendered
-        }
+    } else if (element.content?.trim()) {
+        const textEl: ParsedElement = {
+            type: 'text',
+            content: element.content,
+        };
+        renderInlineContent(
+            doc,
+            [textEl],
+            store.X + indent,
+            store.Y,
+            maxWidth,
+            store,
+            { trimLastLine: true },
+        );
     }
 
+    // Bottom spacing
+    const bottomSpacing =
+        store.options.paragraph?.bottomSpacing ??
+        store.options.spacing?.afterParagraph ??
+        store.options.page.lineSpace;
+    store.updateY(bottomSpacing, 'add');
     store.updateX(store.options.page.xpading);
-    store.deactivateInlineLock();
+    doc.setTextColor(savedColor);
 };
 
 export default renderParagraph;
