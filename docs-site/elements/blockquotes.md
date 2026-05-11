@@ -30,8 +30,14 @@ Blockquotes render with a visual left border and indented text.
 
 | Option | Effect |
 |--------|--------|
+| `blockquote.barColor` | Color of the left vertical bar |
+| `blockquote.barWidth` | Width of the left vertical bar |
+| `blockquote.paddingLeft` | Space between the bar and the text |
+| `blockquote.backgroundColor` | Optional background color behind the blockquote |
+| `blockquote.bottomSpacing` | Primary space below the blockquote |
+| `spacing.afterBlockquote` | Fallback space below the blockquote |
 | `page.defaultFontSize` | Font size for blockquote text |
-| `page.indent` | Indentation for the blockquote content |
+| `page.indent` | Overall indentation for the blockquote block |
 | `font.regular` | Font used for blockquote text |
 
 ## Try It

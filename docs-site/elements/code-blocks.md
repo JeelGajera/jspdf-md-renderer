@@ -32,11 +32,12 @@ function hello() {
 
 | Option | Effect |
 |--------|--------|
+| `codeBlock` | Styling parameters (colors, border, padding, labels) |
 | `font.code` | The font family and style used for code (defaults to courier) |
 | `codespan` | Styling parameters mapped to all code blocks and inline spans |
 | `page.defaultFontSize` | Base font size (code may be slightly smaller) |
 | `page.maxContentWidth` | Maximum width of the code block |
-| `page.lineSpace` | Spacing around the code block |
+| `spacing.afterCodeBlock` | Spacing added below the code block |
 
 ## Try It
 

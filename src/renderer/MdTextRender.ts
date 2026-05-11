@@ -39,7 +39,6 @@ export const MdTextRender = async (
     const store = new RenderStore(validOptions);
     const parsedElements = await MdTextParser(text);
     await prefetchImages(parsedElements);
-    // console.log(parsedElements);
 
     const renderElement = (
         element: ParsedElement,

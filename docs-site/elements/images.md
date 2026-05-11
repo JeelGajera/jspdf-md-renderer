@@ -71,6 +71,7 @@ Individual images can override this with the `align` attribute.
 |--------|--------|
 | `image.defaultAlign` | Default alignment for all images |
 | `page.maxContentWidth` | Maximum width — images scale down to fit |
+| `spacing.afterImage` | Spacing added below the image |
 
 ## Examples
 

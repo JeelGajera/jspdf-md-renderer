@@ -30,6 +30,34 @@ export const pxToDocUnit = (px: number, unit: string = 'mm'): number => {
 };
 
 /**
+ * Detects the image format from a ParsedElement's data URI and source URL.
+ * Returns a format string suitable for jsPDF's addImage (e.g. 'PNG', 'JPEG').
+ */
+export const detectImageFormat = (element: ParsedElement): string => {
+    if (element.data) {
+        if (element.data.startsWith('data:image/png')) return 'PNG';
+        if (
+            element.data.startsWith('data:image/jpeg') ||
+            element.data.startsWith('data:image/jpg')
+        )
+            return 'JPEG';
+        if (element.data.startsWith('data:image/webp')) return 'WEBP';
+        if (element.data.startsWith('data:image/gif')) return 'GIF';
+    }
+
+    // Fallback: extract extension from src, ignoring query parameters and hashes
+    if (element.src) {
+        const urlWithoutQuery = element.src.split('?')[0].split('#')[0];
+        const ext = urlWithoutQuery.split('.').pop()?.toUpperCase();
+        if (ext && ['PNG', 'JPEG', 'JPG', 'WEBP', 'GIF'].includes(ext)) {
+            return ext === 'JPG' ? 'JPEG' : ext;
+        }
+    }
+
+    return 'JPEG'; // Default fallback format for jsPDF
+};
+
+/**
  * Extracts width and height from an SVG data URI if possible.
  */
 const extractSvgDimensions = (

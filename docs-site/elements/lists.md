@@ -53,7 +53,9 @@ Unordered lists, ordered lists, and deeply nested combinations are all supported
 |--------|--------|
 | `page.indent` | Indentation per nesting level (default: 10mm) |
 | `page.defaultFontSize` | Font size for list item text |
-| `page.lineSpace` | Spacing between list items |
+| `list.itemSpacing` | Vertical space between list items |
+| `list.bulletChar` | Markdown bullet character override (default: `• `) |
+| `spacing.afterList` | Vertical spacing after the entire list finishes |
 
 ## Try It
 

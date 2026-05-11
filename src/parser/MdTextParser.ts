@@ -20,7 +20,6 @@ export const MdTextParser = async (text: string): Promise<ParsedElement[]> => {
         async: true,
         gfm: true,
     });
-    // console.log(tokens);
     return convertTokens(tokens);
 };
 

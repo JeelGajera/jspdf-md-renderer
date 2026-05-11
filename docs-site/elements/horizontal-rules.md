@@ -31,7 +31,7 @@ ___
 | Option | Effect |
 |--------|--------|
 | `page.maxContentWidth` | Width of the horizontal line |
-| `page.lineSpace` | Spacing above and below the rule |
+| `spacing.afterHR` | Spacing added below the horizontal rule |
 
 ## Try It
 

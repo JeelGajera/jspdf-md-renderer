@@ -25,6 +25,8 @@ export type RenderOption = {
         bold: FontItem;
         regular: FontItem;
         light: FontItem;
+        italic?: FontItem;
+        boldItalic?: FontItem;
         code?: FontItem;
     };
     heading?: {

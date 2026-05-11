@@ -44,7 +44,8 @@ Note: Standard Markdown double-spaces at the end of a line are also supported by
 |--------|--------|
 | `page.defaultFontSize` | Font size for paragraph text |
 | `page.maxContentWidth` | Maximum width before text wraps |
-| `page.lineSpace` | Spacing between paragraphs |
+| `paragraph.bottomSpacing` | Primary space below the paragraph |
+| `spacing.afterParagraph` | Fallback space below paragraph |
 | `page.defaultLineHeightFactor` | Line height within a paragraph |
 | `font.regular` | Font used for regular text |
 | `content.textAlignment` | Text alignment (left, right, center, justify) |
