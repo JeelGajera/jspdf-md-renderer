@@ -37,6 +37,8 @@ const options: RenderOption = {
     bold: { name: 'helvetica', style: 'bold' },
     regular: { name: 'helvetica', style: 'normal' },
     light: { name: 'helvetica', style: 'light' },
+    italic: { name: 'helvetica', style: 'italic' },
+    boldItalic: { name: 'helvetica', style: 'bolditalic' },
     code: { name: 'courier', style: 'normal' },
   },
   endCursorYHandler: () => {},
@@ -148,6 +150,8 @@ type RenderOption = {
     bold: { name: string; style: string }
     regular: { name: string; style: string }
     light: { name: string; style: string }
+    italic?: { name: string; style: string }
+    boldItalic?: { name: string; style: string }
     code?: { name: string; style: string }
   }
   heading?: { h1?: number; h2?: number; h3?: number; h4?: number; h5?: number; h6?: number; bottomSpacing?: number; color?: string; h1Color?: string; h2Color?: string; h3Color?: string; h4Color?: string; h5Color?: string; h6Color?: string }

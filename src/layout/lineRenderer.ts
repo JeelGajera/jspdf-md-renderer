@@ -2,8 +2,9 @@
 import jsPDF from 'jspdf';
 import { StyledLine, StyledWordInfo } from '../types/styledWordInfo';
 import { RenderStore } from '../store/renderStore';
-import { getCharHight } from '../utils/doc-helpers';
+import { getCharHight, withSavedDocState } from '../utils/doc-helpers';
 import { applyStyleToDoc } from './wordSplitter';
+import { detectImageFormat } from '../utils/image-utils';
 
 export const renderLine = (
     doc: jsPDF,
@@ -72,36 +73,30 @@ const renderSingleWord = (
     y: number,
     store: RenderStore,
 ): void => {
-    const savedFont = doc.getFont();
-    const savedSize = doc.getFontSize();
-    const savedColor = doc.getTextColor();
+    withSavedDocState(doc, () => {
+        applyStyleToDoc(doc, word.style, store);
 
-    applyStyleToDoc(doc, word.style, store);
-
-    if (word.isLink && word.linkColor) {
-        doc.setTextColor(...(word.linkColor as [number, number, number]));
-    }
-
-    if (word.isImage && word.imageElement?.data) {
-        renderInlineImage(doc, word, x, y);
-    } else {
-        if (word.style === 'codespan') {
-            renderCodespanBackground(doc, word, x, y, store);
+        if (word.isLink && word.linkColor) {
+            doc.setTextColor(...(word.linkColor as [number, number, number]));
         }
-        doc.text(word.text, x, y, { baseline: 'top' });
-    }
 
-    if (word.isLink && word.href) {
-        const h =
-            word.isImage && word.imageHeight
-                ? word.imageHeight
-                : doc.getTextDimensions('H').h;
-        doc.link(x, y, word.width, h, { url: word.href });
-    }
+        if (word.isImage && word.imageElement?.data) {
+            renderInlineImage(doc, word, x, y);
+        } else {
+            if (word.style === 'codespan') {
+                renderCodespanBackground(doc, word, x, y, store);
+            }
+            doc.text(word.text, x, y, { baseline: 'top' });
+        }
 
-    doc.setFont(savedFont.fontName, savedFont.fontStyle);
-    doc.setFontSize(savedSize);
-    doc.setTextColor(savedColor);
+        if (word.isLink && word.href) {
+            const h =
+                word.isImage && word.imageHeight
+                    ? word.imageHeight
+                    : doc.getTextDimensions('H').h;
+            doc.link(x, y, word.width, h, { url: word.href });
+        }
+    });
 };
 
 const renderCodespanBackground = (
@@ -128,10 +123,7 @@ const renderInlineImage = (
     y: number,
 ): void => {
     const el = word.imageElement!;
-    let fmt = 'JPEG';
-    if (el.data!.startsWith('data:image/png')) fmt = 'PNG';
-    else if (el.data!.startsWith('data:image/webp')) fmt = 'WEBP';
-    else if (el.data!.startsWith('data:image/gif')) fmt = 'GIF';
+    const fmt = detectImageFormat(el);
     if (word.width > 0 && (word.imageHeight || 0) > 0) {
         doc.addImage(el.data!, fmt, x, y, word.width, word.imageHeight!);
     }

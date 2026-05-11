@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import { RenderOption } from '../types/renderOption';
+import { withSavedDocState } from './doc-helpers';
 
 export const applyPageDecorations = (
     doc: jsPDF,
@@ -30,25 +31,19 @@ const applyHeader = (
             : (hOpts.text ?? '');
     if (!text.trim()) return;
 
-    const savedFont = doc.getFont();
-    const savedSize = doc.getFontSize();
-    const savedColor = doc.getTextColor();
+    withSavedDocState(doc, () => {
+        doc.setFontSize(hOpts.fontSize ?? 9);
+        doc.setTextColor(hOpts.color ?? '#666666');
 
-    doc.setFontSize(hOpts.fontSize ?? 9);
-    doc.setTextColor(hOpts.color ?? '#666666');
+        const y = hOpts.y ?? 5;
+        const align = hOpts.align ?? 'center';
+        const pageWidth = doc.internal.pageSize.getWidth();
+        let x = pageWidth / 2;
+        if (align === 'left') x = options.page.xmargin;
+        if (align === 'right') x = pageWidth - options.page.xmargin;
 
-    const y = hOpts.y ?? 5;
-    const align = hOpts.align ?? 'center';
-    const pageWidth = doc.internal.pageSize.getWidth();
-    let x = pageWidth / 2;
-    if (align === 'left') x = options.page.xmargin;
-    if (align === 'right') x = pageWidth - options.page.xmargin;
-
-    doc.text(text, x, y, { align, baseline: 'top' });
-
-    doc.setFont(savedFont.fontName, savedFont.fontStyle);
-    doc.setFontSize(savedSize);
-    doc.setTextColor(savedColor);
+        doc.text(text, x, y, { align, baseline: 'top' });
+    });
 };
 
 const applyFooter = (
@@ -67,24 +62,18 @@ const applyFooter = (
           : (fOpts.text ?? '');
     if (!text.trim()) return;
 
-    const savedFont = doc.getFont();
-    const savedSize = doc.getFontSize();
-    const savedColor = doc.getTextColor();
+    withSavedDocState(doc, () => {
+        doc.setFontSize(fOpts.fontSize ?? 9);
+        doc.setTextColor(fOpts.color ?? '#666666');
 
-    doc.setFontSize(fOpts.fontSize ?? 9);
-    doc.setTextColor(fOpts.color ?? '#666666');
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const y = fOpts.y ?? pageHeight - 5;
+        const align = fOpts.align ?? 'right';
+        const pageWidth = doc.internal.pageSize.getWidth();
+        let x = pageWidth / 2;
+        if (align === 'left') x = options.page.xmargin;
+        if (align === 'right') x = pageWidth - options.page.xmargin;
 
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const y = fOpts.y ?? pageHeight - 5;
-    const align = fOpts.align ?? 'right';
-    const pageWidth = doc.internal.pageSize.getWidth();
-    let x = pageWidth / 2;
-    if (align === 'left') x = options.page.xmargin;
-    if (align === 'right') x = pageWidth - options.page.xmargin;
-
-    doc.text(text, x, y, { align, baseline: 'bottom' });
-
-    doc.setFont(savedFont.fontName, savedFont.fontStyle);
-    doc.setFontSize(savedSize);
-    doc.setTextColor(savedColor);
+        doc.text(text, x, y, { align, baseline: 'bottom' });
+    });
 };

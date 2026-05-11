@@ -1,6 +1,6 @@
 import { RenderOption } from '../types/renderOption';
 
-const DEFAULT_HEADING_SIZES: Required<NonNullable<RenderOption['heading']>> = {
+const DEFAULT_HEADING_SIZES: Partial<NonNullable<RenderOption['heading']>> = {
     h1: 24,
     h2: 20,
     h3: 17,
@@ -14,6 +14,8 @@ const DEFAULT_FONT = {
     bold: { name: 'helvetica', style: 'bold' },
     regular: { name: 'helvetica', style: 'normal' },
     light: { name: 'helvetica', style: 'light' },
+    italic: { name: 'helvetica', style: 'italic' },
+    boldItalic: { name: 'helvetica', style: 'bolditalic' },
     code: { name: 'courier', style: 'normal' },
 };
 
@@ -59,13 +61,15 @@ export const validateOptions = (options: RenderOption): RenderOption => {
     }
     const font = { ...DEFAULT_FONT, ...options.font };
     if (!font.bold?.name) font.bold = DEFAULT_FONT.bold;
+    if (!font.italic?.name) font.italic = DEFAULT_FONT.italic;
+    if (!font.boldItalic?.name) font.boldItalic = DEFAULT_FONT.boldItalic;
     if (!font.code?.name) font.code = DEFAULT_FONT.code;
 
     // Heading scale validation
     const heading = { ...DEFAULT_HEADING_SIZES, ...(options.heading ?? {}) };
     // Clamp all heading sizes to sane range
     (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const).forEach((k) => {
-        if (heading[k] < 6 || heading[k] > 72)
+        if ((heading[k] ?? 0) < 6 || (heading[k] ?? 0) > 72)
             heading[k] = DEFAULT_HEADING_SIZES[k];
     });
 

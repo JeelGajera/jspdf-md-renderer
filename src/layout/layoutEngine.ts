@@ -64,11 +64,11 @@ export const renderInlineContent = (
         // For the last line of block-level elements (when trimLastLine is set),
         // advance by only the raw text height so the caller's bottomSpacing
         // is the sole gap. Otherwise use the full lineHeight.
-        const shouldTrim = isLast && trimLastLine
-            && !line.words.some((w) => w.isImage && w.imageHeight);
-        const yAdvance = shouldTrim
-            ? getCharHight(doc)
-            : line.lineHeight;
+        const shouldTrim =
+            isLast &&
+            trimLastLine &&
+            !line.words.some((w) => w.isImage && w.imageHeight);
+        const yAdvance = shouldTrim ? getCharHight(doc) : line.lineHeight;
 
         store.recordContentY(currentY + yAdvance);
         currentY += yAdvance;

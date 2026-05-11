@@ -34,7 +34,8 @@ Headings from `#` (H1) through `######` (H6) are fully supported.
 |--------|--------|
 | `page.defaultTitleFontSize` | Base font size for headings |
 | `font.bold` | Font used for heading text |
-| `page.lineSpace` | Spacing after the heading |
+| `heading.bottomSpacing` | Primary space added below each heading |
+| `spacing.afterHeading` | Fallback space below headings (if bottomSpacing not set) |
 
 ## Try It
 

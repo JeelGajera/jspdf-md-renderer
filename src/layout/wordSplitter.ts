@@ -55,6 +55,14 @@ export const applyStyleToDoc = (
     const curSize = doc.getFontSize();
     const boldFont = store.options.font.bold?.name || curFont;
     const regularFont = store.options.font.regular?.name || curFont;
+    const italicFont = store.options.font.italic || {
+        name: regularFont,
+        style: 'italic',
+    };
+    const boldItalicFont = store.options.font.boldItalic || {
+        name: italicFont.name,
+        style: 'bolditalic',
+    };
     const codeFont = store.options.font.code || {
         name: 'courier',
         style: 'normal',
@@ -65,10 +73,10 @@ export const applyStyleToDoc = (
             doc.setFont(boldFont, store.options.font.bold?.style || 'bold');
             break;
         case 'italic':
-            doc.setFont(regularFont, 'italic');
+            doc.setFont(italicFont.name, italicFont.style);
             break;
         case 'bolditalic':
-            doc.setFont(boldFont, 'bolditalic');
+            doc.setFont(boldItalicFont.name, boldItalicFont.style);
             break;
         case 'codespan':
             doc.setFont(codeFont.name, codeFont.style);

@@ -25,8 +25,8 @@ jspdf-md-renderer supports inline text formatting within paragraphs and other el
 | Style | Markdown | Font Used |
 |-------|----------|-----------|
 | Bold | `**text**` or `__text__` | `font.bold` |
-| Italic | `*text*` or `_text_` | `font.regular` (italic style) |
-| Bold Italic | `***text***` | `font.bold` (italic) |
+| Italic | `*text*` or `_text_` | `font.italic` (falls back to `font.regular` with italic style) |
+| Bold Italic | `***text***` | `font.boldItalic` (falls back to `font.italic` or `font.bold`) |
 | Inline Code | `` `text` `` | Monospace with background |
 
 ## Inline Code Styling

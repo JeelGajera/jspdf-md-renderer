@@ -57,6 +57,7 @@ const options = {
 |--------|--------|
 | `table` | Full `UserOptions` from jspdf-autotable — controls theme, colors, fonts, margins |
 | `page.maxContentWidth` | Maximum table width |
+| `spacing.afterTable` | Spacing added below the table |
 
 ## Try It
 

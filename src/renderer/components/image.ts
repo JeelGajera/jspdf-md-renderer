@@ -2,35 +2,10 @@ import { jsPDF } from 'jspdf';
 import { ParsedElement } from '../../types';
 import { RenderStore } from '../../store/renderStore';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
-import { calculateImageDimensions } from '../../utils/image-utils';
-
-/**
- * Detects the image format from element data and source.
- */
-const detectImageFormat = (element: ParsedElement): string => {
-    if (element.data) {
-        if (element.data.startsWith('data:image/png')) return 'PNG';
-        if (
-            element.data.startsWith('data:image/jpeg') ||
-            element.data.startsWith('data:image/jpg')
-        )
-            return 'JPEG';
-        if (element.data.startsWith('data:image/webp')) return 'WEBP';
-        if (element.data.startsWith('data:image/webp')) return 'WEBP';
-        if (element.data.startsWith('data:image/gif')) return 'GIF';
-    }
-
-    // Fallback: extract extension from src, ignoring query parameters and hashes
-    if (element.src) {
-        const urlWithoutQuery = element.src.split('?')[0].split('#')[0];
-        const ext = urlWithoutQuery.split('.').pop()?.toUpperCase();
-        if (ext && ['PNG', 'JPEG', 'JPG', 'WEBP', 'GIF'].includes(ext)) {
-            return ext === 'JPG' ? 'JPEG' : ext;
-        }
-    }
-
-    return 'JPEG'; // Default fallback format for jsPDF
-};
+import {
+    calculateImageDimensions,
+    detectImageFormat,
+} from '../../utils/image-utils';
 
 /**
  * Renders an image element into the jsPDF document with smart sizing and alignment.
