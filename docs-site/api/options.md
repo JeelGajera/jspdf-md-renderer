@@ -1,15 +1,14 @@
 ---
 title: Options Reference
-description: Complete v4 RenderOption reference for jspdf-md-renderer.
+description: Complete RenderOption reference for jspdf-md-renderer, including security controls.
 llm_summary: |
-  v4 RenderOption reference including heading scale, list/task options,
-  codeBlock/codespan styling, spacing system, blockquote/list/paragraph controls,
-  and page header/footer with page numbers.
+  RenderOption reference with page/font/layout controls, heading and list behavior,
+  spacing precedence rules, and security options with violation modes and defaults.
 ---
 
 # Options Reference
 
-`RenderOption` controls typography, spacing, layout, colors, and page decorations.
+`RenderOption` controls layout, typography, spacing, rendering behavior, and optional security enforcement.
 
 ## Minimal Required Shape
 
@@ -37,40 +36,60 @@ const options: RenderOption = {
     bold: { name: 'helvetica', style: 'bold' },
     regular: { name: 'helvetica', style: 'normal' },
     light: { name: 'helvetica', style: 'light' },
-    italic: { name: 'helvetica', style: 'italic' },
-    boldItalic: { name: 'helvetica', style: 'bolditalic' },
-    code: { name: 'courier', style: 'normal' },
   },
   endCursorYHandler: () => {},
 }
 ```
 
-## New in v4
+## Layout and Typography
 
-### Heading Typography
+### Heading
 
 ```ts
 heading: {
-  h1: 26, h2: 22, h3: 18, h4: 16, h5: 13, h6: 11,
+  bold: true,
+  h1: 26,
+  h2: 22,
+  h3: 18,
+  h4: 16,
+  h5: 13,
+  h6: 11,
   bottomSpacing: 3,
   color: '#1A365D',
   h1Color: '#7B2D00',
 }
 ```
 
-### Spacing System
+Behavior notes:
+- `heading.bold` defaults to `true`.
+- Size fallback chain is: `heading.hN` -> `page.defaultTitleFontSize`.
+
+### Lists and Spacing
 
 ```ts
+list: {
+  bulletChar: '\u2022 ',
+  indentSize: 8,
+  itemSpacing: 0,
+},
 spacing: {
-  afterHeading: 2,
-  afterParagraph: 4,
-  afterCodeBlock: 4,
-  afterBlockquote: 3,
-  afterImage: 2,
-  afterHR: 2,
   betweenListItems: 1,
   afterList: 3,
-  afterTable: 3,
+}
+```
+
+Spacing precedence:
+- `spacing.betweenListItems` has higher priority.
+- `list.itemSpacing` is used only when `spacing.betweenListItems` is not set.
+
+### Blockquotes
+
+```ts
+blockquote: {
+  barColor: '#AAAAAA',
+  barWidth: 1,
+  paddingLeft: 4,
+  backgroundColor: '#F8FAFC',
 }
 ```
 
@@ -95,85 +114,87 @@ codespan: {
 }
 ```
 
-### Lists and Blockquotes
+### Table Width Behavior
+
+Tables follow the same content column as other block elements:
+- left margin follows `page.xpading + indent`
+- width is constrained to `page.maxContentWidth - indent`
+
+## Security Options (opt-in)
+
+Security is disabled by default for backward compatibility.
 
 ```ts
-list: {
-  bulletChar: '• ',
-  indentSize: 8,
-  itemSpacing: 0,
-},
-blockquote: {
-  barColor: '#AAAAAA',
-  barWidth: 1,
-  paddingLeft: 4,
-  backgroundColor: undefined,
+security: {
+  enabled: true,
+  violationMode: 'skip', // 'skip' | 'throw' | 'placeholder'
+
+  // Link controls
+  allowedLinkProtocols: ['https:', 'http:', 'mailto:', 'tel:'],
+  disablePdfLinks: false,
+
+  // Image controls
+  allowRemoteImages: true,
+  allowedImageProtocols: ['https:', 'http:'],
+  allowedImageDomains: ['cdn.example.com'],
+  allowDataUrls: true,
+  allowSvgImages: true,
+
+  // SSRF controls
+  blockLocalhost: true,
+  blockPrivateIPs: true,
+  blockLinkLocalIPs: true,
+  blockMetadataIPs: true,
+
+  // Limits
+  maxMarkdownLength: 500_000,
+  maxImageCount: 200,
+  maxImageSizeBytes: 10 * 1024 * 1024,
+  maxNestedDepth: 20,
+  renderTimeoutMs: 30_000,
+
+  // Hooks
+  validateUrl: async (url, type) => true,
+  onSecurityViolation: (violation) => console.warn(violation),
+
+  // Placeholders
+  placeholderText: '[blocked]',
+  placeholderImageText: '[blocked image]',
 }
 ```
 
-### Header/Footer and Page Numbers
+### Violation Mode Behavior
 
-```ts
-header: {
-  text: 'My Company Report',
-  align: 'center',
-  color: '#1A365D',
-  fontSize: 9,
-},
-footer: {
-  showPageNumbers: true,
-  align: 'right',
-}
-```
+- `skip`: block unsafe item and continue rendering.
+- `throw`: throw `SecurityViolationError` and abort render.
+- `placeholder`: render safe placeholder text instead of blocked content where supported.
 
-## Full Type (summary)
+### Domain Allowlist Semantics
 
-```ts
-type RenderOption = {
-  cursor: { x: number; y: number }
-  page: {
-    format?: string | number[]
-    unit: 'pt' | 'mm' | 'cm' | 'in' | 'px' | 'pc' | 'em' | 'ex'
-    orientation?: 'portrait' | 'p' | 'landscape' | 'l'
-    maxContentWidth: number
-    maxContentHeight: number
-    lineSpace: number
-    defaultLineHeightFactor: number
-    defaultFontSize: number
-    defaultTitleFontSize: number
-    topmargin: number
-    xpading: number
-    xmargin: number
-    indent: number
-  }
-  font: {
-    bold: { name: string; style: string }
-    regular: { name: string; style: string }
-    light: { name: string; style: string }
-    italic?: { name: string; style: string }
-    boldItalic?: { name: string; style: string }
-    code?: { name: string; style: string }
-  }
-  heading?: { h1?: number; h2?: number; h3?: number; h4?: number; h5?: number; h6?: number; bottomSpacing?: number; color?: string; h1Color?: string; h2Color?: string; h3Color?: string; h4Color?: string; h5Color?: string; h6Color?: string }
-  paragraph?: { bottomSpacing?: number; color?: string }
-  list?: { bulletChar?: string; indentSize?: number; itemSpacing?: number }
-  blockquote?: { barColor?: string; barWidth?: number; paddingLeft?: number; backgroundColor?: string; bottomSpacing?: number }
-  spacing?: { afterHeading?: number; afterParagraph?: number; afterCodeBlock?: number; afterBlockquote?: number; afterImage?: number; afterHR?: number; betweenListItems?: number; afterList?: number; afterTable?: number }
-  content?: { textAlignment: 'left' | 'right' | 'center' | 'justify' }
-  codeBlock?: { backgroundColor?: string; borderColor?: string; borderRadius?: number; padding?: number; fontSizeScale?: number; showLanguageLabel?: boolean; textColor?: string; labelColor?: string }
-  codespan?: { backgroundColor?: string; padding?: number; showBackground?: boolean; fontSizeScale?: number }
-  link?: { linkColor: [number, number, number] }
-  image?: { defaultAlign?: 'left' | 'center' | 'right' }
-  table?: import('jspdf-autotable').UserOptions
-  header?: { text?: string | ((pageNumber: number, totalPages: number) => string); y?: number; fontSize?: number; color?: string; align?: 'left' | 'center' | 'right' }
-  footer?: { text?: string | ((pageNumber: number, totalPages: number) => string); y?: number; fontSize?: number; color?: string; align?: 'right' | 'left' | 'center'; showPageNumbers?: boolean }
-  pageBreakHandler?: (doc: import('jspdf').default) => void
-  endCursorYHandler: (y: number) => void
-}
-```
+- `allowedImageDomains: undefined` -> allow all domains.
+- `allowedImageDomains: []` -> block all remote image domains.
+- `allowedImageDomains: ['example.com']` -> allow `example.com` and subdomains.
 
-## Notes
+### URL Classification Rules
 
-- Validation errors are thrown only by option validation.
-- Rendering-time non-fatal issues are logged with warnings.
-- Very long unbroken tokens (for example long links or long inline code text) now wrap safely in v4.
+Security URL validation treats URLs as:
+- `explicitScheme` (for example `https://...`) -> full protocol/domain/IP checks.
+- `protocolRelative` (for example `//host/path`) -> treated as external absolute URL and fully checked.
+- `relativePath` (for example `/a`, `./a`, `../a`, `?q=1`, `#id`) -> allowed by default; custom `validateUrl` can still reject.
+
+### Browser Runtime SSRF Note
+
+In browser runtimes, DNS APIs are unavailable, so IP-level checks are best-effort only. The library warns when these checks cannot be fully enforced. For strict SSRF enforcement, route remote image fetching through a trusted server-side proxy.
+
+## Full Type
+
+See the generated type definition in source:
+- `src/types/renderOption.ts`
+- `src/types/security.ts`
+
+## Related Pages
+
+- [MdTextRender](/api/MdTextRender)
+- [Links](/elements/links)
+- [Images](/elements/images)
+- [Security Guide](/guide/security)

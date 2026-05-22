@@ -42,7 +42,9 @@ const renderTable = (
     }
 
     const options = store.options;
-    const marginLeft = options.page.xmargin + indentLevel * options.page.indent;
+    const indent = indentLevel * options.page.indent;
+    const marginLeft = options.page.xpading + indent;
+    const availableWidth = Math.max(10, options.page.maxContentWidth - indent);
 
     // Estimate table header height at minimum
     ensureSpace(doc, store, 20);
@@ -95,7 +97,14 @@ const renderTable = (
         head,
         body: rows,
         startY: store.Y,
-        margin: { left: marginLeft, right: options.page.xmargin },
+        margin: {
+            left: marginLeft,
+            right: Math.max(
+                0,
+                doc.internal.pageSize.getWidth() - (marginLeft + availableWidth),
+            ),
+        },
+        tableWidth: availableWidth,
         ...userTableOptions,
         didDrawPage: safeDidDrawPage,
         didDrawCell: safeDidDrawCell,

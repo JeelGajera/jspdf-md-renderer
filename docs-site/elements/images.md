@@ -1,96 +1,81 @@
 ---
 title: Images
-description: Embedding and styling images in your PDF with jspdf-md-renderer.
+description: Image rendering behavior, sizing attributes, and security controls.
 llm_summary: |
-  Images are rendered from URLs or base64. Use custom attributes {width=N height=N align=X}
-  to control size and alignment. Width/height are in pixels and auto-scale to maintain
-  aspect ratio. Global default alignment set via options.image.defaultAlign.
+  Images support URL and data sources, attribute-based sizing/alignment, intrinsic sizing,
+  optional security restrictions for protocol/domain/SSRF, and placeholder behavior.
 ---
 
 # Images
 
-Embed images directly in your PDF from URLs or base64 data.
+Render markdown images from remote URLs or data URLs.
 
 ## Syntax
 
 ```markdown
 ![Alt text](https://example.com/image.png)
 ![Photo](https://example.com/photo.png){width=200 align=center}
-![Logo](https://example.com/logo.png){h=150 align=right}
+![Logo](data:image/png;base64,...){h=120 align=right}
 ```
 
-## Inline vs Block Images
+## Attribute Controls
 
-Images can be rendered either as distinct blocks or inline with text. 
-
-- **Block Images:** If an image is the *only* element in a paragraph (i.e. on its own line), it will render as a standalone block. Block images support the `align` attribute (`left`, `center`, `right`).
-- **Inline Images:** If an image is mixed directly with text, the library automatically renders it inline, anchoring it to the text baseline so it flows naturally within the sentence. Inline images ignore the `align` attribute (since they follow the text flow) but fully support `width` and `height` adjustments.
-
-```markdown
-<!-- Block image -->
-![photo](https://picsum.photos/400/200){align=center}
-
-<!-- Inline image flow -->
-Here is an inline LaTeX equation ![LaTeX](https://latex.codecogs.com/svg.image?e%20%3D%20mc%5E2) placed right inside the text!
-```
-
-## Custom Attributes
-
-Add an attribute block `{...}` immediately after the image syntax to control sizing and alignment:
+Use `{...}` after image markdown:
 
 | Attribute | Alias | Type | Description |
 |-----------|-------|------|-------------|
-| `width` | `w` | `number` | Image width in pixels |
-| `height` | `h` | `number` | Image height in pixels |
-| `align` | — | `string` | `'left'` \| `'center'` \| `'right'` |
+| `width` | `w` | `number` | Width in px |
+| `height` | `h` | `number` | Height in px |
+| `align` | - | `string` | `left` \| `center` \| `right` |
 
 ## Sizing Rules
 
-- **No attributes** → renders at intrinsic (original) size, scaled down if exceeds page width
-- **Width only** → height auto-calculated from aspect ratio
-- **Height only** → width auto-calculated from aspect ratio
-- **Both** → exact dimensions (may distort if aspect ratio differs)
-- Images that exceed `page.maxContentWidth` are always scaled down proportionally
+- No attributes: intrinsic image size (scaled down to page bounds when needed).
+- Width only: height auto-calculated to preserve aspect ratio.
+- Height only: width auto-calculated to preserve aspect ratio.
+- Width + height: exact dimensions (can distort aspect ratio).
+- Final image is constrained by `page.maxContentWidth` and page height bounds.
 
-## Global Default Alignment
+## Block vs Inline
 
-```ts
-const options = {
-  // ...other options
-  image: {
-    defaultAlign: 'center', // 'left' (default) | 'center' | 'right'
-  },
-}
-```
+- Block image: image-only paragraph supports alignment.
+- Inline image: image in text flow ignores block alignment and follows line layout.
 
-Individual images can override this with the `align` attribute.
+## Security-Aware Behavior
+
+When `security.enabled` is `true`, image handling can enforce:
+
+- protocol allowlist (`allowedImageProtocols`)
+- domain allowlist (`allowedImageDomains`)
+- remote image toggle (`allowRemoteImages`)
+- data URL toggle (`allowDataUrls`)
+- SVG toggle (`allowSvgImages`)
+- SSRF host/IP checks
+- size limits (`maxImageSizeBytes`) using decoded bytes for data URLs
+- image count and nesting limits at parsed-tree stage
+
+Blocked images follow `violationMode`:
+- `skip`: dropped
+- `throw`: render aborts with `SecurityViolationError`
+- `placeholder`: replaced with `placeholderImageText`
+
+## Browser SSRF Note
+
+In browser runtimes, DNS resolution APIs are not available, so IP-level SSRF checks are best-effort only. For strict SSRF policy, route remote image fetching through a trusted server-side proxy.
 
 ## Relevant Options
 
 | Option | Effect |
 |--------|--------|
-| `image.defaultAlign` | Default alignment for all images |
-| `page.maxContentWidth` | Maximum width — images scale down to fit |
-| `spacing.afterImage` | Spacing added below the image |
-
-## Examples
-
-```markdown
-<!-- Default size and alignment -->
-![photo](https://picsum.photos/400/200)
-
-<!-- Fixed width, auto height, centered -->
-![photo](https://picsum.photos/400/200){width=150 align=center}
-
-<!-- Fixed height, auto width, right-aligned -->
-![photo](https://picsum.photos/400/200){h=80 align=right}
-
-<!-- Both dimensions specified -->
-![photo](https://picsum.photos/400/200){width=100 height=60}
-```
+| `image.defaultAlign` | Default alignment for block images |
+| `spacing.afterImage` | Spacing after images |
+| `security.allowRemoteImages` | Allow or deny http/https image fetches |
+| `security.allowedImageDomains` | Optional host allowlist (`undefined` allow-all, `[]` deny-all) |
+| `security.maxImageSizeBytes` | Max image payload bytes |
+| `security.placeholderImageText` | Placeholder text in placeholder mode |
 
 ## Try It
 
 ::: tip Interactive
-Try this in the [Playground](/playground/) — paste the markdown above and click **Generate PDF**.
+Try this element in the [Playground](/playground/).
 :::

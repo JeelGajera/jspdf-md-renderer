@@ -1,11 +1,46 @@
 import { jsPDF } from 'jspdf';
 import { MdTokenType } from '../enums/mdTokenType';
 import { ParsedElement } from '../types';
+import {
+    handleSecurityViolation,
+    isNodeEnvironment,
+    isDataUrl,
+    isSvgDataUrl,
+    validateResourceUrl,
+} from '../security/security-policy';
+import { RenderSecurityOptions, SecurityViolationError } from '../types/security';
 
 /**
  * Standard DPI for web/screen pixels.
  */
 const DEFAULT_DPI = 96;
+
+const getDataUrlPayloadByteSize = (dataUrl: string): number | null => {
+    const commaIndex = dataUrl.indexOf(',');
+    if (commaIndex < 0) return null;
+
+    const metadata = dataUrl.slice(0, commaIndex).toLowerCase();
+    const payload = dataUrl.slice(commaIndex + 1);
+
+    if (metadata.includes(';base64')) {
+        const normalized = payload.replace(/\s/g, '');
+        const padding = (normalized.match(/=*$/)?.[0].length ?? 0);
+        return Math.floor((normalized.length * 3) / 4) - padding;
+    }
+
+    try {
+        const decoded = decodeURIComponent(payload);
+        if (typeof TextEncoder !== 'undefined') {
+            return new TextEncoder().encode(decoded).length;
+        }
+        if (typeof Buffer !== 'undefined') {
+            return Buffer.from(decoded, 'utf-8').byteLength;
+        }
+        return decoded.length;
+    } catch {
+        return null;
+    }
+};
 
 /**
  * Converts pixel values to the document's unit system.
@@ -198,22 +233,113 @@ export const calculateImageDimensions = (
  */
 export const prefetchImages = async (
     elements: ParsedElement[],
+    security?: RenderSecurityOptions,
 ): Promise<void> => {
     for (const element of elements) {
         if (element.type === MdTokenType.Image && element.src) {
             try {
+                if (security?.enabled) {
+                    if (isDataUrl(element.src)) {
+                        const isSvg = isSvgDataUrl(element.src);
+
+                        if (isSvg && !security.allowSvgImages) {
+                            handleSecurityViolation(security, {
+                                code: 'SVG_BLOCKED',
+                                type: 'image',
+                                message: 'SVG images are blocked',
+                                value: element.src,
+                                context: 'image-src',
+                            });
+                            element.data = undefined;
+                            element.src = undefined;
+                            continue;
+                        }
+                        if (!security.allowDataUrls) {
+                            handleSecurityViolation(security, {
+                                code: 'DATA_URL_BLOCKED',
+                                type: 'image',
+                                message: 'Data URLs are blocked for images',
+                                value: element.src,
+                                context: 'image-src',
+                            });
+                            element.data = undefined;
+                            element.src = undefined;
+                            continue;
+                        }
+                    } else {
+                        if (!security.allowRemoteImages) {
+                            handleSecurityViolation(security, {
+                                code: 'IMAGE_PROTOCOL_BLOCKED',
+                                type: 'image',
+                                message: 'Remote images are disabled',
+                                value: element.src,
+                                context: 'image-src',
+                            });
+                            element.data = undefined;
+                            element.src = undefined;
+                            continue;
+                        }
+
+                        const allowed = await validateResourceUrl(
+                            element.src,
+                            'image',
+                            security,
+                            'image-src',
+                        );
+                        if (!allowed) {
+                            element.data = undefined;
+                            element.src = undefined;
+                            continue;
+                        }
+                    }
+                }
+
                 // If the src is already a data URI, we treat it as loaded (or just store it as data)
                 if (element.src.startsWith('data:')) {
                     element.data = element.src;
+                    const dataUrlBytes = getDataUrlPayloadByteSize(element.data);
+                    if (
+                        security?.enabled &&
+                        security.maxImageSizeBytes &&
+                        dataUrlBytes !== null &&
+                        dataUrlBytes > security.maxImageSizeBytes
+                    ) {
+                        handleSecurityViolation(security, {
+                            code: 'IMAGE_SIZE_EXCEEDED',
+                            type: 'image',
+                            message: 'Data URL image exceeds maxImageSizeBytes',
+                            value: String(dataUrlBytes),
+                            context: 'data-url-size',
+                        });
+                        element.data = undefined;
+                        element.src = undefined;
+                        continue;
+                    }
                 } else {
                     // Try to fetch the image
-                    const response = await fetch(element.src);
+                    const response = await secureImageFetch(element.src, security);
                     if (!response.ok) {
                         throw new Error(
                             `Failed to fetch image: ${response.statusText}`,
                         );
                     }
                     const blob = await response.blob();
+                    if (
+                        security?.enabled &&
+                        security.maxImageSizeBytes &&
+                        blob.size > security.maxImageSizeBytes
+                    ) {
+                        handleSecurityViolation(security, {
+                            code: 'IMAGE_SIZE_EXCEEDED',
+                            type: 'image',
+                            message: 'Fetched image exceeds maxImageSizeBytes',
+                            value: String(blob.size),
+                            context: 'blob-size',
+                        });
+                        element.data = undefined;
+                        element.src = undefined;
+                        continue;
+                    }
 
                     // Convert blob to base64
                     const base64 = await new Promise<string>(
@@ -279,6 +405,9 @@ export const prefetchImages = async (
                     }
                 }
             } catch (error) {
+                if (error instanceof SecurityViolationError) {
+                    throw error;
+                }
                 console.warn(
                     `[jspdf-md-renderer] Warning: Failed to load image at ${element.src}. It will be skipped.`,
                     error,
@@ -287,7 +416,32 @@ export const prefetchImages = async (
         }
 
         if (element.items && element.items.length > 0) {
-            await prefetchImages(element.items);
+            await prefetchImages(element.items, security);
         }
     }
+};
+
+/**
+ * Best-effort remote image fetch hardening.
+ * In Node, re-validates URL immediately before fetch to reduce DNS rebind window.
+ * In browser runtimes, or when security is undefined/disabled, delegates to normal fetch.
+ */
+export const secureImageFetch = async (
+    url: string,
+    security?: RenderSecurityOptions,
+): Promise<Response> => {
+    if (security?.enabled && isNodeEnvironment()) {
+        const stillAllowed = await validateResourceUrl(
+            url,
+            'image',
+            security,
+            'pre-fetch-recheck',
+        );
+        if (!stillAllowed) {
+            throw new Error(
+                `[jspdf-md-renderer] URL blocked on pre-fetch recheck: ${url}`,
+            );
+        }
+    }
+    return fetch(url);
 };

@@ -22,7 +22,8 @@ const IMAGE_WITH_ATTRS_REGEX = /(!\[[^\]]*\]\()([^)]+)(\))\s*\{([^}]+)\}/g;
  * - Quoted values: width="200.5" or width='200'
  * - Decimal values: width=200.5
  */
-const ATTR_PAIR_REGEX = /(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)'|(\S+))/g;
+const ATTR_PAIR_REGEX = /(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([\w.+-]+))/g;
+const MAX_ATTR_BLOCK_LENGTH = 500;
 
 /** Valid alignment values */
 const VALID_ALIGNMENTS = ['left', 'center', 'right'] as const;
@@ -54,6 +55,14 @@ const encodeAttrsToFragment = (attrs: ImageAttributes): string => {
  */
 const parseRawAttributes = (attrString: string): ImageAttributes => {
     const attrs: ImageAttributes = {};
+    if (attrString.length > MAX_ATTR_BLOCK_LENGTH) {
+        console.warn(
+            `[jspdf-md-renderer] Image attribute block too long (${attrString.length} chars), skipping attribute parsing.`,
+        );
+        return attrs;
+    }
+
+    ATTR_PAIR_REGEX.lastIndex = 0;
     let match;
 
     while ((match = ATTR_PAIR_REGEX.exec(attrString)) !== null) {
