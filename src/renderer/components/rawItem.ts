@@ -75,6 +75,11 @@ const renderRawItem = (
         store.updateX(xLeft, 'set');
 
         if (hasRawBullet && bullet) {
+            // Keep marker and first text line together on the same page.
+            const firstLineHeight =
+                getCharHight(doc) * options.page.defaultLineHeightFactor;
+            breakIfOverflow(doc, store, firstLineHeight);
+
             const bulletWidth = doc.getTextWidth(bullet);
             const textMaxWidth =
                 options.page.maxContentWidth - indent - bulletWidth;

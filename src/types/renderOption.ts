@@ -1,5 +1,6 @@
 import jsPDF, { jsPDFOptions } from 'jspdf';
 import { UserOptions } from 'jspdf-autotable';
+import { RenderSecurityOptions } from './security';
 
 export type RenderOption = {
     cursor: {
@@ -30,6 +31,8 @@ export type RenderOption = {
         code?: FontItem;
     };
     heading?: {
+        /** Whether headings should use bold font. Default: true */
+        bold?: boolean;
         /** Font size for h1-h6. Values are absolute (e.g. 22, 20, 18, 16, 14, 12). */
         h1?: number;
         h2?: number;
@@ -53,7 +56,7 @@ export type RenderOption = {
         bulletChar?: string;
         /** Extra indent per nesting level in doc units. Default: uses page.indent */
         indentSize?: number;
-        /** Vertical space between list items. Default: 0 */
+        /** Vertical space between list items. Used when spacing.betweenListItems is not provided. */
         itemSpacing?: number;
     };
     paragraph?: {
@@ -156,6 +159,7 @@ export type RenderOption = {
     };
     pageBreakHandler?: (doc: jsPDF) => void;
     endCursorYHandler: (y: number) => void;
+    security?: RenderSecurityOptions;
 };
 
 export type Cursor = { x: number; y: number };

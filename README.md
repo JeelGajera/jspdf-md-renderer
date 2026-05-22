@@ -1,173 +1,83 @@
 # jsPDF Markdown Renderer
 
-A jsPDF utility to render Markdown directly into formatted PDFs with custom designs.
-
-## What's New in v4
-
-- Unified inline layout engine for consistent wrapping/alignment.
-- Safe wrapping for long unbroken tokens (long URLs, long inline code).
-- Heading scale controls (`heading.h1` ... `heading.h6`).
-- Task list support (`- [x]` / `- [ ]`).
-- Header/footer + page numbers.
-- Spacing system (`spacing.*`) and richer style options (`codeBlock`, `blockquote`, `list`, `paragraph`).
+A utility to render Markdown directly into formatted PDFs using `jsPDF`.
 
 [![npm version](https://img.shields.io/npm/v/jspdf-md-renderer.svg)](https://www.npmjs.com/package/jspdf-md-renderer)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Downloads](https://img.shields.io/npm/dm/jspdf-md-renderer.svg)](https://www.npmjs.com/package/jspdf-md-renderer)
 
-## Table of Contents
+## Highlights
 
-- [Installation](#installation)
-- [Usage](#usage)
-- [Browser Runtime Usage](#browser-runtime-usage)
-- [API](#api)
-- [Examples](#examples)
-- [Contributing](#contributing)
-- [License](#license)
+- Rich markdown support (headings, lists, tables, images, code, blockquotes, links)
+- Configurable typography, spacing, and block styling
+- Header/footer and page-number support
+- Safe inline layout and long-token wrapping
+- Optional security enforcement for untrusted markdown
 
 ## Installation
-
-To install the library, you can use npm:
 
 ```sh
 npm install jspdf-md-renderer
 ```
 
-## Usage
-
-### Basic Example
-
-Here is a basic example of how to use the library to generate a PDF from Markdown content:
+## Quick Start
 
 ```ts
-import { jsPDF } from 'jspdf';
-import { MdTextRender } from 'jspdf-md-renderer';
+import { jsPDF } from 'jspdf'
+import { MdTextRender } from 'jspdf-md-renderer'
 
-const mdString = `
-# Main Title
+const markdown = `
+# Project Report
 
-This is a brief introduction paragraph. It sets the tone for the document and introduces the main topic in a concise manner.
-
-## Section 1: Overview
-
-Here is a medium-length paragraph that goes into more detail about the first section. It explains the context, provides background information, and sets up the discussion for the subsections.
-
-## Section 2: Lists and Examples
-
-This section showcases how to create simple and nested lists.
-
-### Simple List
+This report includes **formatted markdown** content.
 
 - Item 1
 - Item 2
-- Item 3
+`
 
-### Nested List
+const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
 
-1. First Level 1
-   - First Level 2
-     - First Level 3
-2. Second Level 1
-   - Second Level 2
-   - Another Second Level 2
-     - Nested deeper
+await MdTextRender(doc, markdown, {
+  cursor: { x: 10, y: 10 },
+  page: {
+    format: 'a4',
+    unit: 'mm',
+    orientation: 'portrait',
+    maxContentWidth: 190,
+    maxContentHeight: 277,
+    lineSpace: 1.5,
+    defaultLineHeightFactor: 1.2,
+    defaultFontSize: 12,
+    defaultTitleFontSize: 14,
+    topmargin: 10,
+    xpading: 10,
+    xmargin: 10,
+    indent: 10,
+  },
+  font: {
+    bold: { name: 'helvetica', style: 'bold' },
+    regular: { name: 'helvetica', style: 'normal' },
+    light: { name: 'helvetica', style: 'light' },
+  },
+  endCursorYHandler: (y) => {
+    console.log('Final Y:', y)
+  },
+})
 
-### Mixed List Example
-
-- Topic 1
-  1. Subtopic 1.1
-  2. Subtopic 1.2
-- Topic 2
-  - Subtopic 2.1
-  - Subtopic 2.2
-    1. Nested Subtopic 2.2.1
-    2. Nested Subtopic 2.2.2
-
-### Emphasis and Strong Emphasis
-- *Italic* text using asterisks.
-- _Italic_ text using underscores.
-- **Bold** text using double asterisks.
-- __Bold__ text using double underscores.
-- ***Bold and Italic*** text using triple asterisks.
-- ___Bold and Italic___ text using triple underscores.
-
-`;
-
-const generatePDF = async () => {
-    const doc = new jsPDF({
-        unit: 'mm',
-        format: 'a4',
-        orientation: 'portrait',
-    });
-
-    const options = {
-        cursor: { x: 10, y: 10 },
-        page: {
-            format: 'a4',
-            unit: 'mm',
-            orientation: 'portrait',
-            maxContentWidth: 190,
-            maxContentHeight: 277,
-            lineSpace: 1.5,
-            defaultLineHeightFactor: 1.2,
-            defaultFontSize: 12,
-            defaultTitleFontSize: 14,
-            topmargin: 10,
-            xpading: 10,
-            xmargin: 10,
-            indent: 10,
-        },
-        font: {
-            bold: { name: 'helvetica', style: 'bold' },
-            regular: { name: 'helvetica', style: 'normal' },
-            light: { name: 'helvetica', style: 'light' },
-        },
-        heading: {
-            h1: 24,
-            h2: 20,
-            h3: 17,
-            h4: 15,
-            h5: 13,
-            h6: 12,
-            color: '#1A365D',
-        },
-        spacing: {
-            afterParagraph: 4,
-            afterHeading: 2,
-            afterCodeBlock: 4,
-            betweenListItems: 1,
-        },
-        footer: {
-            showPageNumbers: true,
-            align: 'right',
-        },
-        endCursorYHandler: (y) => {
-            console.log('End cursor Y position:', y);
-        },
-    };
-
-    await MdTextRender(doc, mdString, options);
-    doc.save('example.pdf');
-};
-
-generatePDF();
+doc.save('report.pdf')
 ```
 
-## Browser Runtime Usage
+## Browser Usage
 
-### Option 1: Use with your app bundler (Vite/Webpack/Rollup)
-
-Install dependencies and import from modules as usual:
+### Bundler (Vite/Webpack/Rollup)
 
 ```ts
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { MdTextRender } from 'jspdf-md-renderer';
+import { jsPDF } from 'jspdf'
+import 'jspdf-autotable'
+import { MdTextRender } from 'jspdf-md-renderer'
 ```
 
-### Option 2: Use directly via script tags (UMD)
-
-Load dependencies first, then load `jspdf-md-renderer` UMD bundle.
+### Script Tag (UMD)
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -177,127 +87,48 @@ Load dependencies first, then load `jspdf-md-renderer` UMD bundle.
 <script>
   const { jsPDF } = window.jspdf;
   const { MdTextRender } = window.JspdfMdRenderer;
-
-  (async () => {
-    const doc = new jsPDF();
-    await MdTextRender(doc, '# Hello from browser runtime');
-    doc.save('browser-runtime.pdf');
-  })();
 </script>
 ```
 
-> Note: For script-tag usage you must include `marked`, `jspdf`, and `jspdf-autotable` before the renderer bundle.
+## Supported Markdown
 
-## API
+- Headings (`#` to `######`)
+- Paragraphs
+- Ordered/unordered/task lists
+- Links
+- Images (with optional `{width,height,align}` attributes)
+- Tables
+- Code blocks and inline code
+- Blockquotes
+- Horizontal rules
+- Inline styles (bold/italic)
 
-### `MdTextRender`
-
-Renders parsed markdown text into a jsPDF document.
-
-#### Parameters
-
-- `doc`: The jsPDF document instance.
-- `text`: The markdown content to render.
-- `options`: The render options (fonts, page margins, etc.).
-
-### `MdTextParser`
-
-Parses markdown into tokens and converts to a custom parsed structure.
-
-#### Parameters
-
-- `text`: The markdown content to parse.
-
-#### Returns
-
-- `Promise<ParsedElement[]>`: Parsed markdown elements.
-
-## Supported Markdown Elements
-
-The following Markdown elements are currently supported by `jspdf-md-renderer`:
-
-- **Headings**: `#`, `##`, `###`, etc.
-- **Paragraphs**
-- **Lists**:
-    - Unordered lists: `-`, `*`, `+`
-    - Ordered lists: `1.`, `2.`, `3.`, etc.
-- **Horizontal Rules**: `---`, `***`, `___`
-- **Text Styles**:
-    - Bold: `**bold**` or `__bold__`
-    - Italic: `*italic*` or `_italic_`
-    - Bold Italic: `***bold italic***` or `___bold italic___`
-- **Code Blocks** (fenced and indented):
-    ````markdown
-    ```js
-    console.log('Hello, world!');
-    ```
-    ````
-- **Links**:
-    ```markdown
-    [GitHub](https://github.com)
-    ```
-- **Blockquotes**:
-    ```markdown
-    > This is a blockquote.
-    ```
-- **Images**:
-    ```markdown
-    ![Alt text](https://example.com/image.png)
-    ```
-    Images render at their **intrinsic (original) size** by default and scale down automatically if they exceed the available page width. You can control image dimensions and alignment using an optional attribute block `{...}` after the image syntax:
-
-    **Custom Attributes:**
-    | Attribute | Description | Example |
-    |-----------|-------------|---------|
-    | `width` or `w` | Image width in px | `{width=200}` or `{w=200}` |
-    | `height` or `h` | Image height in px | `{height=150}` or `{h=150}` |
-    | `align` | Alignment: `left`, `center`, `right` | `{align=center}` |
-
-    **Sizing Rules:**
-    - If only `width` is given, height is auto-calculated from aspect ratio
-    - If only `height` is given, width is auto-calculated from aspect ratio
-    - If both are given, the image uses exact dimensions (may distort if ratio differs)
-    - Images that exceed page bounds are always scaled down proportionally
-
-    **Examples:**
-    ```markdown
-    ![photo](https://example.com/photo.png)
-    ![photo](https://example.com/photo.png){width=200}
-    ![photo](https://example.com/photo.png){h=150 align=center}
-    ![photo](https://example.com/photo.png){width=200 height=150 align=right}
-    ```
-
-    **Global Default Alignment:**
-    You can set a default alignment for all images via the `image` option:
-    ```ts
-    const options = {
-        // ...other options
-        image: {
-            defaultAlign: 'center', // 'left' (default) | 'center' | 'right'
-        },
-    };
-    ```
-
-- **Inline Code**:
-    ```markdown
-    This is an `inline code` example.
-    ```
-- **Tables**:
-    ```markdown
-    | Header 1 | Header 2 | Header 3 |
-    | -------- | -------- | -------- |
-    | Row 1    | Data     | Value    |
-    | Row 2    | Data     | Value    |
-    ```
-
-## New Options (v4 quick reference)
+## Key Render Options
 
 ```ts
 const options = {
-  heading: { h1: 26, h2: 22, h3: 18, bottomSpacing: 3 },
-  list: { bulletChar: '• ', indentSize: 8, itemSpacing: 0 },
-  paragraph: { bottomSpacing: 3, color: '#111827' },
-  blockquote: { barColor: '#4A90D9', barWidth: 2, paddingLeft: 6 },
+  heading: {
+    bold: true,
+    h1: 26,
+    h2: 22,
+    h3: 18,
+    bottomSpacing: 3,
+  },
+  list: {
+    bulletChar: '\u2022 ',
+    indentSize: 8,
+    itemSpacing: 0,
+  },
+  paragraph: {
+    bottomSpacing: 3,
+    color: '#111827',
+  },
+  blockquote: {
+    barColor: '#4A90D9',
+    barWidth: 2,
+    paddingLeft: 6,
+    backgroundColor: '#F8FAFC',
+  },
   codeBlock: {
     backgroundColor: '#F6F8FA',
     borderColor: '#E1E4E8',
@@ -317,27 +148,104 @@ const options = {
     afterList: 3,
     afterTable: 3,
   },
-  header: { text: 'My Report', align: 'center', color: '#6b7280', fontSize: 9 },
-  footer: { showPageNumbers: true, align: 'right' },
+  header: {
+    text: 'My Report',
+    align: 'center',
+    color: '#6b7280',
+    fontSize: 9,
+  },
+  footer: {
+    showPageNumbers: true,
+    align: 'right',
+  },
 }
 ```
 
-## Examples
+Behavior notes:
+- Heading size fallback: `heading.hN` -> `page.defaultTitleFontSize`
+- `heading.bold` defaults to `true`
+- List spacing precedence: `spacing.betweenListItems` > `list.itemSpacing`
+- Table width follows `page.maxContentWidth` for consistent block layout
 
-You can explore complete rendered examples in the documentation site:
-- [Resume example](https://jeelgajera.github.io/jspdf-md-renderer/examples/resume)
-- [Invoice example](https://jeelgajera.github.io/jspdf-md-renderer/examples/invoice)
-- [Technical report example](https://jeelgajera.github.io/jspdf-md-renderer/examples/report)
-- [Custom fonts guide](https://jeelgajera.github.io/jspdf-md-renderer/examples/custom-fonts)
+## Security Controls (opt-in)
+
+Security is disabled by default for backward compatibility.
+
+```ts
+const options = {
+  // ...other options
+  security: {
+    enabled: true,
+    violationMode: 'skip', // 'skip' | 'throw' | 'placeholder'
+    placeholderText: '[blocked]',
+    placeholderImageText: '[blocked image]',
+
+    // Link controls
+    allowedLinkProtocols: ['https:', 'http:', 'mailto:', 'tel:'],
+    disablePdfLinks: false,
+
+    // Image controls
+    allowRemoteImages: true,
+    allowedImageProtocols: ['https:', 'http:'],
+    allowedImageDomains: ['cdn.example.com'],
+    allowDataUrls: true,
+    allowSvgImages: true,
+
+    // SSRF controls
+    blockLocalhost: true,
+    blockPrivateIPs: true,
+    blockLinkLocalIPs: true,
+    blockMetadataIPs: true,
+
+    // Limits
+    maxMarkdownLength: 500000,
+    maxImageCount: 200,
+    maxImageSizeBytes: 10 * 1024 * 1024,
+    maxNestedDepth: 20,
+    renderTimeoutMs: 30000,
+
+    // Hooks
+    validateUrl: async (url, type) => true,
+    onSecurityViolation: (violation) => console.warn(violation),
+  },
+}
+```
+
+### Security Details
+
+- URL classes:
+  - explicit scheme (`https://...`) -> full protocol/domain/IP checks
+  - protocol-relative (`//host/path`) -> treated as external absolute URL
+  - relative path (`/a`, `./a`, `?q=1`, `#id`) -> allowed by default unless custom validator rejects
+- `allowedImageDomains` semantics:
+  - `undefined` -> allow all domains
+  - `[]` -> deny all domains
+- `maxImageSizeBytes` uses decoded bytes for data URLs
+- `SecurityViolationError` is exported for throw-mode handling
+
+Browser caveat:
+- IP-level SSRF checks are best-effort in browser runtime due to DNS API limitations.
+- For strict SSRF policy, fetch remote images through a trusted server-side proxy.
+
+## API Exports
+
+- `MdTextRender`
+- `MdTextParser`
+- `SecurityViolationError`
+- `validateOptions`
+- Types: `RenderOption`, `RenderSecurityOptions`, `SecurityViolation`, `ViolationMode`, and others
+
+## Examples and Docs
+
+- Docs site: [https://jeelgajera.github.io/jspdf-md-renderer/](https://jeelgajera.github.io/jspdf-md-renderer/)
+- Resume example: [https://jeelgajera.github.io/jspdf-md-renderer/examples/resume](https://jeelgajera.github.io/jspdf-md-renderer/examples/resume)
+- Invoice example: [https://jeelgajera.github.io/jspdf-md-renderer/examples/invoice](https://jeelgajera.github.io/jspdf-md-renderer/examples/invoice)
+- Technical report example: [https://jeelgajera.github.io/jspdf-md-renderer/examples/report](https://jeelgajera.github.io/jspdf-md-renderer/examples/report)
 
 ## Contributing
 
-Contributions are welcome! Please read the [contributing guidelines](CONTRIBUTING.md) first.
-
-## Support
-
-If you find this library useful, please consider giving it a ⭐ on GitHub! It helps others find the project and motivates continued development.
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+MIT. See [LICENSE](LICENSE).

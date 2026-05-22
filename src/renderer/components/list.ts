@@ -17,6 +17,8 @@ const renderList = (
     ) => void,
 ) => {
     doc.setFontSize(store.options.page.defaultFontSize);
+    // spacing.betweenListItems is normalized with precedence over list.itemSpacing in validateOptions.
+    const listItemGap = store.options.spacing?.betweenListItems ?? 0;
     for (const [i, point] of element?.items?.entries() ?? []) {
         const _start = element.ordered ? (element.start ?? 1) + i : undefined;
         parentElementRenderer(
@@ -28,7 +30,7 @@ const renderList = (
             element.ordered,
         );
         if (i < (element.items?.length ?? 0) - 1) {
-            store.updateY(store.options.spacing?.betweenListItems ?? 0, 'add');
+            store.updateY(listItemGap, 'add');
         }
     }
     store.updateY(store.options.spacing?.afterList ?? 3, 'add');

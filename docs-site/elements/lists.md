@@ -1,64 +1,80 @@
 ---
 title: Lists
-description: Ordered, unordered, and nested list rendering in jspdf-md-renderer.
+description: Ordered, unordered, nested, and task-list rendering behavior.
 llm_summary: |
-  Supports unordered lists (-, *, +), ordered lists (1., 2.), and deeply nested lists.
-  Nesting level multiplied by page.indent for indentation. Mixed list types supported.
+  Supports ordered/unordered/task lists, nested indentation, bullet customization,
+  and explicit spacing precedence between spacing.betweenListItems and list.itemSpacing.
 ---
 
 # Lists
 
-Unordered lists, ordered lists, and deeply nested combinations are all supported.
+Unordered, ordered, nested, and task lists are supported.
 
 ## Syntax
 
-### Unordered Lists
+### Unordered
 
 ```markdown
 - Item 1
 - Item 2
-- Item 3
 ```
 
-### Ordered Lists
+### Ordered
 
 ```markdown
-1. First item
-2. Second item
-3. Third item
+1. First
+2. Second
 ```
 
-### Nested Lists
+### Task Lists
 
 ```markdown
-- Parent item
-  - Child item
-    - Grandchild item
-- Another parent
-  1. Numbered child
-  2. Another numbered child
+- [x] Done item
+- [ ] Pending item
 ```
 
-## How It Renders
+### Nested
 
-- **Unordered items** get bullet markers (`•`)
-- **Ordered items** get numeric markers (`1.`, `2.`, etc.)
-- Indentation increases by `page.indent` for each nesting level
-- List items can contain inline formatting (bold, italic, code, links)
-- Mixed ordered/unordered nesting is fully supported
+```markdown
+- Parent
+  - Child
+    1. Grandchild
+```
+
+## Rendering Behavior
+
+- `list.bulletChar` applies to unordered list markers only.
+- Ordered and task markers are rendered by their own logic.
+- Indentation per level uses `list.indentSize` (fallbacks to `page.indent` via option normalization).
+- Spacing precedence:
+  - `spacing.betweenListItems` has priority.
+  - `list.itemSpacing` is fallback when global spacing is not set.
 
 ## Relevant Options
 
 | Option | Effect |
 |--------|--------|
-| `page.indent` | Indentation per nesting level (default: 10mm) |
-| `page.defaultFontSize` | Font size for list item text |
-| `list.itemSpacing` | Vertical space between list items |
-| `list.bulletChar` | Markdown bullet character override (default: `• `) |
-| `spacing.afterList` | Vertical spacing after the entire list finishes |
+| `list.bulletChar` | Marker for unordered list items |
+| `list.indentSize` | Additional indent per nesting level |
+| `list.itemSpacing` | Fallback per-item spacing |
+| `spacing.betweenListItems` | Primary per-item spacing |
+| `spacing.afterList` | Spacing after full list block |
+
+## Example
+
+```ts
+list: {
+  bulletChar: '- ',
+  indentSize: 8,
+  itemSpacing: 1,
+},
+spacing: {
+  betweenListItems: 2,
+}
+```
 
 ## Try It
 
 ::: tip Interactive
-Try this element in the [Playground](/playground/) — paste the syntax above and click **Generate PDF**.
+Try this element in the [Playground](/playground/).
 :::

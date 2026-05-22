@@ -25,12 +25,15 @@ const renderListItem = (
     start: number,
     ordered: boolean,
 ) => {
-    // 1) Page break check
-    breakIfOverflow(doc, store, getCharHight(doc));
-
-    // 2) Configuration
+    // 1) Configuration
     const options = store.options;
     const listOpts = store.options.list ?? {};
+    // Keep marker and first text line together on the same page.
+    const firstLineHeight =
+        getCharHight(doc) * options.page.defaultLineHeightFactor;
+    breakIfOverflow(doc, store, firstLineHeight);
+
+    // 2) Layout metrics
     const indentSize = listOpts.indentSize ?? options.page.indent;
     const baseIndent = indentLevel * indentSize;
     const bullet = ordered ? `${start}. ` : (listOpts.bulletChar ?? '\u2022 ');

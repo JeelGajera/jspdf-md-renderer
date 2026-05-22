@@ -1,46 +1,61 @@
 ---
 title: Links
-description: How hyperlinks are rendered in jspdf-md-renderer.
+description: Link rendering and security controls.
 llm_summary: |
-  Links render as clickable text with configurable color via link.linkColor RGB tuple.
-  Syntax: [text](url). Links are rendered with underline and open in browser when clicked in PDF viewer.
+  Markdown links can render as clickable PDF links, plain text, or placeholders
+  depending on security settings such as disablePdfLinks and violationMode.
 ---
 
 # Links
 
-Hyperlinks are rendered as clickable text in the PDF.
-
-## Syntax
+Markdown links use standard syntax:
 
 ```markdown
-[Link text](https://example.com)
+[Project docs](https://example.com/docs)
 ```
 
-## How It Renders
+## Default Behavior
 
-- Link text is colored (configurable via `link.linkColor`)
-- Links are fully clickable in PDF viewers
-- Links can appear inside paragraphs, list items, and headings
+- Link text renders inline.
+- Link color can be customized via `link.linkColor`.
+- PDF link action is added when allowed.
+
+## Security-Aware Behavior
+
+When `security.enabled` is `true`:
+
+- URLs are validated by protocol and optional custom policy.
+- If `security.disablePdfLinks` is `true`, link text remains but click action is removed.
+- Blocked links follow `violationMode`:
+  - `skip`: render as plain text
+  - `throw`: abort render with `SecurityViolationError`
+  - `placeholder`: replace with `security.placeholderText`
 
 ## Relevant Options
 
 | Option | Effect |
 |--------|--------|
-| `link.linkColor` | RGB color tuple, e.g., `[0, 0, 255]` for blue |
+| `link.linkColor` | RGB tuple for link text color |
+| `security.disablePdfLinks` | Removes clickable PDF action |
+| `security.allowedLinkProtocols` | Allowed protocols (for example `https:`) |
+| `security.validateUrl` | Custom link/image URL validation hook |
+| `security.violationMode` | `skip` / `throw` / `placeholder` |
+| `security.placeholderText` | Placeholder text for blocked links |
 
 ## Example
 
 ```ts
-const options = {
-  // ...other options
-  link: {
-    linkColor: [0, 102, 204], // Custom link blue
-  },
+security: {
+  enabled: true,
+  allowedLinkProtocols: ['https:', 'mailto:'],
+  disablePdfLinks: false,
+  violationMode: 'placeholder',
+  placeholderText: '[blocked link]',
 }
 ```
 
 ## Try It
 
 ::: tip Interactive
-Try this in the [Playground](/playground/) — paste the markdown above and click **Generate PDF**.
+Try this element in the [Playground](/playground/).
 :::

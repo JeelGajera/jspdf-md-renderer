@@ -1,6 +1,8 @@
 import { RenderOption } from '../types/renderOption';
+import { normalizeSecurityOptions } from '../security/security-policy';
 
 const DEFAULT_HEADING_SIZES: Partial<NonNullable<RenderOption['heading']>> = {
+    bold: true,
     h1: 24,
     h2: 20,
     h3: 17,
@@ -126,6 +128,11 @@ export const validateOptions = (options: RenderOption): RenderOption => {
         afterTable: 3,
         ...(options.spacing ?? {}),
     };
+    // Backward-compatible precedence:
+    // spacing.betweenListItems (global) overrides list.itemSpacing (list-local fallback).
+    if (options.spacing?.betweenListItems === undefined) {
+        spacing.betweenListItems = list.itemSpacing ?? spacing.betweenListItems;
+    }
     (
         [
             'afterHeading',
@@ -166,6 +173,7 @@ export const validateOptions = (options: RenderOption): RenderOption => {
         codeBlock,
         spacing,
         image,
+        security: normalizeSecurityOptions(options.security),
         endCursorYHandler,
     } as RenderOption;
 };

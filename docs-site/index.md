@@ -4,13 +4,12 @@ title: jspdf-md-renderer
 titleTemplate: Render Markdown to PDF with jsPDF
 description: A jsPDF utility to render Markdown directly into formatted PDFs with custom designs.
 llm_summary: |
-  jspdf-md-renderer is an npm package that renders Markdown content directly into jsPDF PDF documents.
-  It supports headings, paragraphs, lists, tables, images, code blocks, blockquotes, links, horizontal rules,
-  and inline styles (bold, italic, code). All render options are fully customizable.
+  jspdf-md-renderer renders markdown into jsPDF documents with configurable styling,
+  layout controls, and optional security enforcement for untrusted content.
 hero:
   name: jspdf-md-renderer
-  text: Markdown ⇢ PDF
-  tagline: Generate beautifully formatted PDFs directly from Markdown. Zero config, works in browser and Node.js.
+  text: Markdown to PDF
+  tagline: Generate formatted PDFs from Markdown in browser or Node.js.
   image:
     light: /logo.svg
     dark: /logo-dark.svg
@@ -26,46 +25,22 @@ hero:
       text: API Reference
       link: /api/options
 features:
-  - icon: 🚀
-    title: Zero Config
-    details: Sensible defaults out of the box — just pass markdown and get a beautifully formatted PDF. No setup required.
-  - icon: 🎨
-    title: Fully Customizable
-    details: Fine-tune every aspect — fonts, margins, spacing, colors, image alignment, table styles, and more via the options API.
-  - icon: 🌐
-    title: Browser + Node.js
-    details: Works closely with Vite, Webpack, ESM imports, or directly via UMD script tags and CDN.
-  - icon: 📝
-    title: Rich Support
-    details: Headings, lists, tables, images, code blocks, blockquotes, links, and inline styles.
-  - icon: 📄
-    title: Auto Page Breaks
-    details: Content that overflows the page is automatically continued on a new page with proper cursor tracking.
-  - icon: 🧵
-    title: Concurrency Safe
-    details: Safely render multiple PDF documents simultaneously. No shared global state means perfect isolation.
-  - icon: { src: /icons/ts.svg}
+  - icon: /icons/ts.svg
     title: TypeScript Ready
-    details: Written in TypeScript with full type definitions. Enjoy excellent autocompletion and type-safety in your IDE.
-  - icon: 🔗
-    title: Built on jsPDF
-    details: Integrates seamlessly with existing jsPDF workflows and plugins like jspdf-autotable.
+    details: Full type definitions for options, parsed elements, and security controls.
+  - icon: /icons/ts.svg
+    title: Customizable Rendering
+    details: Control fonts, spacing, headings, lists, tables, images, and page decorations.
+  - icon: /icons/ts.svg
+    title: Browser and Node.js
+    details: Use with ESM/bundlers or UMD script tags in browser runtime.
+  - icon: /icons/ts.svg
+    title: Security Controls
+    details: Optional URL/image policies, SSRF checks, limits, and violation modes.
+  - icon: /icons/ts.svg
+    title: Concurrency Safe
+    details: Render multiple documents in parallel with isolated state.
 ---
-
-<div style="display: flex; justify-content: center; gap: 10px; margin-top: 2rem; margin-bottom: 2rem; flex-wrap: wrap;">
-  <a href="https://www.npmjs.com/package/jspdf-md-renderer">
-    <img src="https://img.shields.io/npm/v/jspdf-md-renderer.svg?style=for-the-badge&color=cb3837" alt="npm version" />
-  </a>
-  <a href="https://www.npmjs.com/package/jspdf-md-renderer">
-    <img src="https://img.shields.io/npm/dm/jspdf-md-renderer.svg?style=for-the-badge&color=47a1ff" alt="Downloads" />
-  </a>
-  <a href="https://opensource.org/licenses/MIT">
-    <img src="https://img.shields.io/badge/License-MIT-4c1.svg?style=for-the-badge" alt="License: MIT" />
-  </a>
-  <a href="https://github.com/JeelGajera/jspdf-md-renderer">
-    <img src="https://img.shields.io/github/stars/JeelGajera/jspdf-md-renderer?style=for-the-badge&color=eac54f" alt="GitHub Stars" />
-  </a>
-</div>
 
 ## Quick Start
 
@@ -81,22 +56,22 @@ const doc = new jsPDF()
 
 await MdTextRender(doc, '# Hello World\n\nRendered with **jspdf-md-renderer**!', {
   cursor: { x: 10, y: 10 },
-  page: { 
-    maxContentWidth: 190, 
-    maxContentHeight: 277, 
+  page: {
+    maxContentWidth: 190,
+    maxContentHeight: 277,
     lineSpace: 1.5,
-    defaultLineHeightFactor: 1.2, 
-    defaultFontSize: 12, 
+    defaultLineHeightFactor: 1.2,
+    defaultFontSize: 12,
     defaultTitleFontSize: 14,
-    topmargin: 10, 
-    xpading: 10, 
-    xmargin: 10, 
-    indent: 10 
+    topmargin: 10,
+    xpading: 10,
+    xmargin: 10,
+    indent: 10,
   },
-  font: { 
+  font: {
     bold: { name: 'helvetica', style: 'bold' },
     regular: { name: 'helvetica', style: 'normal' },
-    light: { name: 'helvetica', style: 'light' } 
+    light: { name: 'helvetica', style: 'light' },
   },
   endCursorYHandler: (y) => console.log('Ended at Y:', y),
 })
@@ -104,19 +79,19 @@ await MdTextRender(doc, '# Hello World\n\nRendered with **jspdf-md-renderer**!',
 doc.save('output.pdf')
 ```
 
-## Supported Elements
+## Security Example (opt-in)
 
-| Element | Syntax | Status |
-|---------|--------|--------|
-| Headings | `# H1` to `###### H6` | ✅ |
-| Paragraphs | Plain text | ✅ |
-| Line Breaks | `<br>` tags | ✅ |
-| Bold / Italic | `**bold**` / `*italic*` | ✅ |
-| Lists | `-` unordered, `1.` ordered, nested | ✅ |
-| Links | `[text](url)` | ✅ |
-| Images | `![alt](url){width=200 align=center}` | ✅ |
-| Tables | GFM pipe tables | ✅ |
-| Code Blocks | Fenced \` \`\`\` \` blocks | ✅ |
-| Inline Code | \`\` \`code\` \`\` | ✅ |
-| Blockquotes | `> quote` | ✅ |
-| Horizontal Rules | `---` | ✅ |
+```ts
+await MdTextRender(doc, markdown, {
+  ...options,
+  security: {
+    enabled: true,
+    violationMode: 'skip',
+    allowedLinkProtocols: ['https:', 'mailto:'],
+    allowedImageProtocols: ['https:'],
+    blockLocalhost: true,
+    blockPrivateIPs: true,
+    maxMarkdownLength: 500_000,
+  },
+})
+```

@@ -14,7 +14,9 @@ const renderBlockquote = (
     ) => void,
 ) => {
     const options = store.options;
+    const bqOpts = store.options.blockquote ?? {};
     const savedDrawColor = doc.getDrawColor();
+    const savedFillColor = doc.getFillColor();
     const savedLineWidth = doc.getLineWidth();
 
     // Increase indent for blockquote content
@@ -41,12 +43,12 @@ const renderBlockquote = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const endPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
 
-    // Draw the vertical bar across pages
-    const bqOpts = store.options.blockquote ?? {};
+    // Draw the vertical bar (and optional background) across pages
     const barColor = bqOpts.barColor ?? '#AAAAAA';
     const barWidth = bqOpts.barWidth ?? 1;
     doc.setDrawColor(barColor);
     doc.setLineWidth(barWidth);
+    const bgColor = bqOpts.backgroundColor;
 
     for (let p = startPage; p <= endPage; p++) {
         doc.setPage(p);
@@ -55,6 +57,18 @@ const renderBlockquote = (
 
         const lineTop = isStart ? startY : options.page.topmargin;
         const lineBottom = isEnd ? endY : options.page.maxContentHeight;
+        const lineHeight = Math.max(0, lineBottom - lineTop);
+
+        if (bgColor && lineHeight > 0) {
+            // Fill the content gutter to the right of the quote bar.
+            const bgX = barX + barWidth / 2;
+            const bgW = options.page.maxContentWidth - (bgX - options.page.xpading);
+            if (bgW > 0) {
+                doc.setFillColor(bgColor);
+                doc.rect(bgX, lineTop, bgW, lineHeight, 'F');
+                doc.setDrawColor(barColor);
+            }
+        }
 
         doc.line(barX, lineTop, barX, lineBottom);
     }
@@ -72,6 +86,7 @@ const renderBlockquote = (
         options.page.lineSpace;
     store.updateY(bqBottomSpacing, 'add');
     doc.setDrawColor(savedDrawColor);
+    doc.setFillColor(savedFillColor);
     doc.setLineWidth(savedLineWidth);
 };
 

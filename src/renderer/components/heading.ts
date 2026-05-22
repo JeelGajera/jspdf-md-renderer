@@ -23,17 +23,25 @@ const renderHeading = (
             | 'h6';
         const fontSize =
             store.options.heading?.[headingKey] ??
-            store.options.page.defaultFontSize;
+            store.options.page.defaultTitleFontSize;
         const headingColor =
             store.options.heading?.[`${headingKey}Color`] ??
             store.options.heading?.color ??
             '#000000';
+        const useBold = store.options.heading?.bold ?? true;
 
         doc.setFontSize(fontSize);
-        doc.setFont(
-            store.options.font.bold.name,
-            store.options.font.bold.style || 'bold',
-        );
+        if (useBold) {
+            doc.setFont(
+                store.options.font.bold.name,
+                store.options.font.bold.style || 'bold',
+            );
+        } else {
+            doc.setFont(
+                store.options.font.regular.name,
+                store.options.font.regular.style || 'normal',
+            );
+        }
         doc.setTextColor(headingColor);
 
         breakIfOverflow(doc, store, getCharHight(doc) * 1.8);

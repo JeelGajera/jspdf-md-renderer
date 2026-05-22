@@ -1,16 +1,14 @@
 ---
 title: MdTextRender
-description: API reference for the MdTextRender function.
+description: API reference for MdTextRender including security and preprocessing stages.
 llm_summary: |
-  MdTextRender(doc: jsPDF, text: string, options: RenderOption): Promise<void>
-  Main function that renders markdown into a jsPDF document. Process: validates options,
-  initializes RenderStore, parses markdown via MdTextParser, prefetches images, renders each
-  element, then calls endCursorYHandler with final Y position.
+  MdTextRender(doc, text, options) validates options, applies security guards,
+  parses markdown, transforms links/images, renders tokens, and finalizes cursor callback.
 ---
 
 # MdTextRender
 
-The primary function that renders Markdown content into a jsPDF document.
+`MdTextRender` renders markdown into an existing `jsPDF` document.
 
 ## Signature
 
@@ -26,49 +24,52 @@ function MdTextRender(
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `doc` | `jsPDF` | An existing jsPDF document instance to render into |
-| `text` | `string` | The raw Markdown content to render |
-| `options` | [`RenderOption`](/api/options) | Configuration object controlling layout, fonts, and behavior |
+| `doc` | `jsPDF` | Existing jsPDF document instance |
+| `text` | `string` | Raw markdown input |
+| `options` | [`RenderOption`](/api/options) | Render and security configuration |
 
-## Return Value
-
-Returns a `Promise<void>` that resolves when all markdown content has been rendered into the document. The function is `async` because it needs to:
-
-1. Parse the markdown (using `marked` lexer)
-2. Prefetch images (to determine dimensions)
-3. Render all elements sequentially
-
-## How It Works
+## Render Pipeline
 
 ```mermaid
 flowchart LR
-  A[Validate Options] --> B[Parse Markdown]
-  B --> C[Prefetch Images]
-  C --> D[Render Elements]
-  D --> E[Call endCursorYHandler]
+  A[Validate options] --> B[Security input limits]
+  B --> C[Parse markdown]
+  C --> D[Security tree limits]
+  D --> E[Apply link policy]
+  E --> F[Prefetch and validate images]
+  F --> G[Render tokens]
+  G --> H[Decorations and callback]
 ```
 
-1. **Initialize store** — creates a fresh, isolated `RenderStore` instance for this rendering process
-2. **Parse markdown** — tokenizes the markdown string via `MdTextParser`
-3. **Prefetch images** — loads all images to determine their dimensions
-4. **Render elements** — iterates through parsed tokens, dispatching to the appropriate renderer (heading, paragraph, list, table, image, etc.)
-5. **Callback** — calls `endCursorYHandler` with the final Y cursor position
+### Stage Notes
+
+1. `validateOptions` normalizes defaults (including `security`).
+2. `enforceMarkdownLimits` checks markdown length.
+3. `MdTextParser` tokenizes markdown.
+4. `enforceNestedDepthAndImageCount` sanitizes the parsed tree based on security limits.
+5. `applyLinkPolicy` validates links and applies placeholder/skip behavior.
+6. `prefetchImages` validates and loads image data.
+7. Renderer dispatches token-by-token to component renderers.
+8. `endCursorYHandler` receives final cursor Y position.
+
+## Security Behavior
+
+When `security.enabled` is `true`, `MdTextRender` can:
+- block unsafe URLs and image sources
+- enforce resource and structural limits
+- switch behavior via `violationMode`
+
+### Violation Modes
+
+- `skip`: continue rendering but omit blocked content.
+- `throw`: abort with `SecurityViolationError`.
+- `placeholder`: replace blocked content with placeholder text where supported.
 
 ## Concurrency
 
-`MdTextRender` is fully thread-safe and safe for concurrent use. Because it uses an instance-based state management system (`RenderStore`), you can render multiple documents in parallel using `Promise.all()` without any state bleeding between documents.
+`MdTextRender` is safe for concurrent usage across documents because render state is isolated per call.
 
-This is particularly useful for server-side PDF generation or bulk processing:
-
-```ts
-const documents = ['# Doc 1', '# Doc 2', '# Doc 3']
-await Promise.all(documents.map(md => {
-  const doc = new jsPDF()
-  return MdTextRender(doc, md, options)
-}))
-```
-
-## Usage
+## Example
 
 ```ts
 import { jsPDF } from 'jspdf'
@@ -95,31 +96,10 @@ await MdTextRender(doc, '# Hello\n\nWorld', {
     regular: { name: 'helvetica', style: 'normal' },
     light: { name: 'helvetica', style: 'light' },
   },
+  security: {
+    enabled: true,
+    violationMode: 'skip',
+  },
   endCursorYHandler: (y) => console.log('Done at Y:', y),
 })
-
-doc.save('output.pdf')
 ```
-
-## Supported Element Types
-
-`MdTextRender` handles these token types internally:
-
-| Token Type | Renderer | Description |
-|------------|----------|-------------|
-| `heading` | `renderHeading` | `#` through `######` |
-| `paragraph` | `renderParagraph` | Plain text blocks |
-| `list` | `renderList` | Ordered and unordered lists |
-| `list_item` | `renderListItem` | Individual list items |
-| `hr` | `renderHR` | Horizontal rules (`---`) |
-| `code` | `renderCodeBlock` | Fenced code blocks |
-| `strong` | `renderInlineContent` (layout engine) | Bold text |
-| `em` | `renderInlineContent` (layout engine) | Italic text |
-| `codespan` | `renderInlineContent` (layout engine) | Inline code |
-| `link` | `renderInlineContent` (layout engine) | Hyperlinks |
-| `blockquote` | `renderBlockquote` | Blockquotes |
-| `image` | `renderImage` | Images with optional attributes |
-| `table` | `renderTable` | GFM pipe tables |
-| `text` / `raw` | `renderRawItem` | Raw text content |
-
-Unsupported token types will log a warning to the console with a link to submit a GitHub issue.

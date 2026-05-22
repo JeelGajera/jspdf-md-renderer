@@ -4,7 +4,7 @@ export default defineConfig({
     base: '/jspdf-md-renderer',
     cleanUrls: true,
     title: 'jspdf-md-renderer',
-    description: 'Render Markdown to PDF with jsPDF — fully customizable',
+    description: 'Render Markdown to PDF with jsPDF - fully customizable',
 
     head: [
         ['link', { rel: 'icon', href: '/jspdf-md-renderer/favicon.ico' }],
@@ -54,6 +54,7 @@ export default defineConfig({
                         { text: 'Installation', link: '/guide/installation' },
                         { text: 'Basic Usage', link: '/guide/basic-usage' },
                         { text: 'Browser Usage', link: '/guide/browser-usage' },
+                        { text: 'Security Guide', link: '/guide/security' },
                     ],
                 },
             ],
@@ -119,7 +120,7 @@ export default defineConfig({
         footer: {
             message: 'Released under the MIT License.',
             copyright:
-                'Copyright © <a href="https://github.com/JeelGajera" target="_blank" rel="noopener">Jeel Gajera</a>',
+                'Copyright (c) <a href="https://github.com/JeelGajera" target="_blank" rel="noopener">Jeel Gajera</a>',
         },
 
         search: { provider: 'local' },

@@ -1,44 +1,81 @@
-## Contributing
+# Contributing
 
-Contributions are welcome! To get started, follow these steps:
+Thanks for contributing to `jspdf-md-renderer`.
 
-1. **Fork the repository** on GitHub.
-2. **Clone your forked repository** to your local machine:
-    ```sh
-    git clone https://github.com/JeelGajera/jspdf-md-renderer
-    cd jspdf-md-renderer
-    ```
-3. **Install dependencies**:
-    ```sh
-    npm i
-    ```
-4. **Run the project locally**:
-    ```sh
-    npm run dev
-    ```
-5. **Format the code** using Prettier:
-    ```sh
-    npm run format
-    ```
-6. **Lint the code** using ESLint:
-    ```sh
-    npm run lint
-    ```
-7. **Create a new branch** for your feature or bugfix:
-    ```sh
-    git checkout -b feature-or-bugfix-name
-    ```
-8. **Make your changes** and commit them:
-    ```sh
-    git add .
-    git commit -m "Description of your changes"
-    ```
-9. **Push your changes** to your forked repository:
-    ```sh
-    git push origin feature-or-bugfix-name
-    ```
-10. **Create a pull request** on GitHub from your forked repository to the main repository.
+## Development Setup
 
-Please ensure your code adheres to the project's coding standards and passes all checks before submitting a pull request.
+1. Fork and clone the repository.
+2. Install dependencies:
 
-Thank you for contributing!
+```sh
+npm install
+```
+
+3. Build once:
+
+```sh
+npm run build
+```
+
+## Local Commands
+
+```sh
+npm run build      # Build dist bundles and type declarations
+npm run lint       # Lint source
+npm run format     # Format repository with Prettier
+```
+
+## Security-Related Changes
+
+If your PR touches URL/image handling, markdown guards, or option normalization:
+
+1. Update docs in all relevant places:
+   - `README.md`
+   - `docs-site/api/options.md`
+   - `docs-site/guide/security.md`
+   - affected element/API docs
+2. Keep defaults backward compatible unless a breaking change is intentional.
+
+## Coding Expectations
+
+- Prefer small, focused commits.
+- Preserve public API compatibility unless explicitly planning a major version change.
+- Keep option behavior consistent with type docs and README.
+- Add concise comments only where behavior is non-obvious.
+
+## Documentation Expectations
+
+When adding or changing render/security behavior:
+
+- document option defaults
+- document precedence/fallback rules
+- document runtime caveats (for example browser SSRF limitations)
+- document violation mode behavior for user-visible outcomes
+
+## Pull Request Checklist
+
+Before opening a PR, verify:
+
+- [ ] `npm run build` passes
+- [ ] docs updated (`README` + `docs-site` pages)
+- [ ] examples/snippets reflect current API
+- [ ] no unrelated file churn
+
+## Branching and Commits
+
+Use descriptive branch names and commit messages, for example:
+
+```sh
+git checkout -b fix/security-protocol-relative-url-validation
+git commit -m "fix(security): validate protocol-relative URLs as external"
+```
+
+## Submitting a PR
+
+1. Push your branch.
+2. Open a PR against `main`.
+3. Include:
+   - what changed
+   - why it changed
+   - test and docs updates
+   - any migration notes

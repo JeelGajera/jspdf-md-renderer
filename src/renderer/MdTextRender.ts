@@ -22,6 +22,15 @@ import { validateOptions } from '../utils/options-validation';
 import { getCharHight } from '../utils/doc-helpers';
 import { HandlePageBreaks } from '../utils/handlePageBreak';
 import { applyPageDecorations } from '../utils/pageDecorations';
+import {
+    createTimeoutGuard,
+    enforceMarkdownLimits,
+    enforceNestedDepthAndImageCount,
+} from '../security/security-guards';
+import {
+    applyLinkPolicy,
+    convertBlockedImagesToPlaceholder,
+} from '../security/security-transforms';
 
 /**
  * Renders parsed markdown text into jsPDF document.
@@ -36,9 +45,24 @@ export const MdTextRender = async (
     options: RenderOption,
 ) => {
     const validOptions = validateOptions(options);
+    const security = validOptions.security || {};
+    const guardTimeout = createTimeoutGuard(security);
+
+    enforceMarkdownLimits(text, security);
+    guardTimeout();
+
     const store = new RenderStore(validOptions);
     const parsedElements = await MdTextParser(text);
-    await prefetchImages(parsedElements);
+    guardTimeout();
+
+    enforceNestedDepthAndImageCount(parsedElements, security);
+    await applyLinkPolicy(parsedElements, security);
+    await prefetchImages(parsedElements, security);
+    guardTimeout();
+
+    if (security.enabled && security.violationMode === 'placeholder') {
+        convertBlockedImagesToPlaceholder(parsedElements, security);
+    }
 
     const renderElement = (
         element: ParsedElement,
@@ -146,6 +170,7 @@ export const MdTextRender = async (
     };
 
     for (const item of parsedElements) {
+        guardTimeout();
         renderElement(item, 0, store);
     }
 
