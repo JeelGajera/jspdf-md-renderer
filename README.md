@@ -242,6 +242,19 @@ Browser caveat:
 - Invoice example: [https://jeelgajera.github.io/jspdf-md-renderer/examples/invoice](https://jeelgajera.github.io/jspdf-md-renderer/examples/invoice)
 - Technical report example: [https://jeelgajera.github.io/jspdf-md-renderer/examples/report](https://jeelgajera.github.io/jspdf-md-renderer/examples/report)
 
+## Testing
+
+This repository uses **Vitest** for regression testing and coverage reporting.
+
+```sh
+npm test         # Run tests with coverage
+npm run test:watch
+npm run test:ui
+```
+
+Coverage policy:
+- Security/rendering behavior changes should include focused regression tests.
+
 ## Contributing
 
 Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md).

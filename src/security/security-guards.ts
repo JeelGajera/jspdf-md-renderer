@@ -46,7 +46,10 @@ export const enforceNestedDepthAndImageCount = (
     const placeholderText = security.placeholderImageText || '[blocked image]';
     let imageLimitViolated = false;
 
-    const sanitizeNodes = (nodes: ParsedElement[], depth: number): ParsedElement[] => {
+    const sanitizeNodes = (
+        nodes: ParsedElement[],
+        depth: number,
+    ): ParsedElement[] => {
         if (maxDepth > 0 && depth > maxDepth) {
             handleSecurityViolation(security, {
                 code: 'MAX_NESTED_DEPTH_EXCEEDED',
@@ -61,7 +64,8 @@ export const enforceNestedDepthAndImageCount = (
         for (const node of nodes) {
             if (node.type === MdTokenType.Image) {
                 imageCount++;
-                const exceedsLimit = maxImageCount > 0 && imageCount > maxImageCount;
+                const exceedsLimit =
+                    maxImageCount > 0 && imageCount > maxImageCount;
                 if (exceedsLimit) {
                     if (!imageLimitViolated) {
                         imageLimitViolated = true;

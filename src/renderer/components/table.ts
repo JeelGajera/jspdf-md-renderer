@@ -101,7 +101,8 @@ const renderTable = (
             left: marginLeft,
             right: Math.max(
                 0,
-                doc.internal.pageSize.getWidth() - (marginLeft + availableWidth),
+                doc.internal.pageSize.getWidth() -
+                    (marginLeft + availableWidth),
             ),
         },
         tableWidth: availableWidth,

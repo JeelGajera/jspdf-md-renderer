@@ -62,7 +62,8 @@ const renderBlockquote = (
         if (bgColor && lineHeight > 0) {
             // Fill the content gutter to the right of the quote bar.
             const bgX = barX + barWidth / 2;
-            const bgW = options.page.maxContentWidth - (bgX - options.page.xpading);
+            const bgW =
+                options.page.maxContentWidth - (bgX - options.page.xpading);
             if (bgW > 0) {
                 doc.setFillColor(bgColor);
                 doc.rect(bgX, lineTop, bgW, lineHeight, 'F');

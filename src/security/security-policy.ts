@@ -218,7 +218,7 @@ const isIPv6InRange = (
     const mask =
         prefixLength === 0
             ? 0n
-            : ((MAX_IPV6 << BigInt(128 - prefixLength)) & MAX_IPV6);
+            : (MAX_IPV6 << BigInt(128 - prefixLength)) & MAX_IPV6;
     return (ipNum & mask) === (prefixBigInt & mask);
 };
 
@@ -243,7 +243,7 @@ const extractIPv4Mapped = (ip: string): string | null => {
     // General path for hex form (::ffff:a9fe:a9fe) and equivalent compressed forms.
     const ipNum = parseIPv6ToBigInt(stripped);
     if (ipNum === null) return null;
-    if ((ipNum >> 32n) !== 0xffffn) return null;
+    if (ipNum >> 32n !== 0xffffn) return null;
 
     const low32 = Number(ipNum & 0xffffffffn);
     const octet1 = (low32 >>> 24) & 0xff;
@@ -428,7 +428,13 @@ export const validateResourceUrl = async (
     } catch {
         handleSecurityViolation(
             security,
-            createViolation('INVALID_URL', type, 'Invalid URL', rawValue, context),
+            createViolation(
+                'INVALID_URL',
+                type,
+                'Invalid URL',
+                rawValue,
+                context,
+            ),
         );
         return false;
     }
@@ -461,7 +467,10 @@ export const validateResourceUrl = async (
 
     if (
         type === 'image' &&
-        !isAllowedDomain(parsed.hostname.toLowerCase(), security.allowedImageDomains)
+        !isAllowedDomain(
+            parsed.hostname.toLowerCase(),
+            security.allowedImageDomains,
+        )
     ) {
         handleSecurityViolation(
             security,

@@ -22,8 +22,16 @@ npm run build
 ```sh
 npm run build      # Build dist bundles and type declarations
 npm run lint       # Lint source
+npm test           # Run Vitest suites with coverage
+npm run test:watch # Run Vitest in watch mode
 npm run format     # Format repository with Prettier
 ```
+
+## Testing Expectations
+
+- Run `npm run lint`, `npm run build`, and `npm test` before opening a PR.
+- If you fix a bug or regression, add or update a targeted test that fails without your change.
+- Security and rendering changes should include deterministic tests (avoid brittle binary PDF snapshots).
 
 ## Security-Related Changes
 
@@ -57,6 +65,8 @@ When adding or changing render/security behavior:
 Before opening a PR, verify:
 
 - [ ] `npm run build` passes
+- [ ] `npm run lint` passes
+- [ ] `npm test` passes
 - [ ] docs updated (`README` + `docs-site` pages)
 - [ ] examples/snippets reflect current API
 - [ ] no unrelated file churn
