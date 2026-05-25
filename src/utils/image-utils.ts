@@ -8,7 +8,10 @@ import {
     isSvgDataUrl,
     validateResourceUrl,
 } from '../security/security-policy';
-import { RenderSecurityOptions, SecurityViolationError } from '../types/security';
+import {
+    RenderSecurityOptions,
+    SecurityViolationError,
+} from '../types/security';
 
 /**
  * Standard DPI for web/screen pixels.
@@ -24,7 +27,7 @@ const getDataUrlPayloadByteSize = (dataUrl: string): number | null => {
 
     if (metadata.includes(';base64')) {
         const normalized = payload.replace(/\s/g, '');
-        const padding = (normalized.match(/=*$/)?.[0].length ?? 0);
+        const padding = normalized.match(/=*$/)?.[0].length ?? 0;
         return Math.floor((normalized.length * 3) / 4) - padding;
     }
 
@@ -297,7 +300,9 @@ export const prefetchImages = async (
                 // If the src is already a data URI, we treat it as loaded (or just store it as data)
                 if (element.src.startsWith('data:')) {
                     element.data = element.src;
-                    const dataUrlBytes = getDataUrlPayloadByteSize(element.data);
+                    const dataUrlBytes = getDataUrlPayloadByteSize(
+                        element.data,
+                    );
                     if (
                         security?.enabled &&
                         security.maxImageSizeBytes &&
@@ -317,7 +322,10 @@ export const prefetchImages = async (
                     }
                 } else {
                     // Try to fetch the image
-                    const response = await secureImageFetch(element.src, security);
+                    const response = await secureImageFetch(
+                        element.src,
+                        security,
+                    );
                     if (!response.ok) {
                         throw new Error(
                             `Failed to fetch image: ${response.statusText}`,
