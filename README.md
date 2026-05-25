@@ -5,6 +5,7 @@ A utility to render Markdown directly into formatted PDFs using `jsPDF`.
 [![npm version](https://img.shields.io/npm/v/jspdf-md-renderer.svg)](https://www.npmjs.com/package/jspdf-md-renderer)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Downloads](https://img.shields.io/npm/dm/jspdf-md-renderer.svg)](https://www.npmjs.com/package/jspdf-md-renderer)
+[![Node.js CI](https://github.com/JeelGajera/jspdf-md-renderer/actions/workflows/node.js.yml/badge.svg)](https://github.com/JeelGajera/jspdf-md-renderer/actions/workflows/node.js.yml)
 
 ## Highlights
 
