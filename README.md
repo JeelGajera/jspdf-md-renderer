@@ -172,6 +172,21 @@ Behavior notes:
 
 Security is disabled by default for backward compatibility.
 
+> **Always-on baseline limits (cannot be disabled):**
+> Regardless of the `security.enabled` setting, `MdTextParser` (and by extension
+> `MdTextRender`) enforces two unconditional hard limits to prevent the underlying
+> Markdown parser from crashing the host process:
+>
+> - **Absolute length ceiling:** Inputs larger than **2 MB** (2,000,000 characters) are
+>   rejected with a `MarkdownParsingLimitError` before parsing begins.
+> - **Structural nesting ceiling:** Blockquote or list structures nested more than
+>   **300 levels** deep are rejected with a `MarkdownParsingLimitError`.
+>
+> These limits exist because deeply nested or oversized Markdown can cause stack
+> exhaustion or memory exhaustion in the parser regardless of any security settings.
+> `MarkdownParsingLimitError` is exported from `jspdf-md-renderer` and can be caught
+> and handled by callers.
+
 ```ts
 const options = {
   // ...other options
@@ -233,6 +248,7 @@ Browser caveat:
 - `MdTextRender`
 - `MdTextParser`
 - `SecurityViolationError`
+- `MarkdownParsingLimitError`
 - `validateOptions`
 - Types: `RenderOption`, `RenderSecurityOptions`, `SecurityViolation`, `ViolationMode`, and others
 

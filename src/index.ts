@@ -4,6 +4,7 @@ export { renderInlineContent, renderPlainText } from './layout';
 export type { RenderOption } from './types/renderOption';
 export type { ParsedElement } from './types/parsedElement';
 export { SecurityViolationError } from './types/security';
+export { MarkdownParsingLimitError } from './security/pre-parse-guards';
 export type {
     RenderSecurityOptions,
     SecurityViolation,
