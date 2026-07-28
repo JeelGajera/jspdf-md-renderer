@@ -57,6 +57,7 @@ export class MockDoc {
             getCurrentPageInfo: () => ({
                 pageNumber: this.currentPage,
             }),
+            getNumberOfPages: () => this.currentPage,
         };
     }
 

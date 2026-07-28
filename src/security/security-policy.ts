@@ -357,9 +357,27 @@ const isAllowedDomain = (
 
 type UrlClass = 'explicitScheme' | 'protocolRelative' | 'relativePath';
 
+/**
+ * Mirrors the WHATWG URL parser's own preprocessing before we make any
+ * security decision based on the shape of the string. Two things browsers
+ * (and Node's URL/fetch implementation) do that we must match:
+ *
+ * 1. Strip ASCII tab / newline / CR before parsing.
+ * 2. For special schemes (http/https/ws/wss/ftp/file), treat backslashes
+ *    the same as forward slashes when resolving a reference.
+ *
+ * Without this, a string like "\\evil.com/x" is classified as a harmless
+ * "relative path" (and thus allowed with zero protocol/domain/SSRF checks),
+ * even though it actually resolves to https://evil.com/x once any real URL
+ * parser (browser, fetch, PDF viewer) gets hold of it.
+ */
+const normalizeUrlForClassification = (raw: string): string =>
+    raw.replace(/[\t\n\r]/g, '').replace(/\\/g, '/');
+
 const classifyUrl = (raw: string): UrlClass => {
-    if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(raw)) return 'explicitScheme';
-    if (raw.startsWith('//')) return 'protocolRelative';
+    const normalized = normalizeUrlForClassification(raw);
+    if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(normalized)) return 'explicitScheme';
+    if (normalized.startsWith('//')) return 'protocolRelative';
     return 'relativePath';
 };
 
@@ -377,15 +395,17 @@ export const validateResourceUrl = async (
     security: RenderSecurityOptions,
     context?: string,
 ): Promise<boolean> => {
-    // Protocol-relative URLs (//host/path) are intentionally treated as
-    // external absolute URLs for security checks.
+    // Classify (and construct any URL object) using the normalized form —
+    // never the raw attacker string — so classification and resolution can
+    // never disagree with each other.
+    const normalizedValue = normalizeUrlForClassification(rawValue);
     const urlClass = classifyUrl(rawValue);
 
     if (urlClass === 'relativePath') {
         if (security.validateUrl) {
             let relativeUrl: URL;
             try {
-                relativeUrl = new URL(rawValue, 'https://relative.local');
+                relativeUrl = new URL(normalizedValue, 'https://relative.local');
             } catch {
                 handleSecurityViolation(
                     security,
@@ -417,9 +437,9 @@ export const validateResourceUrl = async (
         return true;
     }
 
-    let canonicalRaw = rawValue;
+    let canonicalRaw = normalizedValue;
     if (urlClass === 'protocolRelative') {
-        canonicalRaw = `https:${rawValue}`;
+        canonicalRaw = `https:${normalizedValue}`;
     }
 
     let parsed: URL;
@@ -444,9 +464,9 @@ export const validateResourceUrl = async (
         const protocolList =
             type === 'link'
                 ? security.allowedLinkProtocols ||
-                  DEFAULT_SECURITY.allowedLinkProtocols
+                DEFAULT_SECURITY.allowedLinkProtocols
                 : security.allowedImageProtocols ||
-                  DEFAULT_SECURITY.allowedImageProtocols;
+                DEFAULT_SECURITY.allowedImageProtocols;
 
         if (!protocolList.includes(protocol)) {
             handleSecurityViolation(
@@ -518,9 +538,9 @@ export const validateResourceUrl = async (
         if (type === 'image') {
             console.warn(
                 '[jspdf-md-renderer] Security warning: IP-based SSRF checks ' +
-                    '(blockPrivateIPs, blockLinkLocalIPs, blockMetadataIPs) ' +
-                    'cannot be fully enforced in browser environments. Route image ' +
-                    'fetching through a trusted server-side proxy.',
+                '(blockPrivateIPs, blockLinkLocalIPs, blockMetadataIPs) ' +
+                'cannot be fully enforced in browser environments. Route image ' +
+                'fetching through a trusted server-side proxy.',
             );
         }
     } else {

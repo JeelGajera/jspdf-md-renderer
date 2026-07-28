@@ -6,6 +6,11 @@ import {
     preprocessImageAttributes,
     parseImageAttrsFromHref,
 } from './imageExtension';
+import {
+    enforceAbsoluteMarkdownLengthLimit,
+    enforceStructuralSafetyLimits,
+    MarkdownParsingLimitError,
+} from '../security/pre-parse-guards';
 
 /**
  * Parses markdown into tokens and converts to a custom parsed structure.
@@ -14,12 +19,32 @@ import {
  * @returns Parsed markdown elements.
  */
 export const MdTextParser = async (text: string): Promise<ParsedElement[]> => {
+    // Hard, unconditional safety limits — always run, regardless of the
+    // opt-in `security` option. See src/security/pre-parse-guards.ts.
+    enforceAbsoluteMarkdownLengthLimit(text);
+    enforceStructuralSafetyLimits(text);
+
     // Pre-process: encode {width=N height=N align=X} into image URL fragments
     const processedText = preprocessImageAttributes(text);
-    const tokens = await marked.lexer(processedText, {
-        async: true,
-        gfm: true,
-    });
+
+    let tokens: TokensList;
+    try {
+        tokens = await marked.lexer(processedText, {
+            async: true,
+            gfm: true,
+        });
+    } catch (error) {
+        // Convert an uncaught parser crash (e.g. stack overflow on
+        // pathological input that slipped past the structural heuristic
+        // above) into a typed, catchable error instead of letting it
+        // propagate as a raw RangeError/unhandled rejection.
+        throw new MarkdownParsingLimitError(
+            `[jspdf-md-renderer] Markdown parsing failed, likely due to excessive ` +
+            `structural complexity in the input. Original error: ${error instanceof Error ? error.message : String(error)
+            }`,
+        );
+    }
+
     return convertTokens(tokens);
 };
 
