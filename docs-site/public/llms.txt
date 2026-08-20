@@ -67,6 +67,30 @@ Parses markdown into structured tokens.
 ### link (optional)
 - link.linkColor: [number, number, number] — RGB link color
 
+### page.margin (recommended)
+- page.margin: { top, right, bottom, left } — derives the content area from the
+  document page size. Omitted sides default to 10. Replaces manual
+  maxContentWidth/maxContentHeight/topmargin/xpading/xmargin, which are
+  deprecated but still honoured and still win when both are given.
+
+### Return value
+- MdTextRender resolves to { endY, startPage, pageCount, warnings,
+  droppedNodes, violations }
+- warnings report anything that could not be drawn, each with code, message,
+  context and droppedNodes
+- options.silent suppresses console output; options.onWarning receives each one
+
+### components (optional)
+- components: { heading, paragraph, list, listItem, blockquote, code, table,
+  image, hr } — replace or decorate any block renderer
+- each receives a context with doc, element, indentLevel, indent, x, y,
+  maxWidth, store, options, next() and render()
+- next() runs the built-in renderer; an override that throws falls back to it
+
+### registerFont
+- registerFont(doc, { family, variants: { normal, bold, italic, bolditalic } })
+- returns { family, registered, font } where font drops into RenderOption.font
+
 ### table (optional)
 - Passes through to jspdf-autotable UserOptions
 

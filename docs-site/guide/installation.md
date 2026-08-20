@@ -8,6 +8,21 @@ llm_summary: |
 
 # Installation
 
+`jspdf`, `jspdf-autotable` and `marked` are **peer dependencies**. The renderer
+draws into a `jsPDF` document you construct, so it uses the copy your project
+already has rather than bundling a second one.
+
+| Peer | Supported |
+| --- | --- |
+| `jspdf` | `^2 \|\| ^3 \|\| ^4` |
+| `jspdf-autotable` | `^3 \|\| ^4 \|\| ^5` |
+| `marked` | `^18` |
+
+`marked`'s range is deliberately narrow: its tokenizer output is this library's
+layout input, and earlier majors emit different blank-line tokens that move
+content vertically on the page.
+
+
 ## Package Manager (Recommended)
 
 Install with npm, yarn, or pnpm:
@@ -15,7 +30,7 @@ Install with npm, yarn, or pnpm:
 ::: code-group
 
 ```bash [npm]
-npm install jspdf-md-renderer
+npm install jspdf-md-renderer jspdf jspdf-autotable marked
 ```
 
 ```bash [yarn]

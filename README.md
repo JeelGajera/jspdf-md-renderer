@@ -10,6 +10,9 @@ A utility to render Markdown directly into formatted PDFs using `jsPDF`.
 ## Highlights
 
 - Rich markdown support (headings, lists, tables, images, code, blockquotes, links)
+- Page geometry derived from margins — no manual content-area arithmetic
+- Overridable block renderers, so you can draw any block yourself
+- A render result reporting anything that could not be drawn
 - Configurable typography, spacing, and block styling
 - Header/footer and page-number support
 - Safe inline layout and long-token wrapping
@@ -36,6 +39,30 @@ layout input, and earlier majors emit different blank-line tokens that move
 content vertically on the page.
 
 ## Quick Start
+
+```ts
+import { jsPDF } from 'jspdf'
+import { MdTextRender } from 'jspdf-md-renderer'
+
+const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+
+const result = await MdTextRender(doc, '# Report\n\nWith **formatted** markdown.', {
+  page: { margin: { top: 20, right: 20, bottom: 20, left: 20 } },
+  font: { regular: { name: 'helvetica', style: 'normal' } },
+})
+
+if (result.warnings.length) {
+  console.warn('Some content could not be rendered:', result.warnings)
+}
+
+doc.save('report.pdf')
+```
+
+The content area is derived from the document's own page size, so it stays
+correct across formats and orientations. Everything else has a default.
+
+<details>
+<summary>Full configuration, with explicit geometry</summary>
 
 ```ts
 import { jsPDF } from 'jspdf'
@@ -81,6 +108,88 @@ await MdTextRender(doc, markdown, {
 
 doc.save('report.pdf')
 ```
+
+</details>
+
+## Render Result
+
+`MdTextRender` resolves to a summary of what it drew — and what it could not.
+
+```ts
+const { endY, startPage, pageCount, warnings, droppedNodes, violations } =
+  await MdTextRender(doc, markdown, options)
+```
+
+| Field | Meaning |
+| --- | --- |
+| `endY` | Y position of the cursor when rendering finished |
+| `startPage` | Page the render began on |
+| `pageCount` | Pages this render produced |
+| `warnings` | Everything that could not be drawn, with a code and context |
+| `droppedNodes` | How much content that cost |
+| `violations` | Security violations raised during the render |
+
+Failures were previously silent — an image that failed to load, an unsupported
+element, or a subtree past the nesting limit produced a PDF that looked
+successful and was not. Check `warnings` if a document must be complete.
+
+```ts
+// React to warnings as they happen, and keep the console quiet
+await MdTextRender(doc, markdown, {
+  ...options,
+  silent: true,
+  onWarning: (w) => logger.warn(w.code, w.message, w.context),
+})
+```
+
+## Custom Components
+
+Replace or decorate any block renderer. `ctx.next()` runs the built-in, so an
+override can wrap it rather than reimplement it.
+
+```ts
+await MdTextRender(doc, markdown, {
+  ...options,
+  components: {
+    heading: (ctx) => {
+      if (ctx.element.depth === 1) {
+        ctx.doc.setFillColor('#1A365D')
+        ctx.doc.rect(ctx.x, ctx.y, ctx.maxWidth, 10, 'F')
+      }
+      ctx.next()
+    },
+    code: (ctx) => myHighlighter(ctx),
+  },
+})
+```
+
+Overridable: `heading`, `paragraph`, `list`, `listItem`, `blockquote`, `code`,
+`table`, `image`, `hr`.
+
+The context carries `doc`, `element`, `indentLevel`, `indent`, `x`, `y`,
+`maxWidth`, `store` and `options`, plus `next()` and
+`render(element, indentLevel?)` for laying out children. An override that throws
+is reported as a warning and falls back to the built-in renderer, so a mistake
+degrades to default output rather than losing the block.
+
+## Custom Fonts
+
+`registerFont` handles the `addFileToVFS`/`addFont` wiring and returns the
+`font` config that selects the result.
+
+```ts
+import { registerFont } from 'jspdf-md-renderer'
+
+const inter = registerFont(doc, {
+  family: 'Inter',
+  variants: { normal: regularBase64, bold: boldBase64, italic: italicBase64 },
+})
+
+await MdTextRender(doc, markdown, { ...options, font: inter.font })
+```
+
+Styles with no data registered fall back to the normal face, so text stays in
+the intended family instead of silently reverting to a core font.
 
 ## Browser Usage
 
@@ -214,8 +323,8 @@ const options = {
   draws cell content itself and has no notion of mixed inline runs.
 - Inline HTML tags (`<strong>`, `<em>`) render their text without applying the
   style. `<br>` is supported.
-- `cursor.x` applies to the first line only; each block then starts at
-  `page.xpading`.
+- `cursor.x` applies to the first line only; each block then starts at the left
+  edge of the content column.
 - Long runs of CJK text wrap character by character, without kinsoku rules.
 
 ## Security Controls (opt-in)
@@ -300,12 +409,15 @@ Browser caveat:
 
 ## API Exports
 
-- `MdTextRender`
+- `MdTextRender` — renders markdown, resolves to a `RenderResult`
 - `MdTextParser`
+- `registerFont`
+- `validateOptions`
 - `SecurityViolationError`
 - `MarkdownParsingLimitError`
-- `validateOptions`
-- Types: `RenderOption`, `RenderSecurityOptions`, `SecurityViolation`, `ViolationMode`, and others
+- Types: `RenderOption`, `RenderResult`, `RenderWarning`, `PageMargin`,
+  `ComponentContext`, `ComponentOverrides`, `RegisteredFont`,
+  `RenderSecurityOptions`, `SecurityViolation`, `ViolationMode`, and others
 
 All types are exported from the package root:
 
