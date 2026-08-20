@@ -1,3 +1,5 @@
+import { RenderWarnings } from '../store/renderWarnings';
+
 /**
  * Internal hash prefix used to encode image attributes in the URL fragment.
  * This is stripped during token conversion and never reaches the image fetcher.
@@ -53,12 +55,22 @@ const encodeAttrsToFragment = (attrs: ImageAttributes): string => {
  * Parses an attribute string like "width=200 height=150 align=center"
  * into a structured object.
  */
-const parseRawAttributes = (attrString: string): ImageAttributes => {
+const parseRawAttributes = (
+    attrString: string,
+    warnings?: RenderWarnings,
+): ImageAttributes => {
     const attrs: ImageAttributes = {};
     if (attrString.length > MAX_ATTR_BLOCK_LENGTH) {
-        console.warn(
-            `[jspdf-md-renderer] Image attribute block too long (${attrString.length} chars), skipping attribute parsing.`,
-        );
+        // The image still renders, at its intrinsic size and default
+        // alignment — so without a warning the only symptom is a picture
+        // that quietly ignored the size the author asked for.
+        warnings?.warn({
+            code: 'IMAGE_ATTRS_IGNORED',
+            message:
+                `Image attribute block is ${attrString.length} characters, over the ` +
+                `${MAX_ATTR_BLOCK_LENGTH} character limit. Width, height and alignment ` +
+                'were ignored for this image.',
+        });
         return attrs;
     }
 
@@ -112,13 +124,17 @@ const parseRawAttributes = (attrString: string): ImageAttributes => {
  * - `align`: Image alignment - 'left', 'center', or 'right'
  *
  * @param text - The raw markdown text
+ * @param warnings - Collector for attributes that could not be applied
  * @returns The cleaned markdown text with attributes encoded in URLs
  */
-export const preprocessImageAttributes = (text: string): string => {
+export const preprocessImageAttributes = (
+    text: string,
+    warnings?: RenderWarnings,
+): string => {
     return text.replace(
         IMAGE_WITH_ATTRS_REGEX,
         (_fullMatch, before, url, closeParen, attrsContent) => {
-            const attrs = parseRawAttributes(attrsContent);
+            const attrs = parseRawAttributes(attrsContent, warnings);
             const fragment = encodeAttrsToFragment(attrs);
             // Reconstruct: ![alt](url#__jmr_w=200&h=100)
             return `${before}${url}${fragment}${closeParen}`;

@@ -256,6 +256,67 @@ describe('security violations on the result', () => {
     });
 });
 
+describe('warnings from the security layer', () => {
+    it('reports a throwing onSecurityViolation callback', async () => {
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const result = await MdTextRender(
+            doc,
+            '[bad](javascript:alert(1))',
+            silent({
+                security: {
+                    enabled: true,
+                    allowedLinkProtocols: ['https:'],
+                    violationMode: 'skip' as const,
+                    onSecurityViolation: () => {
+                        throw new Error('audit sink is down');
+                    },
+                },
+            }),
+        );
+
+        const failures = result.warnings.filter(
+            (w) => w.code === 'SECURITY_CALLBACK_FAILED',
+        );
+        expect(failures.length).toBeGreaterThan(0);
+        expect(failures[0].message).toContain('audit sink is down');
+        // The violation is still handled — the callback failing does not
+        // turn a blocked link into an allowed one.
+        expect(
+            result.violations.some((v) => v.code === 'LINK_PROTOCOL_BLOCKED'),
+        ).toBe(true);
+    });
+
+    it('routes security warnings through silent and onWarning', async () => {
+        const seen: RenderWarning[] = [];
+        const consoleWarn = vi
+            .spyOn(console, 'warn')
+            .mockImplementation(() => {});
+
+        await MdTextRender(
+            new jsPDF({ unit: 'mm', format: 'a4' }),
+            '[bad](javascript:alert(1))',
+            silent({
+                onWarning: (w: RenderWarning) => seen.push(w),
+                security: {
+                    enabled: true,
+                    allowedLinkProtocols: ['https:'],
+                    violationMode: 'skip' as const,
+                    onSecurityViolation: () => {
+                        throw new Error('audit sink is down');
+                    },
+                },
+            }),
+        );
+
+        expect(seen.some((w) => w.code === 'SECURITY_CALLBACK_FAILED')).toBe(
+            true,
+        );
+        // `silent` covers the security layer too.
+        expect(consoleWarn).not.toHaveBeenCalled();
+        consoleWarn.mockRestore();
+    });
+});
+
 describe('the result does not change rendering', () => {
     it('produces identical output to a render whose result is ignored', async () => {
         const a = recordDoc();

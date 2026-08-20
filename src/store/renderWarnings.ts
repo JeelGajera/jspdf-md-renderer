@@ -18,7 +18,7 @@ export type RenderWarningCode =
     | 'IMAGE_LOAD_FAILED'
     | 'IMAGE_RENDER_FAILED'
     | 'IMAGE_ATTRS_IGNORED'
-    | 'SVG_DIMENSIONS_UNKNOWN'
+    | 'IMAGE_SIZE_UNKNOWN'
     | 'TABLE_SKIPPED'
     | 'TABLE_CALLBACK_FAILED'
     | 'TABLE_POSITION_UNKNOWN'
@@ -26,8 +26,7 @@ export type RenderWarningCode =
     | 'CONTENT_DROPPED'
     | 'COMPONENT_OVERRIDE_FAILED'
     | 'SECURITY_CALLBACK_FAILED'
-    | 'SSRF_CHECKS_UNAVAILABLE'
-    | 'FONT_VARIANT_MISSING';
+    | 'SSRF_CHECKS_UNAVAILABLE';
 
 export interface RenderWarning {
     /** Machine-readable identifier for the kind of problem. */
@@ -42,6 +41,14 @@ export interface RenderWarning {
 
 /** Receives each warning as it is recorded. */
 export type WarningListener = (warning: RenderWarning) => void;
+
+/**
+ * Anything a warning can be reported to. Both `RenderWarnings` and the render
+ * store satisfy it, so a helper can accept whichever its caller has to hand.
+ */
+export interface WarningSink {
+    warn(warning: RenderWarning): void;
+}
 
 export class RenderWarnings {
     private readonly warnings: RenderWarning[] = [];

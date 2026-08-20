@@ -29,7 +29,7 @@ export const MdTextParser = async (
     enforceStructuralSafetyLimits(text);
 
     // Pre-process: encode {width=N height=N align=X} into image URL fragments
-    const processedText = preprocessImageAttributes(text);
+    const processedText = preprocessImageAttributes(text, warnings);
 
     let tokens: TokensList;
     try {

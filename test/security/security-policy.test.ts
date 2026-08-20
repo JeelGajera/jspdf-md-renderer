@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+    attachRenderWarnings,
     handleSecurityViolation,
     normalizeSecurityOptions,
     validateResourceUrl,
 } from '../../src/security/security-policy';
+import { RenderWarnings } from '../../src/store/renderWarnings';
 import { SecurityViolationError } from '../../src/types/security';
 import { createSecurity } from '../helpers/security';
 
@@ -109,5 +111,97 @@ describe('security-policy', () => {
         expect(action).toBe('skip');
         expect(warnSpy).toHaveBeenCalled();
         warnSpy.mockRestore();
+    });
+});
+
+/**
+ * The security layer is called from a dozen places that have no reason to
+ * carry a warning collector, so it finds the current render's collector by the
+ * identity of the normalized security options. These tests pin that wiring:
+ * without it, `silent` and `onWarning` would not cover security warnings.
+ */
+describe('security warnings reach the render collector', () => {
+    it('reports a throwing violation callback to the attached collector', () => {
+        const consoleWarn = vi
+            .spyOn(console, 'warn')
+            .mockImplementation(() => {});
+        const warnings = new RenderWarnings({ logToConsole: false });
+        const security = createSecurity({
+            onSecurityViolation: () => {
+                throw new Error('hook failure');
+            },
+        });
+        attachRenderWarnings(security, warnings);
+
+        handleSecurityViolation(security, {
+            code: 'INVALID_URL',
+            type: 'link',
+            message: 'blocked',
+        });
+
+        const reported = warnings.list();
+        expect(reported).toHaveLength(1);
+        expect(reported[0].code).toBe('SECURITY_CALLBACK_FAILED');
+        expect(reported[0].context).toBe('INVALID_URL');
+        // Nothing escapes to the console once a collector is attached.
+        expect(consoleWarn).not.toHaveBeenCalled();
+        consoleWarn.mockRestore();
+    });
+
+    it('reports that IP checks could not run without DNS resolution', async () => {
+        // Simulate a browser runtime: no `process.versions.node`, so the
+        // library cannot resolve a hostname to IPs and the blockPrivateIPs /
+        // blockLinkLocalIPs / blockMetadataIPs checks cannot be enforced.
+        const realNode = process.versions.node;
+        Object.defineProperty(process.versions, 'node', {
+            value: undefined,
+            configurable: true,
+        });
+
+        try {
+            const warnings = new RenderWarnings({ logToConsole: false });
+            const security = createSecurity({ blockPrivateIPs: true });
+            attachRenderWarnings(security, warnings);
+
+            const allowed = await validateResourceUrl(
+                'https://cdn.example.com/a.png',
+                'image',
+                security,
+            );
+
+            // The URL still passes every check that *can* run.
+            expect(allowed).toBe(true);
+            const reported = warnings.list();
+            expect(reported).toHaveLength(1);
+            expect(reported[0].code).toBe('SSRF_CHECKS_UNAVAILABLE');
+            expect(reported[0].context).toBe('cdn.example.com');
+        } finally {
+            Object.defineProperty(process.versions, 'node', {
+                value: realNode,
+                configurable: true,
+            });
+        }
+    });
+
+    it('falls back to the console when called outside a render', () => {
+        const consoleWarn = vi
+            .spyOn(console, 'warn')
+            .mockImplementation(() => {});
+        const security = createSecurity({
+            onSecurityViolation: () => {
+                throw new Error('hook failure');
+            },
+        });
+
+        // No collector attached — these helpers are exported, so a caller can
+        // reach them directly.
+        handleSecurityViolation(security, {
+            code: 'INVALID_URL',
+            type: 'link',
+            message: 'blocked',
+        });
+
+        expect(consoleWarn).toHaveBeenCalled();
+        consoleWarn.mockRestore();
     });
 });
