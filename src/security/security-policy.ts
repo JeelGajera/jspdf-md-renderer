@@ -32,6 +32,7 @@ const DEFAULT_SECURITY: Required<
     maxImageSizeBytes: 10 * 1024 * 1024,
     maxNestedDepth: 20,
     renderTimeoutMs: 30_000,
+    imageFetchTimeoutMs: 10_000,
     violationMode: 'skip',
     placeholderText: '[blocked]',
     placeholderImageText: '[blocked image]',
@@ -87,6 +88,7 @@ export const normalizeSecurityOptions = (
         'maxImageSizeBytes',
         'maxNestedDepth',
         'renderTimeoutMs',
+        'imageFetchTimeoutMs',
     ];
     for (const field of numFields) {
         const value = merged[field] as number;
@@ -111,6 +113,11 @@ export const normalizeSecurityOptions = (
     merged.maxNestedDepth = clampInteger(merged.maxNestedDepth || 0, 0, 100);
     merged.renderTimeoutMs = clampInteger(
         merged.renderTimeoutMs || 0,
+        0,
+        300_000,
+    );
+    merged.imageFetchTimeoutMs = clampInteger(
+        merged.imageFetchTimeoutMs ?? 0,
         0,
         300_000,
     );

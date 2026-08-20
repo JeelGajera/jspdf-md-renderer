@@ -99,6 +99,14 @@ export interface RenderSecurityOptions {
     maxNestedDepth?: number;
     /** Maximum total render time in milliseconds. */
     renderTimeoutMs?: number;
+    /**
+     * Per-request timeout for remote image fetches, in milliseconds.
+     *
+     * `renderTimeoutMs` is only sampled at checkpoints between render phases,
+     * so it cannot interrupt a socket that never answers. This bounds each
+     * individual request. Set to 0 to disable. Default: 10000.
+     */
+    imageFetchTimeoutMs?: number;
     /** Action taken when a violation occurs. */
     violationMode?: ViolationMode;
     /** Placeholder text used for blocked text-like content in placeholder mode. */

@@ -3,7 +3,6 @@ import { MdTokenType } from '../enums/mdTokenType';
 import { ParsedElement } from '../types';
 import {
     handleSecurityViolation,
-    isNodeEnvironment,
     isDataUrl,
     isSvgDataUrl,
     validateResourceUrl,
@@ -43,6 +42,68 @@ const getDataUrlPayloadByteSize = (dataUrl: string): number | null => {
     } catch {
         return null;
     }
+};
+
+/**
+ * Converts a fetched image blob into a `data:` URL.
+ *
+ * `FileReader` is a browser API and is not a Node global — not even in Node 22 —
+ * so the previous FileReader-only implementation threw a ReferenceError on
+ * every server-side render. The error was swallowed by the caller's catch and
+ * downgraded to a warning, so remote images were silently dropped from every
+ * PDF generated outside a browser. Prefer the isomorphic `arrayBuffer()` path
+ * and keep `FileReader` only as a fallback for exotic runtimes.
+ */
+export const blobToDataUrl = async (blob: Blob): Promise<string> => {
+    const mime = blob.type || 'image/png';
+
+    if (typeof blob.arrayBuffer === 'function') {
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        return `data:${mime};base64,${bytesToBase64(bytes)}`;
+    }
+
+    if (typeof FileReader !== 'undefined') {
+        return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                if (typeof reader.result === 'string') {
+                    resolve(reader.result);
+                } else {
+                    reject(
+                        new Error('Failed to convert image to base64 string'),
+                    );
+                }
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    throw new Error(
+        '[jspdf-md-renderer] No supported way to read image data in this runtime.',
+    );
+};
+
+/**
+ * Base64-encodes bytes using whichever primitive the runtime provides.
+ * Chunked so a large image cannot blow the argument limit of `fromCharCode`.
+ */
+const bytesToBase64 = (bytes: Uint8Array): string => {
+    if (typeof Buffer !== 'undefined') {
+        return Buffer.from(bytes).toString('base64');
+    }
+
+    let binary = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+    }
+
+    if (typeof btoa === 'function') return btoa(binary);
+
+    throw new Error(
+        '[jspdf-md-renderer] No base64 encoder available in this runtime.',
+    );
 };
 
 /**
@@ -349,27 +410,7 @@ export const prefetchImages = async (
                         continue;
                     }
 
-                    // Convert blob to base64
-                    const base64 = await new Promise<string>(
-                        (resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                                if (typeof reader.result === 'string') {
-                                    resolve(reader.result);
-                                } else {
-                                    reject(
-                                        new Error(
-                                            'Failed to convert image to base64 string',
-                                        ),
-                                    );
-                                }
-                            };
-                            reader.onerror = reject;
-                            reader.readAsDataURL(blob);
-                        },
-                    );
-
-                    element.data = base64;
+                    element.data = await blobToDataUrl(blob);
                 }
 
                 // If in browser, asynchronously rasterize SVG to a transparent PNG for jsPDF's synchronous engine
@@ -429,27 +470,103 @@ export const prefetchImages = async (
     }
 };
 
+/** Upper bound on redirect hops we will follow before giving up. */
+const MAX_REDIRECT_HOPS = 5;
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
 /**
- * Best-effort remote image fetch hardening.
- * In Node, re-validates URL immediately before fetch to reduce DNS rebind window.
- * In browser runtimes, or when security is undefined/disabled, delegates to normal fetch.
+ * Remote image fetch hardening.
+ *
+ * Validating only the URL the markdown supplied is not enough: `fetch` follows
+ * redirects transparently, so an allowed host could 302 the request to any
+ * internal address and the response body would be embedded in the PDF with no
+ * check at all. Every hop is therefore resolved and re-validated here, with
+ * redirects taken manually so the chain cannot outrun the policy.
+ *
+ * A timeout is applied per request, because `security.renderTimeoutMs` is only
+ * sampled at checkpoints between render phases and cannot interrupt a socket
+ * that never answers.
  */
 export const secureImageFetch = async (
     url: string,
     security?: RenderSecurityOptions,
 ): Promise<Response> => {
-    if (security?.enabled && isNodeEnvironment()) {
-        const stillAllowed = await validateResourceUrl(
-            url,
-            'image',
-            security,
-            'pre-fetch-recheck',
+    const enforce = security?.enabled === true;
+    const timeoutMs = enforce ? (security?.imageFetchTimeoutMs ?? 0) : 0;
+
+    let currentUrl = url;
+
+    for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop++) {
+        if (enforce) {
+            // Re-validate immediately before each request. On the first hop
+            // this also narrows the DNS-rebind window; on later hops it is the
+            // only thing standing between a redirect and an internal service.
+            const allowed = await validateResourceUrl(
+                currentUrl,
+                'image',
+                security,
+                hop === 0 ? 'pre-fetch-recheck' : 'redirect-recheck',
+            );
+            if (!allowed) {
+                throw new Error(
+                    `[jspdf-md-renderer] URL blocked on ${
+                        hop === 0 ? 'pre-fetch recheck' : `redirect hop ${hop}`
+                    }: ${currentUrl}`,
+                );
+            }
+        }
+
+        const response = await fetchWithTimeout(
+            currentUrl,
+            timeoutMs,
+            enforce ? 'manual' : 'follow',
         );
-        if (!stillAllowed) {
+
+        if (!enforce || !REDIRECT_STATUSES.has(response.status)) {
+            return response;
+        }
+
+        const location = response.headers.get('location');
+        if (!location) return response;
+
+        // Resolve relative redirect targets against the URL that issued them.
+        try {
+            currentUrl = new URL(location, currentUrl).toString();
+        } catch {
             throw new Error(
-                `[jspdf-md-renderer] URL blocked on pre-fetch recheck: ${url}`,
+                `[jspdf-md-renderer] Image redirect target could not be parsed: ${location}`,
             );
         }
     }
-    return fetch(url);
+
+    throw new Error(
+        `[jspdf-md-renderer] Image request exceeded ${MAX_REDIRECT_HOPS} redirects: ${url}`,
+    );
+};
+
+const fetchWithTimeout = async (
+    url: string,
+    timeoutMs: number,
+    redirect: RequestRedirect,
+): Promise<Response> => {
+    if (timeoutMs <= 0 || typeof AbortController === 'undefined') {
+        return fetch(url, { redirect });
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(url, { redirect, signal: controller.signal });
+    } catch (error) {
+        if ((error as Error)?.name === 'AbortError') {
+            throw new Error(
+                `[jspdf-md-renderer] Image request timed out after ${timeoutMs}ms: ${url}`,
+                { cause: error },
+            );
+        }
+        throw error;
+    } finally {
+        clearTimeout(timer);
+    }
 };
