@@ -71,7 +71,8 @@ Split rendering changes into two kinds:
   opt-in until the next major.
 
 `spacing.blankLines` and `breaks` are the current examples of the second kind.
-See the deprecation table in `CHANGELOG.md`.
+See the scheduled default changes table in the
+[Options Reference](https://jeelgajera.github.io/jspdf-md-renderer/api/options).
 
 ## Tests
 

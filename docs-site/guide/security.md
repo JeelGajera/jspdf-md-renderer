@@ -81,6 +81,16 @@ security: {
 
 These checks include IPv4 and IPv6/private-mapped variants.
 
+### Redirects
+
+Remote image fetches follow redirects manually rather than transparently. Every
+hop is re-validated against the same protocol, domain and SSRF rules as the
+original URL, and the chain is bounded to 5 hops.
+
+This matters because a permitted host would otherwise be able to redirect the
+request to an address the policy forbids: validating only the URL the Markdown
+supplied is not enough when the fetch itself follows the redirect.
+
 ## Limit Controls (DoS)
 
 ```ts
@@ -91,12 +101,23 @@ security: {
   maxImageSizeBytes: 10 * 1024 * 1024,
   maxNestedDepth: 20,
   renderTimeoutMs: 30_000,
+  imageFetchTimeoutMs: 10_000,
 }
 ```
 
 Notes:
 - `maxImageSizeBytes` for data URLs uses decoded payload bytes.
 - depth/image-count limits sanitize the parsed tree before rendering.
+- `maxNestedDepth` counts **structural containers** — lists, list items,
+  blockquotes and tables. Inline wrappers such as emphasis and links do not
+  count, so the value matches Markdown nesting as an author would count it.
+  Exceeding it drops the nested content, raises a
+  `MAX_NESTED_DEPTH_EXCEEDED` violation, and reports how many nodes were
+  dropped, so the omission is never silent.
+- `imageFetchTimeoutMs` bounds each individual remote image request; `0`
+  disables it. It is separate from `renderTimeoutMs`, which is only sampled at
+  checkpoints between render phases and so cannot interrupt a request to a host
+  that never responds.
 
 ## Custom Hook Controls
 
@@ -140,5 +161,6 @@ security: {
   maxImageSizeBytes: 10 * 1024 * 1024,
   maxNestedDepth: 20,
   renderTimeoutMs: 30_000,
+  imageFetchTimeoutMs: 10_000,
 }
 ```

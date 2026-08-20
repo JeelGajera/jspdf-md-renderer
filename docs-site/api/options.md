@@ -82,6 +82,41 @@ Spacing precedence:
 - `spacing.betweenListItems` has higher priority.
 - `list.itemSpacing` is used only when `spacing.betweenListItems` is not set.
 
+### Blank Lines Between Blocks
+
+```ts
+spacing: {
+  blankLines: 'preserve', // 'preserve' | 'collapse'
+}
+```
+
+Controls whether blank lines in the Markdown source add vertical space on top of
+the configured `spacing.*` values.
+
+- `'preserve'` (default) — each blank line adds a line of space in addition to
+  the `spacing.*` value. This is the historical behaviour, so existing documents
+  render unchanged.
+- `'collapse'` — blank lines add nothing, so the `spacing.*` options alone
+  determine the gap between blocks. The gap no longer varies with how many blank
+  lines the author happened to leave in the source.
+
+Use `'collapse'` when you want spacing to be fully determined by your
+configuration. See [Scheduled default changes](#scheduled-default-changes).
+
+### Line Breaks
+
+```ts
+breaks: true // top-level option, not nested under `page`
+```
+
+Controls how a single newline inside a paragraph is rendered.
+
+- `true` (default) — renders a hard line break. Historical behaviour.
+- `false` — renders a space, which is what CommonMark specifies for a soft line
+  break.
+
+An explicit `<br>` always breaks the line regardless of this setting.
+
 ### Blockquotes
 
 ```ts
@@ -120,6 +155,29 @@ Tables follow the same content column as other block elements:
 - left margin follows `page.xpading + indent`
 - width is constrained to `page.maxContentWidth - indent`
 
+Column alignment is read from the Markdown delimiter row and applied
+automatically — see [Tables](/elements/tables).
+
+## Scheduled Default Changes
+
+Two options currently default to the behaviour of 4.1.x so that upgrading does
+not move anything on an existing page. Their defaults are scheduled to change in
+a future release. Setting them explicitly makes that upgrade a no-op.
+
+| Option | Current default | Future default | Effect of the future value |
+| --- | --- | --- | --- |
+| `spacing.blankLines` | `'preserve'` | `'collapse'` | Blank lines stop adding vertical space, so `spacing.*` alone decides block gaps |
+| `breaks` | `true` | `false` | A single newline renders as a space rather than a hard break, per CommonMark |
+
+```ts
+// Opt in to the future behaviour today
+const options = {
+  // ...other options
+  spacing: { blankLines: 'collapse' },
+  breaks: false,
+}
+```
+
 ## Security Options (opt-in)
 
 Security is disabled by default for backward compatibility.
@@ -150,8 +208,9 @@ security: {
   maxMarkdownLength: 500_000,
   maxImageCount: 200,
   maxImageSizeBytes: 10 * 1024 * 1024,
-  maxNestedDepth: 20,
+  maxNestedDepth: 20,        // structural containers, not AST levels
   renderTimeoutMs: 30_000,
+  imageFetchTimeoutMs: 10_000, // per remote image request; 0 disables
 
   // Hooks
   validateUrl: async (url, type) => true,
@@ -168,6 +227,28 @@ security: {
 - `skip`: block unsafe item and continue rendering.
 - `throw`: throw `SecurityViolationError` and abort render.
 - `placeholder`: render safe placeholder text instead of blocked content where supported.
+
+### Nesting Depth Semantics
+
+`maxNestedDepth` counts **structural containers** — lists, list items,
+blockquotes and tables. Inline wrappers such as emphasis or links do not count
+towards it, so the value corresponds to Markdown nesting as an author would
+count it.
+
+When the limit is exceeded the nested content is dropped, a
+`MAX_NESTED_DEPTH_EXCEEDED` violation is raised, and the number of dropped nodes
+is reported as a warning so the omission is never silent.
+
+### Remote Image Fetching
+
+`imageFetchTimeoutMs` bounds each individual remote image request. It is separate
+from `renderTimeoutMs`, which is only sampled at checkpoints between render
+phases and therefore cannot interrupt a request to a host that never responds.
+
+Redirects are followed manually rather than transparently: every hop is
+re-validated against the same protocol, domain and SSRF rules as the original
+URL, with the chain bounded to 5 hops. A host that is permitted cannot redirect
+the fetch to one that is not.
 
 ### Domain Allowlist Semantics
 
