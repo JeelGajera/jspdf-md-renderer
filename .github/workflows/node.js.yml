@@ -18,8 +18,10 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                # Active LTS lines plus current. See https://nodejs.org/en/about/releases/
-                node-version: [20.x, 22.x, 24.x]
+                # Supported Node lines. Node 20 reached end-of-life in April
+                # 2026 and is no longer offered by the runners.
+                # See https://nodejs.org/en/about/releases/
+                node-version: [22.x, 24.x]
 
         steps:
             - uses: actions/checkout@v4
@@ -31,13 +33,7 @@ jobs:
             - run: npm ci
             - run: npm run lint
             - run: npm run typecheck
-            # The library runs on Node 20, but the build tool does not: tsdown
-            # declares engines ^22.18.0 || >=24.11.0, and on older Node it falls
-            # back to loading its config through `unrun`, an optional peer that
-            # is not installed. The `package` job below builds and smoke-tests
-            # the real artifact, so build coverage is not lost here.
             - run: npm run build
-              if: matrix.node-version != '20.x'
             - run: npm test
             - name: Upload coverage artifact
               if: always()
