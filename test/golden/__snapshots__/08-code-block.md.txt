@@ -1,14 +1,14 @@
 pages: 1
-endY: 51.848
+endY: 54.817
 
-p1 roundedRect x=10 y=10 w=190 h=24.065 rx=2 ry=2 style=FD fill=#f4f7f9 draw=#e0e2e8
-p1 text        text="js" x=191.767 y=14 baseline=top font=courier/normal size=10 color=#666666
-p1 text        text="const value = 1;" x=14 y=14 baseline=top font=courier/normal size=9.9 color=#000000
-p1 text        text="function example(input) {" x=14 y=18.016 baseline=top font=courier/normal size=9.9 color=#000000
-p1 text        text="  return input * 2;" x=14 y=22.033 baseline=top font=courier/normal size=9.9 color=#000000
-p1 text        text="}" x=14 y=26.049 baseline=top font=courier/normal size=9.9 color=#000000
-p1 text        text="Text" x=10 y=44.968 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="after" x=18.149 y=44.968 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="the" x=26.958 y=44.968 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="code" x=33.4 y=44.968 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="block." x=42.83 y=44.968 baseline=top font=helvetica/normal size=11 color=#000000
+p1 roundedRect x=10 y=10 w=190 h=27.034 rx=2 ry=2 style=FD fill=#f4f7f9 draw=#e0e2e8
+p1 text        text="js" x=192.438 y=14 baseline=top font=courier/normal size=8.415 color=#666666
+p1 text        text="const value = 1;" x=14 y=16.969 baseline=top font=courier/normal size=9.9 color=#000000
+p1 text        text="function example(input) {" x=14 y=20.985 baseline=top font=courier/normal size=9.9 color=#000000
+p1 text        text="  return input * 2;" x=14 y=25.001 baseline=top font=courier/normal size=9.9 color=#000000
+p1 text        text="}" x=14 y=29.018 baseline=top font=courier/normal size=9.9 color=#000000
+p1 text        text="Text" x=10 y=47.936 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="after" x=18.149 y=47.936 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="the" x=26.958 y=47.936 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="code" x=33.4 y=47.936 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="block." x=42.83 y=47.936 baseline=top font=helvetica/normal size=11 color=#000000

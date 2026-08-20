@@ -13,6 +13,8 @@ export type ParsedElement = {
     text?: string;
     header?: ParsedElement[];
     rows?: ParsedElement[][];
+    /** Per-column alignment for tables, from the markdown delimiter row. */
+    columnAlign?: Array<'left' | 'center' | 'right' | null>;
     data?: string;
     // Image sizing attributes (in document units, e.g. mm for A4)
     width?: number;

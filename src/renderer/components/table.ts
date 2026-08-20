@@ -29,6 +29,32 @@ const resolveAutoTable = (): AutoTableFn => {
     );
 };
 
+/**
+ * Flattens a cell's inline tokens to plain text.
+ *
+ * autoTable draws cell content itself and has no notion of mixed inline runs,
+ * so emphasis cannot be reproduced faithfully here. Previously the cell's raw
+ * markdown source was passed straight through and readers saw literal `**bold**`
+ * and `[label](url)` in the output. Rendering the text without its markup is a
+ * strictly better approximation; full inline styling inside cells needs a
+ * custom cell renderer and is tracked for a later release.
+ */
+const cellToText = (cell: ParsedElement): string => {
+    const fromTokens = (nodes: ParsedElement[] | undefined): string =>
+        (nodes ?? [])
+            .map((node) => {
+                if (node.items && node.items.length > 0) {
+                    return fromTokens(node.items);
+                }
+                if (node.type === 'br') return ' ';
+                return node.content ?? node.text ?? '';
+            })
+            .join('');
+
+    const text = fromTokens(cell.items);
+    return (text || cell.content || '').trim();
+};
+
 const renderTable = (
     doc: jsPDF,
     element: ParsedElement,
@@ -57,12 +83,22 @@ const renderTable = (
         while (normalized.length < columnCount) {
             normalized.push({ type: 'table_cell', content: '' });
         }
-        return normalized
-            .slice(0, columnCount)
-            .map((cell) => cell.content || '');
+        return normalized.slice(0, columnCount).map(cellToText);
     });
 
-    const head = [element.header.map((h) => h.content || '')];
+    const head = [element.header.map(cellToText)];
+
+    // Column alignment from the markdown delimiter row (`|:--|--:|`). It was
+    // parsed by marked but never read, so every column rendered left-aligned.
+    const columnStyles: Record<
+        number,
+        { halign: 'left' | 'center' | 'right' }
+    > = {};
+    (element.columnAlign ?? []).forEach((align, index) => {
+        if (align === 'center' || align === 'right' || align === 'left') {
+            columnStyles[index] = { halign: align };
+        }
+    });
 
     // User options
     const userTableOptions = options.table || {};
@@ -97,6 +133,7 @@ const renderTable = (
         head,
         body: rows,
         startY: store.Y,
+        ...(Object.keys(columnStyles).length > 0 ? { columnStyles } : {}),
         margin: {
             left: marginLeft,
             right: Math.max(

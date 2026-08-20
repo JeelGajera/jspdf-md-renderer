@@ -38,6 +38,8 @@ export interface StyledWordInfo {
     isBr?: boolean;
     /** Whether this word was followed by whitespace in the source Markdown */
     hasTrailingSpace?: boolean;
+    /** Whether this word is inside a GFM strikethrough (`~~text~~`) */
+    isStrikethrough?: boolean;
 }
 
 /**

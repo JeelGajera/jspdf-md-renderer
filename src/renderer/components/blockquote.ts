@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { ParsedElement } from '../../types';
 import { RenderStore } from '../../store/renderStore';
+import { getPageOpCount, moveOpsBefore } from '../../utils/content-stream';
 
 const renderBlockquote = (
     doc: jsPDF,
@@ -32,6 +33,16 @@ const renderBlockquote = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const startPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
 
+    // A blockquote only learns how tall it is after laying out its children,
+    // so its background can only be drawn afterwards — and a fill emitted after
+    // a glyph run paints straight over it. Setting blockquote.backgroundColor
+    // therefore used to erase the quote's own text. Remember where this
+    // blockquote's content begins on each page so the decorations can be moved
+    // behind it once the extent is known.
+    const insertAt = new Map<number, number>();
+    const startIndex = getPageOpCount(doc, startPage);
+    if (startIndex !== null) insertAt.set(startPage, startIndex);
+
     // Render children
     if (element.items && element.items.length > 0) {
         element.items.forEach((item) => {
@@ -49,6 +60,20 @@ const renderBlockquote = (
     doc.setDrawColor(barColor);
     doc.setLineWidth(barWidth);
     const bgColor = bqOpts.backgroundColor;
+
+    // Any page after the first holds only this blockquote's content, so its
+    // decorations belong at the very start of that page's own content.
+    for (let p = startPage + 1; p <= endPage; p++) {
+        const start = store.getPageContentStart(p);
+        if (start !== undefined) insertAt.set(p, start);
+    }
+
+    // Where each page's drawing ends before the decorations are emitted.
+    const appendedFrom = new Map<number, number>();
+    for (let p = startPage; p <= endPage; p++) {
+        const count = getPageOpCount(doc, p);
+        if (count !== null) appendedFrom.set(p, count);
+    }
 
     for (let p = startPage; p <= endPage; p++) {
         doc.setPage(p);
@@ -72,6 +97,12 @@ const renderBlockquote = (
         }
 
         doc.line(barX, lineTop, barX, lineBottom);
+    }
+
+    // Slide the decorations behind the content they enclose.
+    for (const [page, from] of appendedFrom) {
+        const to = insertAt.get(page);
+        if (to !== undefined) moveOpsBefore(doc, page, from, to);
     }
 
     // Ensure the blockquote effectively "claims" the vertical space up to the cursor

@@ -18,4 +18,24 @@ export enum MdTokenType {
     Raw = 'raw',
     Text = 'text',
     Br = 'br',
+    Del = 'del',
+    Escape = 'escape',
+    Def = 'def',
+    /** Parsed but intentionally renders nothing (e.g. link reference definitions). */
+    Noop = 'noop',
 }
+
+/**
+ * Block-level tokens that the inline layout engine cannot represent.
+ *
+ * `flattenToWords` builds words from a node's `content`/`text`, so a token that
+ * carries its payload elsewhere — a fenced code block keeps its source in
+ * `code`, a table in `header`/`rows` — produces no words and is dropped without
+ * a warning. These must always be delegated to their own component renderer.
+ */
+export const NON_INLINE_TYPES: ReadonlySet<string> = new Set<string>([
+    MdTokenType.Code,
+    MdTokenType.Table,
+    MdTokenType.Hr,
+    MdTokenType.Blockquote,
+]);

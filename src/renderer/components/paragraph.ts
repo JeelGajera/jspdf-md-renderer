@@ -43,11 +43,13 @@ const renderParagraph = (
         const inlineTypes = [
             MdTokenType.Strong,
             MdTokenType.Em,
+            MdTokenType.Del,
             MdTokenType.Text,
             MdTokenType.CodeSpan,
             MdTokenType.Link,
             MdTokenType.Image,
             MdTokenType.Br,
+            MdTokenType.Noop,
         ];
         const hasBlockItems = element.items.some(
             (item) => !inlineTypes.includes(item.type as MdTokenType),

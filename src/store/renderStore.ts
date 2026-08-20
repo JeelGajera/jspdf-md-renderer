@@ -5,6 +5,12 @@ export class RenderStore {
     private lastContentY_: number = 0;
     private options_: RenderOption;
     private inlineLock: boolean = false;
+    /**
+     * Index into a page's content stream at which this render's own drawing
+     * begins. Lets containers insert a background ahead of their children
+     * without disturbing anything drawn on the page beforehand.
+     */
+    private pageContentStarts_: Map<number, number> = new Map();
 
     constructor(options: RenderOption) {
         this.options_ = options;
@@ -80,6 +86,18 @@ export class RenderStore {
      */
     public get lastContentY(): number {
         return this.lastContentY_;
+    }
+
+    /** Records where this render's content begins on `page`. */
+    public recordPageContentStart(page: number, opIndex: number) {
+        if (!this.pageContentStarts_.has(page)) {
+            this.pageContentStarts_.set(page, opIndex);
+        }
+    }
+
+    /** Where this render's content begins on `page`, if known. */
+    public getPageContentStart(page: number): number | undefined {
+        return this.pageContentStarts_.get(page);
     }
 
     // Convenience methods to get individual x and y values
