@@ -10,6 +10,13 @@ Conventions for anyone — human or agent — working in this repository.
 - **No AI attribution.** Do not add `Co-Authored-By: Claude …`, `Claude-Session:`,
   `Generated with …` or any similar trailer to commit messages. An agent working
   on someone's behalf commits as that person, with no extra trailers.
+- **No tooling signatures.** If the environment has `commit.gpgsign` on with a
+  signing key that is not the contributor's own (agent sandboxes often ship
+  one), turn it off for this repo — `git config commit.gpgsign false` — before
+  committing. A commit signed by a key GitHub cannot tie to the author shows a
+  red *Unverified* badge; an unsigned commit shows no badge at all, which is
+  the better of the two. Check with `git config --show-origin --get
+  commit.gpgsign`.
 - **Conventional Commits** for the subject: `fix(renderer): …`, `feat(layout): …`,
   `build:`, `test:`, `docs:`, `ci:`, `chore:`. Scope where it clarifies.
 - Explain what was wrong and what the user-visible effect of the change is, not
