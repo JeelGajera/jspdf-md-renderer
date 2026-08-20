@@ -1,0 +1,22 @@
+pages: 1
+endY: 90.782
+
+p1 text        text="Heading" x=10 y=10 baseline=top font=helvetica/normal size=24 color=#000000
+p1 text        text="one" x=43.613 y=10 baseline=top font=helvetica/normal size=24 color=#000000
+p1 text        text="Heading" x=10 y=20.467 baseline=top font=helvetica/normal size=20 color=#000000
+p1 text        text="two" x=38.011 y=20.467 baseline=top font=helvetica/normal size=20 color=#000000
+p1 text        text="Heading" x=10 y=29.522 baseline=top font=helvetica/normal size=17 color=#000000
+p1 text        text="three" x=33.809 y=29.522 baseline=top font=helvetica/normal size=17 color=#000000
+p1 text        text="Heading" x=10 y=37.519 baseline=top font=helvetica/normal size=15 color=#000000
+p1 text        text="four" x=31.008 y=37.519 baseline=top font=helvetica/normal size=15 color=#000000
+p1 text        text="Heading" x=10 y=44.811 baseline=top font=helvetica/normal size=13 color=#000000
+p1 text        text="five" x=28.207 y=44.811 baseline=top font=helvetica/normal size=13 color=#000000
+p1 text        text="Heading" x=10 y=51.397 baseline=top font=helvetica/normal size=12 color=#000000
+p1 text        text="six" x=26.806 y=51.397 baseline=top font=helvetica/normal size=12 color=#000000
+p1 text        text="Setext" x=10 y=65.533 baseline=top font=helvetica/normal size=24 color=#000000
+p1 text        text="style" x=36.247 y=65.533 baseline=top font=helvetica/normal size=24 color=#000000
+p1 text        text="Body" x=10 y=83.902 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="paragraph" x=19.857 y=83.902 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="following" x=38.444 y=83.902 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="the" x=54.51 y=83.902 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="headings." x=60.952 y=83.902 baseline=top font=helvetica/normal size=11 color=#000000

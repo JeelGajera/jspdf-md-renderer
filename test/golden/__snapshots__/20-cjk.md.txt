@@ -1,0 +1,5 @@
+pages: 1
+endY: 29.194
+
+p1 text        text="这是一个很长的中文段落，用来测试没有空格的语言如何换行处理，应该按字符切分。" x=10 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="日本語のテキストもテストします。" x=10 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000

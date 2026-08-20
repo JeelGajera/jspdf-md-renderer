@@ -1,0 +1,35 @@
+pages: 1
+endY: 51.597
+
+p1 text        text="• " x=18 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="first" x=20.445 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="item" x=27.779 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="• " x=18 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="second" x=20.445 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="item" x=33.949 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="that" x=42.331 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="is" x=49.859 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="long" x=53.74 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="enough" x=62.083 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="to" x=75.975 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="wrap" x=80.283 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="onto" x=89.713 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="a" x=98.289 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="second" x=101.51 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="line" x=115.014 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="in" x=122.076 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="the" x=126.151 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="rendered" x=132.593 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="output" x=149.046 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="• " x=18 y=20.866 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="third" x=20.445 y=20.866 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="item" x=29.021 y=20.866 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="• " x=26 y=26.298 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="nested" x=28.445 y=26.298 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="one" x=41.095 y=26.298 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="• " x=26 y=31.731 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="nested" x=28.445 y=31.731 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="two" x=41.095 y=31.731 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="• " x=34 y=37.164 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="deeper" x=36.445 y=37.164 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="one" x=49.483 y=37.164 baseline=top font=helvetica/normal size=11 color=#000000

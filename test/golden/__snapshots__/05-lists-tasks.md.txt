@@ -1,0 +1,24 @@
+pages: 1
+endY: 29.298
+
+p1 rect        x=18 y=9.19 w=5.5 h=5.5 fill=#000000 draw=#545454
+p1 text        text="[" x=25.5 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="]" x=27.673 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="unchecked" x=29.846 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="task" x=49.559 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 rect        x=18 y=14.623 w=5.5 h=5.5 fill=#000000 draw=#545454
+p1 line        x1=19.1 y1=17.648 x2=20.2 y2=19.023 draw=#2b6baf width=0.5
+p1 line        x1=20.2 y1=19.023 x2=22.4 y2=15.723 draw=#2b6baf width=0.5
+p1 text        text="[x]" x=25.5 y=15.433 baseline=top font=helvetica/normal size=11 color=#959595
+p1 text        text="checked" x=30.7 y=15.433 baseline=top font=helvetica/normal size=11 color=#949494
+p1 text        text="task" x=46.145 y=15.433 baseline=top font=helvetica/normal size=11 color=#939393
+p1 rect        x=18 y=20.056 w=5.5 h=5.5 fill=#000000 draw=#545454
+p1 text        text="[" x=25.5 y=20.866 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="]" x=27.673 y=20.866 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="task" x=29.846 y=20.866 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="with" x=38.034 y=20.866 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="bold" x=45.989 y=20.866 baseline=top font=helvetica/bold size=11 color=#000000
+p1 text        text="and" x=55.264 y=20.866 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="a" x=62.753 y=20.866 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="link" x=65.974 y=20.866 baseline=top font=helvetica/normal size=11 color=#0000ff
+p1 link        x=65.974 y=20.866 w=5.782 h=3.881 url=https://example.com

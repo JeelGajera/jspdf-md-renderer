@@ -1,0 +1,3 @@
+- [ ] unchecked task
+- [x] checked task
+- [ ] task with **bold** and a [link](https://example.com)

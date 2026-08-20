@@ -1,0 +1,44 @@
+pages: 1
+endY: 165.893
+
+p1 text        text="Report" x=10 y=10 baseline=top font=helvetica/normal size=24 color=#000000
+p1 text        text="Introduction" x=10 y=28.369 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="paragraph" x=31.227 y=28.369 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="with" x=49.814 y=28.369 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="emphasis" x=57.77 y=28.369 baseline=top font=helvetica/bold size=11 color=#000000
+p1 text        text="and" x=76.668 y=28.369 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="a" x=84.157 y=28.369 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="reference" x=87.378 y=28.369 baseline=top font=helvetica/normal size=11 color=#0000ff
+p1 link        x=87.378 y=28.369 w=16.26 h=3.881 url=https://example.com
+p1 text        text="." x=103.638 y=28.369 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="Findings" x=10 y=40.682 baseline=top font=helvetica/normal size=20 color=#000000
+p1 text        text="1. " x=18 y=55.171 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="First" x=22.307 y=55.171 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="finding" x=30.922 y=55.171 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="2. " x=18 y=60.603 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="Second" x=22.307 y=60.603 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="finding" x=36.433 y=60.603 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="• " x=26 y=66.036 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="supporting" x=28.445 y=66.036 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="detail" x=47.498 y=66.036 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="• " x=26 y=71.469 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="another" x=28.445 y=71.469 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="detail" x=42.57 y=71.469 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="A" x=18 y=88.334 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="quoted" x=21.648 y=88.334 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="observation." x=34.492 y=88.334 baseline=top font=helvetica/normal size=11 color=#000000
+p1 line        x1=14 y1=88.334 x2=14 y2=92.215 draw=#aaaaaa width=1
+p1 rect        x=10 y=103.648 w=98.509 h=7.585 style=F fill=#287fba draw=#c6c6c6
+p1 text        text="Metric" x=11.764 y=108.41 font=helvetica/bold size=10 color=#ffffff
+p1 rect        x=108.509 y=103.648 w=91.491 h=7.585 style=F fill=#287fba draw=#c6c6c6
+p1 text        text="Value" x=110.273 y=108.41 font=helvetica/bold size=10 color=#ffffff
+p1 rect        x=10 y=111.232 w=98.509 h=7.585 style=F fill=#f4f4f4 draw=#c6c6c6
+p1 text        text="Count" x=11.764 y=115.995 font=helvetica/normal size=10 color=#505050
+p1 rect        x=108.509 y=111.232 w=91.491 h=7.585 style=F fill=#f4f4f4 draw=#c6c6c6
+p1 text        text="42" x=110.273 y=115.995 font=helvetica/normal size=10 color=#505050
+p1 roundedRect x=10 y=127.25 w=190 h=12.016 rx=2 ry=2 style=FD fill=#f4f7f9 draw=#e0e2e8
+p1 text        text="sh" x=191.767 y=131.25 baseline=top font=courier/normal size=10 color=#666666
+p1 text        text="npm install jspdf-md-renderer" x=14 y=131.25 baseline=top font=courier/normal size=9.9 color=#000000
+p1 line        x1=10 y1=147.699 x2=200.002 y2=147.699 draw=#000000 width=0.1
+p1 text        text="Closing" x=10 y=159.012 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="paragraph." x=23.931 y=159.012 baseline=top font=helvetica/normal size=11 color=#000000

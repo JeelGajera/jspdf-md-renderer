@@ -1,0 +1,17 @@
+pages: 1
+endY: 54.492
+
+p1 text        text="Outer" x=18 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="quote." x=28.749 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="Inner" x=26 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="quote." x=35.857 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 line        x1=22 y1=22.313 x2=22 y2=26.194 draw=#aaaaaa width=1
+p1 text        text="• " x=26 y=37.627 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="quoted" x=28.445 y=37.627 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="list" x=41.289 y=37.627 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="item" x=47.11 y=37.627 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="• " x=26 y=43.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="another" x=28.445 y=43.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="quoted" x=42.57 y=43.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="item" x=55.415 y=43.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 line        x1=14 y1=10 x2=14 y2=48.492 draw=#aaaaaa width=1

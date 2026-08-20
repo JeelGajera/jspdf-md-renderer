@@ -1,0 +1,21 @@
+pages: 1
+endY: 35.754
+
+p1 rect        x=10 y=10 w=48.003 h=7.585 style=F fill=#287fba draw=#c6c6c6
+p1 text        text="Column A" x=11.764 y=14.762 font=helvetica/bold size=10 color=#ffffff
+p1 rect        x=58.003 y=10 w=44.287 h=7.585 style=F fill=#287fba draw=#c6c6c6
+p1 text        text="Column B" x=59.767 y=14.762 font=helvetica/bold size=10 color=#ffffff
+p1 rect        x=102.29 y=10 w=97.71 h=7.585 style=F fill=#287fba draw=#c6c6c6
+p1 text        text="Column C" x=104.054 y=14.762 font=helvetica/bold size=10 color=#ffffff
+p1 rect        x=10 y=17.585 w=48.003 h=7.585 style=F fill=#f4f4f4 draw=#c6c6c6
+p1 text        text="left" x=11.764 y=22.347 font=helvetica/normal size=10 color=#505050
+p1 rect        x=58.003 y=17.585 w=44.287 h=7.585 style=F fill=#f4f4f4 draw=#c6c6c6
+p1 text        text="center" x=59.767 y=22.347 font=helvetica/normal size=10 color=#505050
+p1 rect        x=102.29 y=17.585 w=97.71 h=7.585 style=F fill=#f4f4f4 draw=#c6c6c6
+p1 text        text="right" x=104.054 y=22.347 font=helvetica/normal size=10 color=#505050
+p1 rect        x=10 y=25.169 w=48.003 h=7.585 style=F fill=#ffffff draw=#c6c6c6
+p1 text        text="**bold cell**" x=11.764 y=29.932 font=helvetica/normal size=10 color=#505050
+p1 rect        x=58.003 y=25.169 w=44.287 h=7.585 style=F fill=#ffffff draw=#c6c6c6
+p1 text        text="`code`" x=59.767 y=29.932 font=helvetica/normal size=10 color=#505050
+p1 rect        x=102.29 y=25.169 w=97.71 h=7.585 style=F fill=#ffffff draw=#c6c6c6
+p1 text        text="[link](https://example.com)" x=104.054 y=29.932 font=helvetica/normal size=10 color=#505050

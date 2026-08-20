@@ -1,0 +1,21 @@
+pages: 1
+endY: 54.029
+
+p1 text        text="1. " x=18 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="one" x=22.307 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="2. " x=18 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="two" x=22.307 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="1. " x=26 y=20.866 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="nested" x=30.307 y=20.866 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="a" x=42.958 y=20.866 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="2. " x=26 y=26.298 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="nested" x=30.307 y=26.298 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="b" x=42.958 y=26.298 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="3. " x=18 y=34.731 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="three" x=22.307 y=34.731 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="4. " x=18 y=40.164 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="starts" x=22.307 y=40.164 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="at" x=32.863 y=40.164 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="five" x=37.17 y=40.164 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="5. " x=18 y=45.597 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="six" x=22.307 y=45.597 baseline=top font=helvetica/normal size=11 color=#000000
