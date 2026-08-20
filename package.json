@@ -55,11 +55,6 @@
         "url": "https://github.com/JeelGajera/jspdf-md-renderer/issues"
     },
     "homepage": "https://jeelgajera.github.io/jspdf-md-renderer/",
-    "dependencies": {
-        "jspdf": "^4.2.1",
-        "jspdf-autotable": "^5.0.7",
-        "marked": "^18.0.2"
-    },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@types/node": "^25.6.0",
@@ -71,6 +66,9 @@
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.5",
         "globals": "^17.5.0",
+        "jspdf": "^4.2.1",
+        "jspdf-autotable": "^5.0.7",
+        "marked": "^18.0.2",
         "prettier": "^3.8.3",
         "tsdown": "^0.22.0",
         "typescript": "^6.0.3",
@@ -82,5 +80,10 @@
     "sideEffects": false,
     "engines": {
         "node": ">=22"
+    },
+    "peerDependencies": {
+        "jspdf": "^2 || ^3 || ^4",
+        "jspdf-autotable": "^3 || ^4 || ^5",
+        "marked": "^18"
     }
 }
