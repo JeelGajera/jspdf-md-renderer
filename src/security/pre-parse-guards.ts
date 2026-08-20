@@ -94,8 +94,8 @@ export const enforceAbsoluteMarkdownLengthLimit = (text: string): void => {
     if (text.length > ABSOLUTE_MAX_MARKDOWN_LENGTH) {
         throw new MarkdownParsingLimitError(
             `[jspdf-md-renderer] Markdown input length (${text.length}) exceeds the ` +
-            `absolute hard limit (${ABSOLUTE_MAX_MARKDOWN_LENGTH} characters). This limit ` +
-            `is enforced unconditionally and cannot be disabled via the 'security' option.`,
+                `absolute hard limit (${ABSOLUTE_MAX_MARKDOWN_LENGTH} characters). This limit ` +
+                `is enforced unconditionally and cannot be disabled via the 'security' option.`,
         );
     }
 };
@@ -110,8 +110,8 @@ export const enforceStructuralSafetyLimits = (text: string): void => {
     if (bqDepth > MAX_SAFE_STRUCTURAL_DEPTH) {
         throw new MarkdownParsingLimitError(
             `[jspdf-md-renderer] Blockquote nesting depth (${bqDepth}) exceeds the hard ` +
-            `safety limit (${MAX_SAFE_STRUCTURAL_DEPTH}). This limit is enforced ` +
-            `unconditionally to prevent parser stack exhaustion and cannot be disabled.`,
+                `safety limit (${MAX_SAFE_STRUCTURAL_DEPTH}). This limit is enforced ` +
+                `unconditionally to prevent parser stack exhaustion and cannot be disabled.`,
         );
     }
 
@@ -119,8 +119,8 @@ export const enforceStructuralSafetyLimits = (text: string): void => {
     if (listChainDepth > MAX_SAFE_STRUCTURAL_DEPTH) {
         throw new MarkdownParsingLimitError(
             `[jspdf-md-renderer] List nesting chain depth (${listChainDepth}) exceeds the ` +
-            `hard safety limit (${MAX_SAFE_STRUCTURAL_DEPTH}). This limit is enforced ` +
-            `unconditionally to prevent parser memory exhaustion and cannot be disabled.`,
+                `hard safety limit (${MAX_SAFE_STRUCTURAL_DEPTH}). This limit is enforced ` +
+                `unconditionally to prevent parser memory exhaustion and cannot be disabled.`,
         );
     }
 };

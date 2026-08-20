@@ -6,11 +6,7 @@ import { ParsedElement } from './parsedElement';
  */
 
 export type TextStyle =
-    | 'normal'
-    | 'bold'
-    | 'italic'
-    | 'bolditalic'
-    | 'codespan';
+    'normal' | 'bold' | 'italic' | 'bolditalic' | 'codespan';
 
 /**
  * Information about a single styled word for justified text rendering.

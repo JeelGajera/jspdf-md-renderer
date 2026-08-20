@@ -40,8 +40,9 @@ export const MdTextParser = async (text: string): Promise<ParsedElement[]> => {
         // propagate as a raw RangeError/unhandled rejection.
         throw new MarkdownParsingLimitError(
             `[jspdf-md-renderer] Markdown parsing failed, likely due to excessive ` +
-            `structural complexity in the input. Original error: ${error instanceof Error ? error.message : String(error)
-            }`,
+                `structural complexity in the input. Original error: ${
+                    error instanceof Error ? error.message : String(error)
+                }`,
         );
     }
 
@@ -245,5 +246,13 @@ const tokenHandlers: Record<string, (token: any) => ParsedElement> = {
     [MdTokenType.Def]: () => ({
         type: MdTokenType.Noop,
         content: '',
+    }),
+    // Blank lines between blocks. Marked emits these as their own tokens; they
+    // used to fall through to the generic `raw` branch and be turned into extra
+    // vertical space on top of the configured `spacing.*` values. Labelling
+    // them lets the renderer decide, per `spacing.blankLines`.
+    [MdTokenType.Space]: (token) => ({
+        type: MdTokenType.Space,
+        content: token.raw,
     }),
 };

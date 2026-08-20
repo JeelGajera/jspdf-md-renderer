@@ -114,6 +114,14 @@ export const flattenToWords = (
         // Renders nothing by design (e.g. a link reference definition).
         if (el.type === 'noop') continue;
 
+        // Blank-line tokens contribute nothing when blank lines are collapsed.
+        if (
+            el.type === 'space' &&
+            store.options.spacing?.blankLines === 'collapse'
+        ) {
+            continue;
+        }
+
         if (el.type === 'br') {
             result.push({ text: '', width: 0, style, isBr: true });
             continue;
@@ -183,6 +191,10 @@ export const flattenToWords = (
             continue;
         }
 
+        // A single newline is a hard break by default. CommonMark treats it as
+        // a space; `breaks: false` opts into that.
+        const hardBreaks = store.options.breaks ?? true;
+
         // Split on newlines for hard breaks, then on whitespace for words
         const lines = text.split('\n');
         for (let li = 0; li < lines.length; li++) {
@@ -206,7 +218,12 @@ export const flattenToWords = (
                 });
             }
             if (li < lines.length - 1) {
-                result.push({ text: '', width: 0, style, isBr: true });
+                if (hardBreaks) {
+                    result.push({ text: '', width: 0, style, isBr: true });
+                } else if (result.length > 0) {
+                    // Soft break: the newline becomes a word separator.
+                    result[result.length - 1].hasTrailingSpace = true;
+                }
             }
         }
     }

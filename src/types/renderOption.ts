@@ -130,6 +130,19 @@ export type RenderOption = {
         afterList?: number;
         /** Space below tables in doc units. Default: 3 */
         afterTable?: number;
+        /**
+         * How blank lines between blocks affect vertical spacing.
+         *
+         * - `'preserve'` (default): each blank line in the source adds a line
+         *   of space on top of the `spacing.*` values. This is the historical
+         *   behaviour and keeps existing documents rendering identically.
+         * - `'collapse'`: blank lines add nothing, so the `spacing.*` options
+         *   alone determine the gap between blocks.
+         *
+         * `'collapse'` is the intended behaviour and becomes the default in the
+         * next major version.
+         */
+        blankLines?: 'preserve' | 'collapse';
     };
     header?: {
         /** Text to render in header area of each page */
@@ -157,6 +170,17 @@ export type RenderOption = {
         /** Shortcut: render page numbers with format "Page X of Y" */
         showPageNumbers?: boolean;
     };
+    /**
+     * How a single newline inside a paragraph is treated.
+     *
+     * - `true` (default): renders a hard line break. This is the historical
+     *   behaviour and keeps existing documents rendering identically.
+     * - `false`: renders a space, which is what CommonMark specifies for a
+     *   soft line break.
+     *
+     * `false` becomes the default in the next major version.
+     */
+    breaks?: boolean;
     pageBreakHandler?: (doc: jsPDF) => void;
     endCursorYHandler: (y: number) => void;
     security?: RenderSecurityOptions;

@@ -21,6 +21,7 @@ export enum MdTokenType {
     Del = 'del',
     Escape = 'escape',
     Def = 'def',
+    Space = 'space',
     /** Parsed but intentionally renders nothing (e.g. link reference definitions). */
     Noop = 'noop',
 }
