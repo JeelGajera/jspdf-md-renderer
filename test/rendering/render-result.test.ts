@@ -317,6 +317,33 @@ describe('warnings from the security layer', () => {
     });
 });
 
+describe('a failing security hook', () => {
+    /**
+     * The two hooks are deliberately asymmetric, and the guide documents it:
+     * onSecurityViolation is a notification, so losing it must not change what
+     * the PDF contains; validateUrl is a decision, so a failure there must not
+     * be read as approval.
+     */
+    it('rejects the render when validateUrl throws, rather than allowing the URL', async () => {
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+        await expect(
+            MdTextRender(
+                doc,
+                '[x](https://example.com)',
+                silent({
+                    security: {
+                        enabled: true,
+                        validateUrl: async () => {
+                            throw new Error('policy service is down');
+                        },
+                    },
+                }),
+            ),
+        ).rejects.toThrow('policy service is down');
+    });
+});
+
 describe('the result does not change rendering', () => {
     it('produces identical output to a render whose result is ignored', async () => {
         const a = recordDoc();

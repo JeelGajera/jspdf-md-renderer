@@ -65,19 +65,19 @@ described. An empty `warnings` array means the document is complete.
 
 | Code | What happened |
 | --- | --- |
-| `TOKEN_CONVERSION_FAILED` | A token could not be converted to a renderable element; that block was skipped |
+| `TOKEN_CONVERSION_FAILED` | A Markdown token could not be converted to a renderable element, and was dropped |
 | `UNSUPPORTED_ELEMENT` | A parsed element type has no renderer |
 | `IMAGE_LOAD_FAILED` | An image could not be fetched or decoded |
 | `IMAGE_RENDER_FAILED` | The image loaded but jsPDF refused to draw it |
 | `IMAGE_ATTRS_IGNORED` | An image's `{width=… height=… align=…}` block was too long to parse, so the image drew at its natural size |
 | `IMAGE_SIZE_UNKNOWN` | An image's intrinsic size could not be read, so a fallback size was used |
-| `TABLE_SKIPPED` | A table could not be rendered by `jspdf-autotable` |
-| `TABLE_CALLBACK_FAILED` | A user `table` callback threw |
-| `TABLE_POSITION_UNKNOWN` | The cursor could not be advanced past a table exactly |
-| `CODE_BLOCK_OVERFLOW` | A code line is wider than the content column and was clipped |
-| `CONTENT_DROPPED` | A subtree was discarded — most often the security nesting limit |
+| `TABLE_SKIPPED` | A table had no header row, so it was not rendered |
+| `TABLE_CALLBACK_FAILED` | A `table` option callback threw |
+| `TABLE_POSITION_UNKNOWN` | `autoTable` reported no `finalY`, so content after the table may be misplaced |
+| `CODE_BLOCK_OVERFLOW` | A code block's line height exceeds the usable page height, so it renders one line per page |
+| `CONTENT_DROPPED` | A subtree was discarded for nesting deeper than `security.maxNestedDepth` |
 | `COMPONENT_OVERRIDE_FAILED` | A [component override](/guide/component-overrides) threw or was async |
-| `SECURITY_CALLBACK_FAILED` | A `validateUrl` or `onSecurityViolation` callback threw |
+| `SECURITY_CALLBACK_FAILED` | An `onSecurityViolation` callback threw; the violation was still handled |
 | `SSRF_CHECKS_UNAVAILABLE` | IP-level checks could not run because DNS resolution is unavailable (browser runtime) |
 
 Codes are stable API. New codes may be added in a minor release, so treat an
@@ -149,6 +149,13 @@ if (result.warnings.length) {
   process.exitCode = 1
 }
 ```
+
+::: tip A throwing `validateUrl` aborts the render
+`onSecurityViolation` is a notification, so a failure in it is caught and
+reported as a warning — losing your audit log should not change what the PDF
+contains. `validateUrl` is a *decision*, so a failure in it rejects the whole
+render rather than proceeding as if the URL had been approved.
+:::
 
 ### Security violations
 
