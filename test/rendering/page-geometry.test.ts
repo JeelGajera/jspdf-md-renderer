@@ -212,3 +212,63 @@ describe('relaxed option requirements (item 6)', () => {
         expect(withLight.transcript()).toBe(withoutLight.transcript());
     });
 });
+
+describe('margin edge cases', () => {
+    it('clamps a negative margin to zero rather than rendering off-page', () => {
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const resolved = validateOptions(
+            {
+                page: { margin: { top: -5, left: -5, right: -5, bottom: -5 } },
+                font: { regular: { name: 'helvetica', style: 'normal' } },
+            },
+            doc,
+        );
+        expect(resolved.page.topmargin).toBe(0);
+        expect(resolved.page.xpading).toBe(0);
+        // Full page width, never wider than the page itself.
+        expect(resolved.page.maxContentWidth).toBeCloseTo(A4_W, 2);
+        expect(resolved.page.maxContentHeight).toBeCloseTo(A4_H, 2);
+    });
+
+    it('keeps a usable content area when margins exceed the page', () => {
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const resolved = validateOptions(
+            {
+                page: {
+                    margin: { top: 500, right: 500, bottom: 500, left: 500 },
+                },
+                font: { regular: { name: 'helvetica', style: 'normal' } },
+            },
+            doc,
+        );
+        expect(resolved.page.maxContentWidth).toBeGreaterThan(0);
+        expect(resolved.page.maxContentHeight).toBeGreaterThan(0);
+    });
+
+    it('renders with zero margins', async () => {
+        const { doc, ops } = recordDoc();
+        await MdTextRender(doc, 'Edge to edge.', {
+            page: { margin: { top: 0, right: 0, bottom: 0, left: 0 } },
+            font: { regular: { name: 'helvetica', style: 'normal' } },
+            silent: true,
+        });
+        const drawn = textOps(ops);
+        expect(drawn.length).toBeGreaterThan(0);
+        expect(Number(drawn[0].x)).toBe(0);
+        expect(Number(drawn[0].y)).toBe(0);
+    });
+
+    it('does not mutate a reused options object', async () => {
+        const options = {
+            page: { margin: { top: 10, left: 10 } },
+            font: { regular: { name: 'helvetica', style: 'normal' } },
+            silent: true,
+        };
+        const before = JSON.stringify(options);
+
+        await MdTextRender(new jsPDF({ unit: 'mm', format: 'a4' }), '# A', options);
+        await MdTextRender(new jsPDF({ unit: 'mm', format: 'a4' }), '# B', options);
+
+        expect(JSON.stringify(options)).toBe(before);
+    });
+});

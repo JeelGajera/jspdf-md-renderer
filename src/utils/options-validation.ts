@@ -68,10 +68,15 @@ const deriveGeometryFromMargin = (
     const pageWidth = pageSize.getWidth();
     const pageHeight = pageSize.getHeight();
 
-    const top = margin.top ?? DEFAULT_MARGIN_SIDE;
-    const right = margin.right ?? DEFAULT_MARGIN_SIDE;
-    const bottom = margin.bottom ?? DEFAULT_MARGIN_SIDE;
-    const left = margin.left ?? DEFAULT_MARGIN_SIDE;
+    // A negative margin would start content above or left of the page edge,
+    // where it is simply not visible. Treat it as zero.
+    const side = (value: number | undefined): number =>
+        Math.max(0, value ?? DEFAULT_MARGIN_SIDE);
+
+    const top = side(margin.top);
+    const right = side(margin.right);
+    const bottom = side(margin.bottom);
+    const left = side(margin.left);
 
     const derived: Partial<ResolvedRenderOption['page']> = {};
 

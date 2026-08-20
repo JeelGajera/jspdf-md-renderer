@@ -130,7 +130,7 @@ export const MdTextRender = async (
         };
 
         try {
-            override({
+            const returned: unknown = override({
                 doc,
                 element,
                 indentLevel,
@@ -144,6 +144,24 @@ export const MdTextRender = async (
                 render: (child, level = indentLevel) =>
                     renderElement(child, level, store),
             });
+
+            // Rendering is synchronous, so anything an override does after an
+            // await lands once the document is already finished. Failing
+            // loudly here beats content that silently goes missing.
+            if (
+                returned &&
+                typeof (returned as PromiseLike<unknown>).then === 'function'
+            ) {
+                store.warn({
+                    code: 'COMPONENT_OVERRIDE_FAILED',
+                    message:
+                        `The '${name}' component override returned a promise. ` +
+                        'Component renderers must be synchronous; anything ' +
+                        'awaited inside one runs after the document is ' +
+                        'complete and will not appear in the output.',
+                    context: name,
+                });
+            }
         } catch (error) {
             store.warn({
                 code: 'COMPONENT_OVERRIDE_FAILED',

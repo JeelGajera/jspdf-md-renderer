@@ -351,3 +351,64 @@ describe('overrides do not change default rendering', () => {
         expect(passthrough.transcript()).toBe(baseline.transcript());
     });
 });
+
+describe('unsupported override shapes', () => {
+    it('reports an async override rather than losing its work silently', async () => {
+        const { doc } = recordDoc();
+        const result = await MdTextRender(
+            doc,
+            '# Heading',
+            silent({
+                components: {
+                    heading: (async (ctx: ComponentContext) => {
+                        ctx.next();
+                    }) as unknown as (ctx: ComponentContext) => void,
+                },
+            }),
+        );
+
+        const failures = result.warnings.filter(
+            (w) => w.code === 'COMPONENT_OVERRIDE_FAILED',
+        );
+        expect(failures).toHaveLength(1);
+        expect(failures[0].message).toContain('promise');
+    });
+
+    it('does not warn for a synchronous override that returns a value', async () => {
+        const { doc } = recordDoc();
+        const result = await MdTextRender(
+            doc,
+            '# Heading',
+            silent({
+                components: {
+                    heading: ((ctx: ComponentContext) => {
+                        ctx.next();
+                        return 42;
+                    }) as unknown as (ctx: ComponentContext) => void,
+                },
+            }),
+        );
+        expect(result.warnings).toEqual([]);
+    });
+
+    it('survives an override that recurses through ctx.render', async () => {
+        const { doc, ops } = recordDoc();
+        let depth = 0;
+
+        await MdTextRender(
+            doc,
+            '# Heading',
+            silent({
+                components: {
+                    heading: (ctx: ComponentContext) => {
+                        if (depth++ < 3) ctx.render(ctx.element, ctx.indentLevel);
+                        else ctx.next();
+                    },
+                },
+            }),
+        );
+
+        // The recursion terminates and the heading is drawn exactly once.
+        expect(textOps(ops).filter((o) => o.text === 'Heading')).toHaveLength(1);
+    });
+});
