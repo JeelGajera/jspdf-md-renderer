@@ -148,7 +148,13 @@ const options = {
     betweenListItems: 0,
     afterList: 3,
     afterTable: 3,
+    // 'collapse' makes the values above the only source of inter-block gaps.
+    // Default 'preserve' also adds a line per blank line in the source.
+    blankLines: 'preserve',
   },
+  // true (default): a single newline is a hard line break.
+  // false: a single newline is a space, per CommonMark.
+  breaks: true,
   header: {
     text: 'My Report',
     align: 'center',
@@ -167,6 +173,36 @@ Behavior notes:
 - `heading.bold` defaults to `true`
 - List spacing precedence: `spacing.betweenListItems` > `list.itemSpacing`
 - Table width follows `page.maxContentWidth` for consistent block layout
+
+## Layout Compatibility Options
+
+Two options control behaviour that is scheduled to change. Both default to the
+behaviour of 4.1.x, so upgrading does not move anything on an existing page.
+Setting them explicitly makes the next major upgrade a no-op too.
+
+| Option | Current default | Next major | What `collapse` / `false` does |
+| --- | --- | --- | --- |
+| `spacing.blankLines` | `'preserve'` | `'collapse'` | Blank lines in the source stop adding vertical space, so the `spacing.*` options alone decide the gap between blocks |
+| `breaks` | `true` | `false` | A single newline inside a paragraph renders as a space rather than a hard line break, per CommonMark |
+
+```ts
+// Opt in to the corrected behaviour today
+const options = {
+  // ...other options
+  spacing: { blankLines: 'collapse' },
+  breaks: false,
+}
+```
+
+## Known Limitations
+
+- Inline emphasis inside table cells is flattened to plain text. `jspdf-autotable`
+  draws cell content itself and has no notion of mixed inline runs.
+- Inline HTML tags (`<strong>`, `<em>`) render their text without applying the
+  style. `<br>` is supported.
+- `cursor.x` applies to the first line only; each block then starts at
+  `page.xpading`.
+- Long runs of CJK text wrap character by character, without kinsoku rules.
 
 ## Security Controls (opt-in)
 
@@ -217,8 +253,9 @@ const options = {
     maxMarkdownLength: 500000,
     maxImageCount: 200,
     maxImageSizeBytes: 10 * 1024 * 1024,
-    maxNestedDepth: 20,
+    maxNestedDepth: 20,     // counts structural nesting (lists, quotes, tables)
     renderTimeoutMs: 30000,
+    imageFetchTimeoutMs: 10000, // per remote image request; 0 disables
 
     // Hooks
     validateUrl: async (url, type) => true,
@@ -238,6 +275,10 @@ const options = {
   - `[]` -> deny all domains
 - `maxImageSizeBytes` uses decoded bytes for data URLs
 - `SecurityViolationError` is exported for throw-mode handling
+- Redirects on remote image fetches are followed manually, and every hop is
+  revalidated against the same policy (bounded to 5 hops)
+- `maxNestedDepth` counts structural containers (lists, list items, blockquotes,
+  tables), not every AST level
 
 Browser caveat:
 - IP-level SSRF checks are best-effort in browser runtime due to DNS API limitations.
@@ -251,6 +292,12 @@ Browser caveat:
 - `MarkdownParsingLimitError`
 - `validateOptions`
 - Types: `RenderOption`, `RenderSecurityOptions`, `SecurityViolation`, `ViolationMode`, and others
+
+All types are exported from the package root:
+
+```ts
+import type { RenderOption } from 'jspdf-md-renderer'
+```
 
 ## Examples and Docs
 
