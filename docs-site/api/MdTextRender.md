@@ -2,8 +2,9 @@
 title: MdTextRender
 description: API reference for MdTextRender including security and preprocessing stages.
 llm_summary: |
-  MdTextRender(doc, text, options) validates options, applies security guards,
-  parses markdown, transforms links/images, renders tokens, and finalizes cursor callback.
+  MdTextRender(doc, text, options) validates options, applies security guards, parses markdown,
+  transforms links/images, renders tokens through component renderers (or caller overrides), and
+  resolves to a RenderResult with endY, startPage, pageCount, warnings, droppedNodes and violations.
 ---
 
 # MdTextRender
@@ -17,8 +18,11 @@ function MdTextRender(
   doc: jsPDF,
   text: string,
   options: RenderOption
-): Promise<void>
+): Promise<RenderResult>
 ```
+
+Since 4.3 it resolves to a [`RenderResult`](/guide/render-result) rather than
+`undefined`. Existing code that ignores the return value is unaffected.
 
 ## Parameters
 
@@ -27,6 +31,22 @@ function MdTextRender(
 | `doc` | `jsPDF` | Existing jsPDF document instance |
 | `text` | `string` | Raw markdown input |
 | `options` | [`RenderOption`](/api/options) | Render and security configuration |
+
+## Returns
+
+```ts
+interface RenderResult {
+  endY: number              // cursor Y when rendering finished
+  startPage: number         // page the render began on
+  pageCount: number         // pages this render produced
+  warnings: RenderWarning[] // everything that could not be drawn
+  droppedNodes: number      // total nodes discarded
+  violations: SecurityViolation[]
+}
+```
+
+See [Render Result](/guide/render-result) for the warning codes and the
+`silent` / `onWarning` options.
 
 ## Render Pipeline
 
@@ -49,8 +69,10 @@ flowchart LR
 4. `enforceNestedDepthAndImageCount` sanitizes the parsed tree based on security limits.
 5. `applyLinkPolicy` validates links and applies placeholder/skip behavior.
 6. `prefetchImages` validates and loads image data.
-7. Renderer dispatches token-by-token to component renderers.
-8. `endCursorYHandler` receives final cursor Y position.
+7. Renderer dispatches token-by-token to component renderers, or to a caller's
+   [component override](/guide/component-overrides) where one is supplied.
+8. Page decorations are applied, `endCursorYHandler` receives the final cursor
+   Y position, and the `RenderResult` is returned.
 
 ## Security Behavior
 
@@ -77,29 +99,15 @@ import { MdTextRender } from 'jspdf-md-renderer'
 
 const doc = new jsPDF({ unit: 'mm', format: 'a4' })
 
-await MdTextRender(doc, '# Hello\n\nWorld', {
-  cursor: { x: 10, y: 10 },
-  page: {
-    maxContentWidth: 190,
-    maxContentHeight: 277,
-    lineSpace: 1.5,
-    defaultLineHeightFactor: 1.2,
-    defaultFontSize: 12,
-    defaultTitleFontSize: 14,
-    topmargin: 10,
-    xpading: 10,
-    xmargin: 10,
-    indent: 10,
-  },
-  font: {
-    bold: { name: 'helvetica', style: 'bold' },
-    regular: { name: 'helvetica', style: 'normal' },
-    light: { name: 'helvetica', style: 'light' },
-  },
+const result = await MdTextRender(doc, '# Hello\n\nWorld', {
+  page: { margin: { top: 20, right: 20, bottom: 20, left: 20 } },
+  font: { regular: { name: 'helvetica', style: 'normal' } },
   security: {
     enabled: true,
     violationMode: 'skip',
   },
-  endCursorYHandler: (y) => console.log('Done at Y:', y),
 })
+
+console.log('Done at Y:', result.endY)
+if (result.warnings.length) console.warn(result.warnings)
 ```

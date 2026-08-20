@@ -142,6 +142,8 @@ await MdTextRender(doc, markdown, {
 })
 ```
 
+Full guide, including every warning code: [Render Result](https://jeelgajera.github.io/jspdf-md-renderer/guide/render-result).
+
 ## Custom Components
 
 Replace or decorate any block renderer. `ctx.next()` runs the built-in, so an
@@ -172,6 +174,8 @@ The context carries `doc`, `element`, `indentLevel`, `indent`, `x`, `y`,
 is reported as a warning and falls back to the built-in renderer, so a mistake
 degrades to default output rather than losing the block.
 
+Full guide, with worked recipes: [Component Overrides](https://jeelgajera.github.io/jspdf-md-renderer/guide/component-overrides).
+
 ## Custom Fonts
 
 `registerFont` handles the `addFileToVFS`/`addFont` wiring and returns the
@@ -190,6 +194,8 @@ await MdTextRender(doc, markdown, { ...options, font: inter.font })
 
 Styles with no data registered fall back to the normal face, so text stays in
 the intended family instead of silently reverting to a core font.
+
+Full guide: [Custom Fonts](https://jeelgajera.github.io/jspdf-md-renderer/examples/custom-fonts).
 
 ## Browser Usage
 
@@ -428,6 +434,10 @@ import type { RenderOption } from 'jspdf-md-renderer'
 ## Examples and Docs
 
 - Docs site: [https://jeelgajera.github.io/jspdf-md-renderer/](https://jeelgajera.github.io/jspdf-md-renderer/)
+- Page geometry guide: [https://jeelgajera.github.io/jspdf-md-renderer/guide/page-geometry](https://jeelgajera.github.io/jspdf-md-renderer/guide/page-geometry)
+- Render result guide: [https://jeelgajera.github.io/jspdf-md-renderer/guide/render-result](https://jeelgajera.github.io/jspdf-md-renderer/guide/render-result)
+- Component overrides guide: [https://jeelgajera.github.io/jspdf-md-renderer/guide/component-overrides](https://jeelgajera.github.io/jspdf-md-renderer/guide/component-overrides)
+- Custom fonts guide: [https://jeelgajera.github.io/jspdf-md-renderer/examples/custom-fonts](https://jeelgajera.github.io/jspdf-md-renderer/examples/custom-fonts)
 - Resume example: [https://jeelgajera.github.io/jspdf-md-renderer/examples/resume](https://jeelgajera.github.io/jspdf-md-renderer/examples/resume)
 - Invoice example: [https://jeelgajera.github.io/jspdf-md-renderer/examples/invoice](https://jeelgajera.github.io/jspdf-md-renderer/examples/invoice)
 - Technical report example: [https://jeelgajera.github.io/jspdf-md-renderer/examples/report](https://jeelgajera.github.io/jspdf-md-renderer/examples/report)

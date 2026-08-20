@@ -11,9 +11,11 @@ Renders Markdown content directly into jsPDF PDF documents with full custom styl
 Built on top of jsPDF with marked.js for markdown parsing and jspdf-autotable for table rendering.
 
 ## Installation
+jspdf, jspdf-autotable and marked are PEER dependencies (since 4.3).
 ```
-npm install jspdf-md-renderer
+npm install jspdf-md-renderer jspdf jspdf-autotable marked
 ```
+Supported peers: jspdf ^2 || ^3 || ^4, jspdf-autotable ^3 || ^4 || ^5, marked ^18
 
 ## Core API
 
@@ -22,7 +24,7 @@ Renders markdown into a jsPDF doc.
 - doc: jsPDF instance
 - text: string — raw markdown content
 - options: RenderOption (see below)
-- Returns: Promise<void>
+- Returns: Promise<RenderResult> (since 4.3; previously Promise<void>)
 
 ### MdTextParser(text)
 Parses markdown into structured tokens.
@@ -31,38 +33,50 @@ Parses markdown into structured tokens.
 
 ## RenderOption — Full Options Reference
 
-### cursor (required)
+### Minimal configuration (4.3+)
+Only font.regular is required. Everything else has a default.
+```javascript
+{ page: { margin: { top: 20, right: 20, bottom: 20, left: 20 } },
+  font: { regular: { name: 'helvetica', style: 'normal' } } }
+```
+
+### cursor (optional)
 - cursor.x: number — Starting X position
 - cursor.y: number — Starting Y position
+- Defaults to the top-left of the content area implied by page.margin
 
 ### page
 - page.format: string | number[] — Page format (default: 'a4')
 - page.unit: string — Unit: 'mm', 'pt', 'px', 'in'
 - page.orientation: string — 'portrait'/'p' or 'landscape'/'l' (default: 'p')
-- page.maxContentWidth: number — Max content width (default: 190)
-- page.maxContentHeight: number — Max height before page break (default: 277)
-- page.lineSpace: number — Spacing between elements (default: 1.5)
-- page.defaultLineHeightFactor: number — Line height factor (default: 1.2)
-- page.defaultFontSize: number — Body font size (default: 12)
+- page.margin: { top, right, bottom, left } — RECOMMENDED. See below
+- page.maxContentWidth: number — DEPRECATED. Content column width (default: 190)
+- page.maxContentHeight: number — DEPRECATED. Absolute Y of the content bottom,
+  NOT a height (default: 277)
+- page.lineSpace: number — Spacing between elements (default: 3)
+- page.defaultLineHeightFactor: number — Line height factor (default: 1.4)
+- page.defaultFontSize: number — Body font size (default: 11)
 - page.defaultTitleFontSize: number — Heading font size (default: 14)
-- page.topmargin: number — New page top margin (default: 10)
-- page.xpading: number — Horizontal content padding (default: 10)
-- page.xmargin: number — Left margin (default: 10)
-- page.indent: number — Nested list indent per level (default: 10)
+- page.topmargin: number — DEPRECATED. Y where content starts (default: 10)
+- page.xpading: number — DEPRECATED. Left edge of content column (default: 10)
+- page.xmargin: number — DEPRECATED. Header/footer horizontal margin (default: 10)
+- page.indent: number — Nested list/blockquote indent per level (default: 8)
 
 ### font
-- font.bold: { name: string, style: string } — Bold font (default: helvetica bold)
-- font.regular: { name: string, style: string } — Regular font (default: helvetica normal)
-- font.light: { name: string, style: string } — Light font (default: helvetica light)
+- font.regular: { name: string, style: string } — REQUIRED. Body font
+- font.bold: { name: string, style: string } — default: helvetica bold
+- font.italic / font.boldItalic — default: helvetica italic / bolditalic
+- font.code: { name: string, style: string } — default: courier normal
+- font.light — DEPRECATED, never read by the renderer
 
 ### content (optional)
 - content.textAlignment: 'left' | 'right' | 'center' | 'justify'
 
 ### codespan (optional)
 - codespan.backgroundColor: string — Inline code bg (default: '#EEEEEE')
-- codespan.padding: number — Inline code padding (default: 0.5)
+- codespan.padding: number — Inline code padding (default: 0.8)
 - codespan.showBackground: boolean — Show background (default: true)
-- codespan.fontSizeScale: number — Code font scale (default: 0.9)
+- codespan.fontSizeScale: number — Code font scale (default: 0.88)
 
 ### link (optional)
 - link.linkColor: [number, number, number] — RGB link color
@@ -88,8 +102,12 @@ Parses markdown into structured tokens.
 - next() runs the built-in renderer; an override that throws falls back to it
 
 ### registerFont
-- registerFont(doc, { family, variants: { normal, bold, italic, bolditalic } })
+- registerFont(doc, { family, variants: { normal, bold, italic, bolditalic },
+  fileNames?, onWarning? })
+- variants.normal is required; missing styles fall back to it within the family
+- accepts raw base64 or a data: URI
 - returns { family, registered, font } where font drops into RenderOption.font
+- `registered` lists only the variants jsPDF actually accepted
 
 ### table (optional)
 - Passes through to jspdf-autotable UserOptions
@@ -98,8 +116,17 @@ Parses markdown into structured tokens.
 - image.defaultAlign: 'left' | 'center' | 'right' (default: 'left')
 
 ### Callbacks
-- endCursorYHandler: (y: number) => void — Required. Called with final Y position after rendering.
+- onWarning: (warning: RenderWarning) => void — Optional. Fires per warning.
 - pageBreakHandler: (doc: jsPDF) => void — Optional. Called when new page is added.
+- endCursorYHandler: (y: number) => void — Optional and DEPRECATED since 4.3.
+  Use the returned result's endY, which carries the same value.
+
+### Warning codes (RenderWarningCode)
+TOKEN_CONVERSION_FAILED, UNSUPPORTED_ELEMENT, IMAGE_LOAD_FAILED,
+IMAGE_RENDER_FAILED, IMAGE_ATTRS_IGNORED, IMAGE_SIZE_UNKNOWN, TABLE_SKIPPED,
+TABLE_CALLBACK_FAILED, TABLE_POSITION_UNKNOWN, CODE_BLOCK_OVERFLOW,
+CONTENT_DROPPED, COMPONENT_OVERRIDE_FAILED, SECURITY_CALLBACK_FAILED,
+SSRF_CHECKS_UNAVAILABLE
 
 ## Supported Markdown Elements
 - headings (# through ######)
@@ -138,23 +165,34 @@ import { jsPDF } from 'jspdf';
 import { MdTextRender } from 'jspdf-md-renderer';
 
 const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+const result = await MdTextRender(doc, '# Hello World', {
+  page: { margin: { top: 20, right: 20, bottom: 20, left: 20 } },
+  font: { regular: { name: 'helvetica', style: 'normal' } },
+});
+if (result.warnings.length) console.warn(result.warnings);
+doc.save('output.pdf');
+```
+
+## Legacy Example (pre-4.3 explicit geometry, still supported)
+```javascript
 await MdTextRender(doc, '# Hello World', {
   cursor: { x: 10, y: 10 },
   page: { maxContentWidth: 190, maxContentHeight: 277, lineSpace: 1.5,
     defaultLineHeightFactor: 1.2, defaultFontSize: 12, defaultTitleFontSize: 14,
     topmargin: 10, xpading: 10, xmargin: 10, indent: 10 },
   font: { bold: { name: 'helvetica', style: 'bold' },
-    regular: { name: 'helvetica', style: 'normal' },
-    light: { name: 'helvetica', style: 'light' } },
+    regular: { name: 'helvetica', style: 'normal' } },
   endCursorYHandler: (y) => console.log('End Y:', y),
 });
-doc.save('output.pdf');
 ```
 
 ## Docs Site Sections
 - /guide/getting-started — Quick start guide
 - /guide/installation — All install methods
 - /guide/basic-usage — Detailed usage guide
+- /guide/page-geometry — Margins, formats, orientation, migrating from explicit geometry
+- /guide/render-result — Render result, warning codes, silent/onWarning
+- /guide/component-overrides — Replacing or decorating block renderers
 - /guide/browser-usage — Browser-specific usage
 - /api/options — Full options reference
 - /api/MdTextRender — MdTextRender API
@@ -172,5 +210,5 @@ doc.save('output.pdf');
 - /examples/resume — Resume example
 - /examples/invoice — Invoice example
 - /examples/report — Technical report example
-- /examples/custom-fonts — Custom fonts guide
+- /examples/custom-fonts — registerFont and custom font wiring
 - /playground — Interactive playground

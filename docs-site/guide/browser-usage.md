@@ -28,12 +28,25 @@ import { MdTextRender } from 'jspdf-md-renderer'
 <script>
   const { jsPDF } = window.jspdf
   const { MdTextRender } = window.JspdfMdRenderer
+
+  ;(async () => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+    await MdTextRender(doc, '# Hello from the browser!', {
+      page: { margin: { top: 20, right: 20, bottom: 20, left: 20 } },
+      font: { regular: { name: 'helvetica', style: 'normal' } },
+    })
+    doc.save('browser-output.pdf')
+  })()
 </script>
 ```
 
 ## Browser Security Note
 
-If you enable `security.enabled`, be aware that DNS-based IP checks are best-effort in browser runtime. For strict SSRF protection, route remote image loading through a trusted server-side proxy.
+If you enable `security.enabled`, be aware that DNS-based IP checks cannot run
+in a browser runtime. When that happens the render reports an
+`SSRF_CHECKS_UNAVAILABLE` warning on its [result](/guide/render-result), so the
+gap is visible rather than assumed. For strict SSRF protection, route remote
+image loading through a trusted server-side proxy.
 
 ## Common Output Methods
 
