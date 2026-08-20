@@ -1,0 +1,53 @@
+pages: 1
+endY: 46.940
+
+p1 text        text="A" x=10 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="plain" x=13.648 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="paragraph" x=22.845 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="of" x=41.432 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="text" x=45.74 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="that" x=53.074 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="is" x=60.602 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="long" x=64.483 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="enough" x=72.826 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="to" x=86.719 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="require" x=91.026 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="wrapping" x=104.065 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="across" x=120.751 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="more" x=133.208 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="than" x=143.064 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="a" x=151.64 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="single" x=154.861 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="rendered" x=165.998 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="line" x=182.452 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="in" x=189.514 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="the" x=193.589 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="output" x=10 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="document." x=21.797 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="Inline" x=10 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="styles:" x=20.283 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="bold" x=32.352 y=27.746 baseline=top font=helvetica/bold size=11 color=#000000
+p1 text        text="," x=40.54 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="italic" x=42.713 y=27.746 baseline=top font=helvetica/italic size=11 color=#000000
+p1 text        text="," x=50.435 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="bold" x=52.608 y=27.746 baseline=top font=helvetica/bolditalic size=11 color=#000000
+p1 text        text="italic" x=61.883 y=27.746 baseline=top font=helvetica/bolditalic size=11 color=#000000
+p1 text        text="," x=70.692 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 rect        x=72.065 y=26.946 w=20.04 h=5.015 style=F fill=#ededed draw=#000000
+p1 text        text="code span" x=72.865 y=27.746 baseline=top font=courier/normal size=9.68 color=#000000
+p1 text        text="," x=91.305 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="and" x=93.479 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="a" x=100.968 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="link" x=104.189 y=27.746 baseline=top font=helvetica/normal size=11 color=#0000ff
+p1 link        x=104.189 y=27.746 w=5.782 h=3.881 url=https://example.com
+p1 text        text="." x=109.971 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="Adjacent" x=10 y=40.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="bold" x=24.979 y=40.059 baseline=top font=helvetica/bold size=11 color=#000000
+p1 text        text="text" x=33.167 y=40.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="without" x=40.501 y=40.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="spaces," x=53.811 y=40.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="and" x=68.208 y=40.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="a" x=75.698 y=40.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="trailing" x=78.919 y=40.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="bold" x=91.336 y=40.059 baseline=top font=helvetica/bold size=11 color=#000000
+p1 text        text="." x=99.524 y=40.059 baseline=top font=helvetica/normal size=11 color=#000000

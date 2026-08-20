@@ -1,0 +1,26 @@
+pages: 1
+endY: 89.626
+
+p1 text        text="An" x=10 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="escaped" x=15.782 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="\\*" x=10 y=13.881 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="asterisk" x=10 y=19.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="and" x=24.397 y=19.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="an" x=31.886 y=19.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="escaped" x=37.242 y=19.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="\\_" x=10 y=23.194 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="underscore" x=10 y=28.627 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="\\_" x=10 y=32.507 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="." x=10 y=37.94 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="Strikethrough" x=10 y=50.253 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="~~removed" x=10 y=54.134 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="text~~" x=30.567 y=54.134 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="inline." x=10 y=59.567 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="A" x=10 y=71.88 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="reference" x=13.648 y=71.88 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="link" x=30.994 y=71.88 baseline=top font=helvetica/normal size=11 color=#0000ff
+p1 link        x=30.994 y=71.88 w=5.782 h=3.881 url=https://example.com
+p1 text        text="resolved" x=37.862 y=71.88 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="below." x=53.501 y=71.88 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="[ref]:" x=10 y=84.193 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="https://example.com" x=18.848 y=84.193 baseline=top font=helvetica/normal size=11 color=#000000

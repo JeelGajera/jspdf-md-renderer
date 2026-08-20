@@ -1,0 +1,10 @@
+pages: 1
+endY: 26.130
+
+p1 image       format=PNG x=10 y=10 w=0.265 h=0.265 bytes=118
+p1 text        text="Inline" x=10 y=17.697 baseline=top font=helvetica/normal size=11 color=#000000
+p1 image       format=PNG x=20.283 y=17.697 w=0.265 h=0.265 bytes=118
+p1 text        text="image" x=21.635 y=17.697 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="in" x=33.199 y=17.697 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="a" x=37.273 y=17.697 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="sentence." x=40.494 y=17.697 baseline=top font=helvetica/normal size=11 color=#000000

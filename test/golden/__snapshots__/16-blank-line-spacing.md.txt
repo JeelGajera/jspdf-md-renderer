@@ -1,0 +1,22 @@
+pages: 1
+endY: 66.238
+
+p1 text        text="First" x=10 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="paragraph." x=18.615 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="Second" x=10 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="paragraph" x=24.125 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="after" x=42.713 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="two" x=51.522 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="blank" x=58.623 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="lines." x=68.907 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="• " x=18 y=40.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="a" x=20.445 y=40.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="list" x=23.666 y=40.059 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="• " x=18 y=45.492 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="follows" x=20.445 y=45.492 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="Then" x=10 y=59.358 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="a" x=19.857 y=59.358 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="paragraph" x=23.077 y=59.358 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="after" x=41.665 y=59.358 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="the" x=50.474 y=59.358 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="list." x=56.916 y=59.358 baseline=top font=helvetica/normal size=11 color=#000000

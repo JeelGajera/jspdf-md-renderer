@@ -1,0 +1,10 @@
+pages: 1
+endY: 23.866
+
+p1 text        text="• " x=18 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="item" x=20.445 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="with" x=28.827 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="code" x=36.782 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="• " x=18 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="next" x=20.445 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="item" x=28.827 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000

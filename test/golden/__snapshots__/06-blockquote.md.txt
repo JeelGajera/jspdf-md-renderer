@@ -1,0 +1,26 @@
+pages: 1
+endY: 44.507
+
+p1 text        text="A" x=18 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="quoted" x=21.648 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="paragraph" x=34.492 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="that" x=53.08 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="is" x=60.608 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="long" x=64.489 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="enough" x=72.832 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="to" x=86.725 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="wrap" x=91.032 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="onto" x=100.462 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="a" x=109.038 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="second" x=112.259 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="rendered" x=125.763 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="line." x=142.217 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="A" x=18 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="second" x=21.648 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="quoted" x=35.152 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="paragraph." x=47.997 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 line        x1=14 y1=10 x2=14 y2=26.194 draw=#aaaaaa width=1
+p1 text        text="Text" x=10 y=37.627 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="after" x=18.149 y=37.627 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="the" x=26.958 y=37.627 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="quote." x=33.4 y=37.627 baseline=top font=helvetica/normal size=11 color=#000000

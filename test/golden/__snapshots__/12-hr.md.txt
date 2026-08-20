@@ -1,0 +1,10 @@
+pages: 1
+endY: 40.507
+
+p1 text        text="Before" x=10 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="the" x=22.418 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="rule." x=28.859 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 line        x1=10 y1=22.313 x2=200.002 y2=22.313 draw=#000000 width=0.1
+p1 text        text="After" x=10 y=33.627 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="the" x=19.236 y=33.627 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="rule." x=25.677 y=33.627 baseline=top font=helvetica/normal size=11 color=#000000
