@@ -36,3 +36,10 @@ export type {
 } from './types/styledWordInfo';
 export { MdTokenType } from './enums/mdTokenType';
 export { validateOptions } from './utils/options-validation';
+export { registerFont } from './utils/register-font';
+export type {
+    FontVariants,
+    FontVariantName,
+    RegisterFontOptions,
+    RegisteredFont,
+} from './utils/register-font';
