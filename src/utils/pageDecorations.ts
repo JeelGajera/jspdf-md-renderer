@@ -5,12 +5,15 @@ import { withSavedDocState } from './doc-helpers';
 export const applyPageDecorations = (
     doc: jsPDF,
     options: RenderOption,
+    fromPage: number = 1,
 ): void => {
     const totalPages = (
         doc.internal as unknown as { getNumberOfPages: () => number }
     ).getNumberOfPages();
 
-    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    const start = Math.max(1, Math.min(fromPage, totalPages));
+
+    for (let pageNum = start; pageNum <= totalPages; pageNum++) {
         doc.setPage(pageNum);
         applyHeader(doc, options, pageNum, totalPages);
         applyFooter(doc, options, pageNum, totalPages);

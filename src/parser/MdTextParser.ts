@@ -109,14 +109,19 @@ const tokenHandlers: Record<string, (token: any) => ParsedElement> = {
     }),
     [MdTokenType.Table]: (token) => ({
         type: MdTokenType.Table,
+        // `align` comes straight from the delimiter row (`|:--|--:|`) and was
+        // previously discarded, so every column rendered left-aligned.
+        columnAlign: token.align ?? [],
         header: token.header.map((header: any) => ({
             type: MdTokenType.TableHeader,
             content: header.text,
+            items: header.tokens ? convertTokens(header.tokens) : [],
         })),
         rows: token.rows.map((row: any[]) =>
             row.map((cell: any) => ({
                 type: MdTokenType.TableCell,
                 content: cell.text,
+                items: cell.tokens ? convertTokens(cell.tokens) : [],
             })),
         ),
     }),
@@ -198,19 +203,47 @@ const tokenHandlers: Record<string, (token: any) => ParsedElement> = {
             return { type: MdTokenType.Raw, content: textMatch?.[1] ?? raw };
         }
 
-        // Unknown HTML: render as raw text, strip tags
-        const strippedText = raw.replace(/<[^>]+>/g, '').trim();
+        // Unknown HTML: render as raw text, strip tags.
+        // Comments are removed first and as whole units: `<[^>]+>` stops at the
+        // first '>', so `<!-- a > b -->` left `b -->` behind as visible text.
+        const strippedText = raw
+            .replace(/<!--[\s\S]*?-->/g, '')
+            .replace(/<[^>]*>/g, '')
+            .trim();
         if (strippedText) {
             return { type: MdTokenType.Raw, content: strippedText };
         }
 
+        // HTML that carries no text of its own — an opening or closing tag on
+        // its own token, or a comment — must not reach the layout as an empty
+        // `raw` block. Doing so flushed the surrounding inline buffer and broke
+        // the sentence onto a new line at every tag boundary.
         return {
-            type: MdTokenType.Raw,
+            type: MdTokenType.Noop,
             content: '',
         };
     },
     [MdTokenType.Br]: () => ({
         type: MdTokenType.Br,
         content: '\n',
+    }),
+    // An escape token carries the escaped character in `text` and the source
+    // backslash in `raw`. Falling through to the generic `raw` branch printed
+    // the backslash, so `\\*` rendered as `\\*` instead of `*`.
+    [MdTokenType.Escape]: (token) => ({
+        type: MdTokenType.Text,
+        content: token.text,
+    }),
+    // GFM strikethrough. Previously rendered as literal `~~text~~`.
+    [MdTokenType.Del]: (token) => ({
+        type: MdTokenType.Del,
+        content: token.text,
+        items: token.tokens ? convertTokens(token.tokens) : [],
+    }),
+    // A link reference definition is metadata, not content. It was being
+    // printed into the document as body text.
+    [MdTokenType.Def]: () => ({
+        type: MdTokenType.Noop,
+        content: '',
     }),
 };

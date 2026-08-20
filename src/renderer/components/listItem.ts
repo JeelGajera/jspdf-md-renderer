@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
 import { getCharHight } from '../../utils/doc-helpers';
 import { breakIfOverflow } from '../../utils/handlePageBreak';
-import { MdTokenType } from '../../enums/mdTokenType';
+import { MdTokenType, NON_INLINE_TYPES } from '../../enums/mdTokenType';
 import { RenderStore } from '../../store/renderStore';
 import { renderInlineContent, renderPlainText } from '../../layout';
 
@@ -135,7 +135,22 @@ const renderListItem = (
                     start,
                     ordered,
                 );
+            } else if (NON_INLINE_TYPES.has(subItem.type)) {
+                // Fenced code, blockquotes, tables and rules cannot be laid
+                // out as words. Routing them into the inline buffer meant
+                // flattenToWords found no text on them — a code block carries
+                // its source in `code`, not `content` — and dropped them
+                // without a warning. Delegate to the parent renderer instead,
+                // one indent level deeper so the block sits inside the item,
+                // matching how nested lists indent.
+                flushInlineBuffer();
+                store.updateX(xLeft, 'set');
+                parentElementRenderer(subItem, indentLevel + 1, store, false);
+                store.updateX(xLeft, 'set');
             } else {
+                // Everything else — including the paragraph wrapper that a
+                // loose list item puts around its text — flows inline beside
+                // the bullet.
                 inlineBuffer.push(subItem);
             }
         }

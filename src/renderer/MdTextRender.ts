@@ -20,7 +20,10 @@ import { RenderStore } from '../store/renderStore';
 import { prefetchImages } from '../utils/image-utils';
 import { validateOptions } from '../utils/options-validation';
 import { getCharHight } from '../utils/doc-helpers';
-import { HandlePageBreaks } from '../utils/handlePageBreak';
+import {
+    HandlePageBreaks,
+    markPageContentStart,
+} from '../utils/handlePageBreak';
 import { applyPageDecorations } from '../utils/pageDecorations';
 import {
     createTimeoutGuard,
@@ -30,6 +33,7 @@ import {
 import {
     applyLinkPolicy,
     convertBlockedImagesToPlaceholder,
+    convertUnloadableImagesToAltText,
 } from '../security/security-transforms';
 
 /**
@@ -52,6 +56,16 @@ export const MdTextRender = async (
     guardTimeout();
 
     const store = new RenderStore(validOptions);
+    markPageContentStart(doc, store);
+    // Rendering twice into the same document used to stamp the header and
+    // footer onto every page again, doubling them on the pages the earlier
+    // call had already decorated.
+    const firstPage =
+        (
+            doc as unknown as {
+                internal: { getCurrentPageInfo: () => { pageNumber: number } };
+            }
+        ).internal?.getCurrentPageInfo?.()?.pageNumber ?? 1;
     const parsedElements = await MdTextParser(text);
     guardTimeout();
 
@@ -63,6 +77,10 @@ export const MdTextRender = async (
     if (security.enabled && security.violationMode === 'placeholder') {
         convertBlockedImagesToPlaceholder(parsedElements, security);
     }
+
+    // Any image still without data could not be loaded. Fall back to its alt
+    // text rather than dropping the content silently.
+    convertUnloadableImagesToAltText(parsedElements);
 
     const renderElement = (
         element: ParsedElement,
@@ -101,8 +119,12 @@ export const MdTextRender = async (
             case MdTokenType.Code:
                 renderCodeBlock(doc, element, indentLevel, store);
                 break;
+            // Renders nothing by design (e.g. link reference definitions).
+            case MdTokenType.Noop:
+                break;
             case MdTokenType.Strong:
             case MdTokenType.Em:
+            case MdTokenType.Del:
             case MdTokenType.CodeSpan:
             case MdTokenType.Link:
                 renderInlineContent(
@@ -174,6 +196,6 @@ export const MdTextRender = async (
         renderElement(item, 0, store);
     }
 
-    applyPageDecorations(doc, validOptions);
+    applyPageDecorations(doc, validOptions, firstPage);
     validOptions.endCursorYHandler(store.Y);
 };

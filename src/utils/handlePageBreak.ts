@@ -1,5 +1,19 @@
 import jsPDF from 'jspdf';
 import { RenderStore } from '../store/renderStore';
+import { getPageOpCount } from './content-stream';
+
+/** Records where this render's content starts on the current page. */
+export const markPageContentStart = (doc: jsPDF, store: RenderStore) => {
+    const page = (
+        doc as unknown as {
+            internal: { getCurrentPageInfo: () => { pageNumber: number } };
+        }
+    ).internal?.getCurrentPageInfo?.()?.pageNumber;
+    const count = getPageOpCount(doc, page);
+    if (typeof page === 'number' && count !== null) {
+        store.recordPageContentStart(page, count);
+    }
+};
 
 export const HandlePageBreaks = (doc: jsPDF, store: RenderStore) => {
     if (typeof store.options.pageBreakHandler === 'function') {
@@ -13,6 +27,7 @@ export const HandlePageBreaks = (doc: jsPDF, store: RenderStore) => {
     // reset cursor positions on new page
     store.updateY(store.options.page.topmargin);
     store.updateX(store.options.page.xpading);
+    markPageContentStart(doc, store);
 };
 
 /**

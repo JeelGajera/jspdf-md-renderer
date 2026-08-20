@@ -25,6 +25,7 @@ const renderCodeBlock = (
     const codeOpts = store.options.codeBlock ?? {};
     const codeFontSizeScale = codeOpts.fontSizeScale ?? 0.9;
     const codeFontSize = store.options.page.defaultFontSize * codeFontSizeScale;
+    const labelFontSize = Math.max(6, codeFontSize * 0.85);
     doc.setFontSize(codeFontSize);
 
     const indent = indentLevel * store.options.page.indent;
@@ -77,8 +78,16 @@ const renderCodeBlock = (
         const availableHeight = store.options.page.maxContentHeight - store.Y;
         const remainingLines = lines.length - currentLineIndex;
 
-        // Calculate how many lines fit on this page (accounting for padding)
-        const effectiveAvailable = availableHeight - padding * 2;
+        // Calculate how many lines fit on this page (accounting for padding
+        // and, on the first chunk, the language label's own row)
+        const pendingLabelHeight =
+            currentLineIndex === 0 &&
+            element.lang &&
+            codeOpts.showLanguageLabel !== false
+                ? labelFontSize / doc.internal.scaleFactor
+                : 0;
+        const effectiveAvailable =
+            availableHeight - padding * 2 - pendingLabelHeight;
         let linesToRenderCount = Math.floor(effectiveAvailable / lineHeight);
 
         if (linesToRenderCount <= 0) {
@@ -118,18 +127,38 @@ const renderCodeBlock = (
 
         const textBlockHeight = linesToRenderCount * lineHeight;
 
+        // The label sits in its own row above the code. Previously it shared a
+        // baseline with the first line and the two overlapped.
+        const showLabel =
+            isFirstChunk &&
+            !!element.lang &&
+            codeOpts.showLanguageLabel !== false;
+        const labelHeight = showLabel
+            ? labelFontSize / doc.internal.scaleFactor
+            : 0;
+
         if (isFirstChunk) {
             store.updateY(padding, 'add');
         }
+
+        // Box geometry honours the block's indent, so a code block nested in a
+        // list item or blockquote no longer starts at the page margin and
+        // overhang the content column.
+        const boxX = store.X + indent;
+        const boxWidth = Math.max(
+            0,
+            store.options.page.maxContentWidth - indent,
+        );
 
         // Draw Background
         doc.setFillColor(bgColor);
         doc.setDrawColor(drawColor);
         doc.roundedRect(
-            store.X,
+            boxX,
             store.Y - padding,
-            store.options.page.maxContentWidth,
+            boxWidth,
             textBlockHeight +
+                labelHeight +
                 (isFirstChunk ? padding : 0) +
                 (isLastChunk ? padding : 0),
             radius,
@@ -138,32 +167,29 @@ const renderCodeBlock = (
         );
 
         // Render Language Label (only on first chunk)
-        if (
-            isFirstChunk &&
-            element.lang &&
-            codeOpts.showLanguageLabel !== false
-        ) {
+        if (showLabel) {
             const savedCodeFontSize = doc.getFontSize();
-            doc.setFontSize(10);
+            doc.setFontSize(labelFontSize);
             doc.setTextColor(codeOpts.labelColor ?? '#666666');
             doc.text(
-                element.lang,
-                store.X +
-                    store.options.page.maxContentWidth -
-                    doc.getTextWidth(element.lang) -
-                    4,
+                element.lang as string,
+                boxX +
+                    boxWidth -
+                    doc.getTextWidth(element.lang as string) -
+                    padding,
                 store.Y,
                 { baseline: 'top' },
             );
             doc.setFontSize(savedCodeFontSize);
             doc.setTextColor(savedTextColor);
+            store.updateY(labelHeight, 'add');
         }
 
         // Render code text line by line
         let yPos = store.Y;
         doc.setTextColor(codeOpts.textColor ?? '#000000');
         for (const line of linesToRender) {
-            doc.text(line, store.X + 4, yPos, { baseline: 'top' });
+            doc.text(line, boxX + padding, yPos, { baseline: 'top' });
             yPos += lineHeight;
         }
         doc.setTextColor(savedTextColor);

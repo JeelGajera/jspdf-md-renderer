@@ -1,21 +1,16 @@
 pages: 1
-endY: 61.014
+endY: 40.059
 
 p1 text        text="Text" x=10 y=10 baseline=top font=helvetica/normal size=11 color=#000000
 p1 text        text="with" x=18.149 y=10 baseline=top font=helvetica/normal size=11 color=#000000
 p1 text        text="a" x=10 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
 p1 text        text="break" x=13.221 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
 p1 text        text="tag." x=23.931 y=15.433 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="a" x=10 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="greater" x=13.221 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="than" x=26.492 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="sign" x=35.068 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="-->" x=43.218 y=27.746 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="Text" x=10 y=38.612 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="with" x=18.149 y=38.612 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="bold" x=25.018 y=42.492 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="html" x=33.361 y=42.492 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="and" x=40.656 y=46.373 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="italic" x=47.059 y=50.253 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="html" x=55.868 y=50.253 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="." x=63.164 y=54.134 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="Text" x=10 y=33.179 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="with" x=18.149 y=33.179 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="bold" x=26.104 y=33.179 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="html" x=34.447 y=33.179 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="and" x=42.829 y=33.179 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="italic" x=50.319 y=33.179 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="html" x=59.128 y=33.179 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="." x=66.423 y=33.179 baseline=top font=helvetica/normal size=11 color=#000000

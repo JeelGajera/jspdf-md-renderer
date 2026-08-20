@@ -101,6 +101,7 @@ export const flattenToWords = (
     parentStyle: TextStyle = 'normal',
     isLink = false,
     href?: string,
+    isStrikethrough = false,
 ): StyledWordInfo[] => {
     const result: StyledWordInfo[] = [];
 
@@ -108,6 +109,10 @@ export const flattenToWords = (
         const style = resolveStyle(el.type, parentStyle);
         const elIsLink = el.type === 'link' || isLink;
         const elHref = el.href || href;
+        const elStruck = el.type === 'del' || isStrikethrough;
+
+        // Renders nothing by design (e.g. a link reference definition).
+        if (el.type === 'noop') continue;
 
         if (el.type === 'br') {
             result.push({ text: '', width: 0, style, isBr: true });
@@ -145,6 +150,7 @@ export const flattenToWords = (
                     style,
                     elIsLink,
                     elHref,
+                    elStruck,
                 ),
             );
             continue;
@@ -171,6 +177,7 @@ export const flattenToWords = (
                         ? store.options.link?.linkColor || [0, 0, 255]
                         : undefined,
                     hasTrailingSpace: /\s$/.test(text),
+                    isStrikethrough: elStruck,
                 });
             }
             continue;
@@ -195,6 +202,7 @@ export const flattenToWords = (
                         ? store.options.link?.linkColor || [0, 0, 255]
                         : undefined,
                     hasTrailingSpace: !isLastInLine || /[ \t]$/.test(lines[li]),
+                    isStrikethrough: elStruck,
                 });
             }
             if (li < lines.length - 1) {

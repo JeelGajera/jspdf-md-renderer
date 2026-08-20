@@ -87,6 +87,9 @@ const renderSingleWord = (
                 renderCodespanBackground(doc, word, x, y, store);
             }
             doc.text(word.text, x, y, { baseline: 'top' });
+            if (word.isStrikethrough && word.text) {
+                renderStrikethrough(doc, word, x, y);
+            }
         }
 
         if (word.isLink && word.href) {
@@ -114,6 +117,28 @@ const renderCodespanBackground = (
     doc.setFillColor(bg);
     doc.rect(x - pad, y - pad, word.width + pad * 2, h + pad * 2, 'F');
     doc.setFillColor('#000000');
+};
+
+/**
+ * Draws the rule for a GFM strikethrough word. jsPDF has no text-decoration,
+ * so the line is drawn manually across the glyph run at roughly x-height.
+ */
+const renderStrikethrough = (
+    doc: jsPDF,
+    word: StyledWordInfo,
+    x: number,
+    y: number,
+): void => {
+    const h = doc.getTextDimensions('H').h;
+    const lineY = y + h * 0.55;
+    const savedDraw = doc.getDrawColor();
+    const savedWidth = doc.getLineWidth();
+    // Match the rule colour to the text so it reads as one decorated run.
+    doc.setDrawColor(doc.getTextColor());
+    doc.setLineWidth(Math.max(0.1, doc.getFontSize() / 100));
+    doc.line(x, lineY, x + word.width, lineY);
+    doc.setDrawColor(savedDraw);
+    doc.setLineWidth(savedWidth);
 };
 
 const renderInlineImage = (
