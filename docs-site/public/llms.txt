@@ -86,12 +86,15 @@ Parses markdown into structured tokens.
 - bold (**text** or __text__)
 - italic (*text* or _text_)
 - bold-italic (***text***)
+- strikethrough (~~text~~)
+- escaped characters (\*, \_)
 - code blocks (fenced ```lang blocks)
 - inline code (`code`)
 - links ([text](url))
 - blockquotes (> text)
 - images (![alt](url) with optional attributes)
-- tables (GFM pipe tables)
+- tables (GFM pipe tables, with column alignment from the delimiter row)
+- reference links ([text][ref] with [ref]: url definitions)
 
 ## Image Attribute Syntax
 ```
