@@ -7,28 +7,34 @@
     "types": "dist/index.d.ts",
     "exports": {
         ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.mjs",
-            "require": "./dist/index.js"
+            "import": {
+                "types": "./dist/index.d.mts",
+                "default": "./dist/index.mjs"
+            },
+            "require": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
+            }
         },
-        "./types": "./dist/types/index.d.ts"
+        "./package.json": "./package.json"
     },
     "files": [
         "dist",
-        "types",
         "LICENSE",
         "README.md"
     ],
     "scripts": {
         "dev": "npm run format && npm run lint:fix && npm run build",
         "build": "tsdown",
-        "lint": "eslint src/**",
-        "lint:fix": "eslint src/** --fix",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
         "format": "prettier --write .",
         "test": "vitest run --coverage",
         "test:watch": "vitest",
         "test:ui": "vitest --ui",
-        "watch": "tsdown --watch"
+        "watch": "tsdown --watch",
+        "typecheck": "tsc --noEmit -p tsconfig.test.json",
+        "verify": "npm run lint && npm run typecheck && npm test"
     },
     "repository": {
         "type": "git",
@@ -72,5 +78,9 @@
         "vitest": "^4.1.7"
     },
     "unpkg": "dist/index.umd.js",
-    "jsdelivr": "dist/index.umd.js"
+    "jsdelivr": "dist/index.umd.js",
+    "sideEffects": false,
+    "engines": {
+        "node": ">=18"
+    }
 }

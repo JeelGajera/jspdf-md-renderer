@@ -1,3 +1,4 @@
+import jsPDF from 'jspdf';
 import { getCharHight } from '../../utils/doc-helpers';
 import { RenderStore } from '../../store/renderStore';
 import { breakIfOverflow } from '../../utils/handlePageBreak';
