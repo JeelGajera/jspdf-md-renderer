@@ -28,6 +28,7 @@ import {
     markPageContentStart,
 } from '../utils/handlePageBreak';
 import { applyPageDecorations } from '../utils/pageDecorations';
+import { attachRenderWarnings } from '../security/security-policy';
 import {
     createTimeoutGuard,
     enforceMarkdownLimits,
@@ -70,6 +71,9 @@ export const MdTextRender = async (
         listener: validOptions.onWarning,
         logToConsole: !validOptions.silent,
     });
+    // Lets the security helpers report through the same collector, so `silent`
+    // and `onWarning` cover them too.
+    attachRenderWarnings(security, warnings);
 
     enforceMarkdownLimits(text, security);
     guardTimeout();

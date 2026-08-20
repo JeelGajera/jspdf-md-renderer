@@ -149,6 +149,14 @@ export class MockDoc {
         return this;
     }
 
+    /**
+     * A real jsPDF document exposes this; without it the renderer cannot
+     * determine an image's intrinsic size and reports IMAGE_SIZE_UNKNOWN.
+     */
+    getImageProperties(): { width: number; height: number } {
+        return { width: 100, height: 50 };
+    }
+
     addImage(
         data: string,
         format: string,

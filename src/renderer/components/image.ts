@@ -46,6 +46,7 @@ const renderImage = (
             maxWidth,
             maxH,
             docUnit,
+            store,
         );
 
         // --- Page break check ---

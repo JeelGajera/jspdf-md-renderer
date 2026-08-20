@@ -11,7 +11,7 @@ import {
     RenderSecurityOptions,
     SecurityViolationError,
 } from '../types/security';
-import { RenderWarnings } from '../store/renderWarnings';
+import { RenderWarnings, WarningSink } from '../store/renderWarnings';
 
 /**
  * Standard DPI for web/screen pixels.
@@ -162,6 +162,7 @@ export const detectImageFormat = (element: ParsedElement): string => {
  */
 const extractSvgDimensions = (
     dataUri: string,
+    warnings?: WarningSink,
 ): { width: number; height: number } | null => {
     try {
         let svgString = '';
@@ -212,7 +213,12 @@ const extractSvgDimensions = (
 
         if (w > 0 && h > 0) return { width: w, height: h };
     } catch (e) {
-        console.warn('Failed to extract SVG dimensions:', e);
+        warnings?.warn({
+            code: 'IMAGE_SIZE_UNKNOWN',
+            message:
+                `Could not read the intrinsic size of an SVG: ${String(e)}. ` +
+                'It will be drawn at a fallback size.',
+        });
     }
     return null;
 };
@@ -227,6 +233,7 @@ export const calculateImageDimensions = (
     maxWidth: number,
     maxHeight: number,
     docUnit: string = 'mm',
+    warnings?: WarningSink,
 ): { finalWidth: number; finalHeight: number } => {
     if (!element.data) {
         return { finalWidth: 0, finalHeight: 0 };
@@ -243,13 +250,16 @@ export const calculateImageDimensions = (
                 intrinsicPxW = props.width;
                 intrinsicPxH = props.height;
             } catch (e) {
-                console.warn(
-                    'Failed to get image properties for intrinsic sizing:',
-                    e,
-                );
+                warnings?.warn({
+                    code: 'IMAGE_SIZE_UNKNOWN',
+                    message:
+                        `Could not read the intrinsic size of an image: ${String(e)}. ` +
+                        'It will be drawn at a fallback size.',
+                    context: element.src,
+                });
             }
         } else {
-            const svgDims = extractSvgDimensions(element.data);
+            const svgDims = extractSvgDimensions(element.data, warnings);
             if (svgDims) {
                 // Treat the extracted dimensions as standard intrinsic pixels
                 intrinsicPxW = svgDims.width;
@@ -427,6 +437,7 @@ export const prefetchImages = async (
                                 const canvas = document.createElement('canvas');
                                 const dims = extractSvgDimensions(
                                     element.data!,
+                                    warnings,
                                 );
                                 const w = dims ? dims.width : img.width || 300;
                                 const h = dims

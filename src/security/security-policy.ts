@@ -6,6 +6,48 @@ import {
     ViolationAction,
     ViolationMode,
 } from '../types/security';
+import { RenderWarning, RenderWarnings } from '../store/renderWarnings';
+
+/**
+ * Warning collector for the render a normalized security config belongs to.
+ *
+ * The security helpers are called from a dozen places that have no reason to
+ * carry a collector around, and threading one through all of them would put
+ * render bookkeeping into every signature. `normalizeSecurityOptions` produces
+ * a fresh object per render, so keying off that object identity gives each
+ * render its own collector without changing any public shape. A WeakMap keeps
+ * it out of the object itself, so nothing leaks into what a caller can see.
+ */
+const renderWarningsBySecurity = new WeakMap<
+    RenderSecurityOptions,
+    RenderWarnings
+>();
+
+/** Associates a render's warning collector with its security config. */
+export const attachRenderWarnings = (
+    security: RenderSecurityOptions,
+    warnings: RenderWarnings,
+): void => {
+    renderWarningsBySecurity.set(security, warnings);
+};
+
+/**
+ * Reports a problem the security layer hit, through the render's collector
+ * when there is one so `silent` and `onWarning` apply to it as well.
+ */
+const warnSecurity = (
+    security: RenderSecurityOptions,
+    warning: RenderWarning,
+): void => {
+    const warnings = renderWarningsBySecurity.get(security);
+    if (warnings) {
+        warnings.warn(warning);
+        return;
+    }
+    // Called outside a render (the helpers are exported), so there is nowhere
+    // to collect it.
+    console.warn(`[jspdf-md-renderer] ${warning.code}: ${warning.message}`);
+};
 
 const DEFAULT_SECURITY: Required<
     Omit<
@@ -314,10 +356,13 @@ export const handleSecurityViolation = (
     try {
         security.onSecurityViolation?.(fullViolation);
     } catch (error) {
-        console.warn(
-            '[jspdf-md-renderer] security.onSecurityViolation callback failed:',
-            error,
-        );
+        warnSecurity(security, {
+            code: 'SECURITY_CALLBACK_FAILED',
+            message:
+                `The security.onSecurityViolation callback threw: ${String(error)}. ` +
+                'The violation was still handled according to violationMode.',
+            context: violation.code,
+        });
     }
 
     const mode = security.violationMode || 'skip';
@@ -546,12 +591,16 @@ export const validateResourceUrl = async (
     const ips = await resolveHostToIPs(host);
     if (ips === null) {
         if (type === 'image') {
-            console.warn(
-                '[jspdf-md-renderer] Security warning: IP-based SSRF checks ' +
-                    '(blockPrivateIPs, blockLinkLocalIPs, blockMetadataIPs) ' +
-                    'cannot be fully enforced in browser environments. Route image ' +
-                    'fetching through a trusted server-side proxy.',
-            );
+            warnSecurity(security, {
+                code: 'SSRF_CHECKS_UNAVAILABLE',
+                message:
+                    'IP-based SSRF checks (blockPrivateIPs, blockLinkLocalIPs, ' +
+                    'blockMetadataIPs) cannot be enforced without DNS resolution, ' +
+                    'which is unavailable in browser environments. Route image ' +
+                    'fetching through a trusted server-side proxy for strict ' +
+                    'enforcement.',
+                context: host,
+            });
         }
     } else {
         for (const ip of ips) {
