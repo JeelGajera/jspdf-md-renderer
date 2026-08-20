@@ -63,7 +63,11 @@ const renderTable = (
 ) => {
     // Guard: must have header and at least structure
     if (!element.header || element.header.length === 0) {
-        console.warn('[jspdf-md-renderer] Table skipped: no header row');
+        store.warn({
+            code: 'TABLE_SKIPPED',
+            message: 'Table skipped because it has no header row',
+            droppedNodes: 1,
+        });
         return;
     }
 
@@ -110,10 +114,11 @@ const renderTable = (
                 userTableOptions.didDrawPage(data as never);
             }
         } catch (e) {
-            console.warn(
-                '[jspdf-md-renderer] table.didDrawPage callback threw:',
-                e,
-            );
+            store.warn({
+                code: 'TABLE_CALLBACK_FAILED',
+                message: `table.didDrawPage callback threw: ${String(e)}`,
+                context: 'didDrawPage',
+            });
         }
     };
     const safeDidDrawCell = (data: unknown) => {
@@ -122,10 +127,11 @@ const renderTable = (
                 userTableOptions.didDrawCell(data as never);
             }
         } catch (e) {
-            console.warn(
-                '[jspdf-md-renderer] table.didDrawCell callback threw:',
-                e,
-            );
+            store.warn({
+                code: 'TABLE_CALLBACK_FAILED',
+                message: `table.didDrawCell callback threw: ${String(e)}`,
+                context: 'didDrawCell',
+            });
         }
     };
 
@@ -155,9 +161,12 @@ const renderTable = (
         store.updateX(options.page.xpading, 'set');
         store.recordContentY();
     } else {
-        console.warn(
-            '[jspdf-md-renderer] autoTable did not return a finalY. Y position may be incorrect.',
-        );
+        store.warn({
+            code: 'TABLE_POSITION_UNKNOWN',
+            message:
+                'autoTable did not report a finalY, so content after this ' +
+                'table may be positioned incorrectly',
+        });
     }
 };
 

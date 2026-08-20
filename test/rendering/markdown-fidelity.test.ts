@@ -3,6 +3,7 @@ import { MdTextRender, MdTextParser } from '../../src/index';
 import { goldenOptions, recordDoc } from '../golden/recorder';
 import { enforceNestedDepthAndImageCount } from '../../src/security/security-guards';
 import { normalizeSecurityOptions } from '../../src/security/security-policy';
+import { RenderWarnings } from '../../src/store/renderWarnings';
 import type { ParsedElement } from '../../src/types/parsedElement';
 
 const drawnText = (ops: ReturnType<typeof recordDoc>['ops']): string[] =>
@@ -278,7 +279,6 @@ describe('maxNestedDepth counts markdown nesting (D7)', () => {
     });
 
     it('reports how much content a depth violation dropped', async () => {
-        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const elements = await structuralDepth(10);
         const security = normalizeSecurityOptions({
             enabled: true,
@@ -287,19 +287,28 @@ describe('maxNestedDepth counts markdown nesting (D7)', () => {
         });
 
         const violations: string[] = [];
-        enforceNestedDepthAndImageCount(elements, {
-            ...security,
-            onSecurityViolation: (v) => violations.push(v.code),
-        });
+        const warnings = new RenderWarnings({ logToConsole: false });
+        enforceNestedDepthAndImageCount(
+            elements,
+            {
+                ...security,
+                onSecurityViolation: (v) => violations.push(v.code),
+            },
+            warnings,
+        );
 
         expect(violations).toContain('MAX_NESTED_DEPTH_EXCEEDED');
         // Reported once, not once per branch.
         expect(
             violations.filter((v) => v === 'MAX_NESTED_DEPTH_EXCEEDED'),
         ).toHaveLength(1);
-        expect(warn).toHaveBeenCalledWith(
-            expect.stringContaining('node(s) were dropped'),
-        );
-        warn.mockRestore();
+
+        // The dropped content is quantified, not just flagged.
+        const dropped = warnings
+            .list()
+            .filter((w) => w.code === 'CONTENT_DROPPED');
+        expect(dropped).toHaveLength(1);
+        expect(dropped[0].droppedNodes).toBeGreaterThan(0);
+        expect(warnings.droppedNodes).toBe(dropped[0].droppedNodes);
     });
 });

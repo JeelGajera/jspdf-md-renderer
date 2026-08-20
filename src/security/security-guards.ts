@@ -1,6 +1,7 @@
 import { MdTokenType } from '../enums/mdTokenType';
 import { ParsedElement } from '../types/parsedElement';
 import { RenderSecurityOptions } from '../types/security';
+import { RenderWarnings } from '../store/renderWarnings';
 import { handleSecurityViolation } from './security-policy';
 
 /**
@@ -37,6 +38,7 @@ export const enforceMarkdownLimits = (
 export const enforceNestedDepthAndImageCount = (
     elements: ParsedElement[],
     security: RenderSecurityOptions,
+    warnings?: RenderWarnings,
 ): void => {
     if (!security.enabled) return;
 
@@ -122,11 +124,15 @@ export const enforceNestedDepthAndImageCount = (
     elements.push(...sanitizedRoot);
 
     if (droppedNodeCount > 0) {
-        console.warn(
-            `[jspdf-md-renderer] ${droppedNodeCount} node(s) were dropped because the ` +
-                `markdown nested deeper than security.maxNestedDepth (${maxDepth}). ` +
+        warnings?.warn({
+            code: 'CONTENT_DROPPED',
+            message:
+                `${droppedNodeCount} node(s) were dropped because the markdown ` +
+                `nested deeper than security.maxNestedDepth (${maxDepth}). ` +
                 'Raise the limit or flatten the document to keep this content.',
-        );
+            context: 'maxNestedDepth',
+            droppedNodes: droppedNodeCount,
+        });
     }
 };
 

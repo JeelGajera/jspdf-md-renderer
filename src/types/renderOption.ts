@@ -1,6 +1,7 @@
 import jsPDF, { jsPDFOptions } from 'jspdf';
 import { UserOptions } from 'jspdf-autotable';
-import { RenderSecurityOptions } from './security';
+import { RenderSecurityOptions, SecurityViolation } from './security';
+import { RenderWarning, WarningListener } from '../store/renderWarnings';
 
 export type RenderOption = {
     /**
@@ -225,6 +226,16 @@ export type RenderOption = {
      * `false` becomes the default in the next major version.
      */
     breaks?: boolean;
+    /**
+     * Called for each thing the render decided not to draw. Fires in addition
+     * to the `warnings` array on the result.
+     */
+    onWarning?: WarningListener;
+    /**
+     * Suppresses the library's own `console.warn` output. Warnings are still
+     * collected on the result and still reach `onWarning`.
+     */
+    silent?: boolean;
     pageBreakHandler?: (doc: jsPDF) => void;
     /**
      * Called with the final Y position once rendering completes.
@@ -291,3 +302,25 @@ export type ResolvedRenderOption = Omit<
     breaks: boolean;
     endCursorYHandler: (y: number) => void;
 };
+
+/**
+ * What a render produced, and what it could not.
+ *
+ * Returned by `MdTextRender`. `warnings` and `droppedNodes` exist because
+ * failures in this library were previously silent — a caller had no way to
+ * learn that the document they just generated was missing content.
+ */
+export interface RenderResult {
+    /** Y position of the cursor when rendering finished. */
+    endY: number;
+    /** Page the render started on — relevant when rendering into an existing document. */
+    startPage: number;
+    /** Number of pages this render produced, including the one it started on. */
+    pageCount: number;
+    /** Everything the render could not draw. Empty on a clean render. */
+    warnings: RenderWarning[];
+    /** Total nodes discarded, summed across the warnings. */
+    droppedNodes: number;
+    /** Security violations raised during the render. */
+    violations: SecurityViolation[];
+}

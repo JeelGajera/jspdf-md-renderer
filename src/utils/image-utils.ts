@@ -11,6 +11,7 @@ import {
     RenderSecurityOptions,
     SecurityViolationError,
 } from '../types/security';
+import { RenderWarnings } from '../store/renderWarnings';
 
 /**
  * Standard DPI for web/screen pixels.
@@ -298,6 +299,7 @@ export const calculateImageDimensions = (
 export const prefetchImages = async (
     elements: ParsedElement[],
     security?: RenderSecurityOptions,
+    warnings?: RenderWarnings,
 ): Promise<void> => {
     for (const element of elements) {
         if (element.type === MdTokenType.Image && element.src) {
@@ -457,15 +459,22 @@ export const prefetchImages = async (
                 if (error instanceof SecurityViolationError) {
                     throw error;
                 }
-                console.warn(
-                    `[jspdf-md-renderer] Warning: Failed to load image at ${element.src}. It will be skipped.`,
-                    error,
-                );
+                warnings?.warn({
+                    code: 'IMAGE_LOAD_FAILED',
+                    message: `Failed to load image: ${String(error)}`,
+                    context: element.src,
+                });
+                if (!warnings) {
+                    console.warn(
+                        `[jspdf-md-renderer] Warning: Failed to load image at ${element.src}. It will be skipped.`,
+                        error,
+                    );
+                }
             }
         }
 
         if (element.items && element.items.length > 0) {
-            await prefetchImages(element.items, security);
+            await prefetchImages(element.items, security, warnings);
         }
     }
 };

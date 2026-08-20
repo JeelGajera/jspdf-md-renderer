@@ -100,12 +100,16 @@ const renderCodeBlock = (
             // We already moved to a fresh page and a single line still does
             // not fit, so no page ever will. Render one line anyway and let it
             // overflow: losing the block entirely, or looping, is worse.
-            console.warn(
-                '[jspdf-md-renderer] Code block line height exceeds the usable ' +
-                    'page height (maxContentHeight - topmargin - 2 * codeBlock.padding). ' +
-                    'Rendering one line per page; content may overflow the page bounds. ' +
-                    'Increase page.maxContentHeight or reduce codeBlock.padding / font size.',
-            );
+            store.warn({
+                code: 'CODE_BLOCK_OVERFLOW',
+                message:
+                    'Code block line height exceeds the usable page height ' +
+                    '(content bottom - top margin - 2 * codeBlock.padding). ' +
+                    'Rendering one line per page; content may overflow the ' +
+                    'page bounds. Increase the page height or reduce ' +
+                    'codeBlock.padding or the font size.',
+                context: element.lang,
+            });
             linesToRenderCount = 1;
         }
 

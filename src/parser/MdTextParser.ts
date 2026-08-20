@@ -6,6 +6,7 @@ import {
     preprocessImageAttributes,
     parseImageAttrsFromHref,
 } from './imageExtension';
+import { RenderWarnings } from '../store/renderWarnings';
 import {
     enforceAbsoluteMarkdownLengthLimit,
     enforceStructuralSafetyLimits,
@@ -18,7 +19,10 @@ import {
  * @param text - The markdown content to parse.
  * @returns Parsed markdown elements.
  */
-export const MdTextParser = async (text: string): Promise<ParsedElement[]> => {
+export const MdTextParser = async (
+    text: string,
+    warnings?: RenderWarnings,
+): Promise<ParsedElement[]> => {
     // Hard, unconditional safety limits — always run, regardless of the
     // opt-in `security` option. See src/security/pre-parse-guards.ts.
     enforceAbsoluteMarkdownLengthLimit(text);
@@ -46,7 +50,7 @@ export const MdTextParser = async (text: string): Promise<ParsedElement[]> => {
         );
     }
 
-    return convertTokens(tokens);
+    return convertTokens(tokens, warnings);
 };
 
 /**
@@ -55,13 +59,16 @@ export const MdTextParser = async (text: string): Promise<ParsedElement[]> => {
  * @param tokens - The list of markdown tokens.
  * @returns Parsed elements in a custom structure.
  */
-const convertTokens = (tokens: TokensList | any[]): ParsedElement[] => {
+const convertTokens = (
+    tokens: TokensList | any[],
+    warnings?: RenderWarnings,
+): ParsedElement[] => {
     const parsedElements: ParsedElement[] = [];
     tokens.forEach((token) => {
         try {
             const handler = tokenHandlers[token.type];
             if (handler) {
-                parsedElements.push(handler(token));
+                parsedElements.push(handler(token, warnings));
             } else {
                 parsedElements.push({
                     type: MdTokenType.Raw,
@@ -69,7 +76,14 @@ const convertTokens = (tokens: TokensList | any[]): ParsedElement[] => {
                 });
             }
         } catch (error) {
-            console.error('Failed to handle token ==>', token, error);
+            // The token is discarded, so this is content loss: report it rather
+            // than only logging it.
+            warnings?.warn({
+                code: 'TOKEN_CONVERSION_FAILED',
+                message: `Failed to convert a '${token?.type}' token: ${String(error)}`,
+                context: token?.type,
+                droppedNodes: 1,
+            });
         }
     });
     return parsedElements;
@@ -78,7 +92,10 @@ const convertTokens = (tokens: TokensList | any[]): ParsedElement[] => {
 /**
  * Map each token type to its handler function.
  */
-const tokenHandlers: Record<string, (token: any) => ParsedElement> = {
+const tokenHandlers: Record<
+    string,
+    (token: any, warnings?: RenderWarnings) => ParsedElement
+> = {
     [MdTokenType.Heading]: (token) => ({
         type: MdTokenType.Heading,
         depth: token.depth,
