@@ -1,149 +1,220 @@
 ---
 title: Custom Fonts
-description: How to use custom fonts with jspdf-md-renderer.
+description: Register a non-core font with registerFont and use it for headings, body text and code.
 llm_summary: |
-  Demonstrates custom font registration with jsPDF's addFont method,
-  then referencing fonts in the font option of RenderOption. Supports
-  any TTF font that jsPDF can load.
+  registerFont(doc, { family, variants, fileNames?, onWarning? }) wires a base64 TTF into a jsPDF
+  document and returns a font config that drops into RenderOption.font. Covers style-name matching,
+  missing-variant fallback, a second family for code, loading font data in Node and the browser,
+  file size, and the manual addFileToVFS/addFont equivalent.
 ---
 
-# Custom Fonts Example
+# Custom Fonts
 
-Use custom fonts to match your brand or design requirements.
+Use a custom font to match your brand, or to render a script the built-in
+Helvetica does not cover.
 
-## How It Works
+## The problem `registerFont` solves
 
-1. **Add the font to jsPDF** using `doc.addFont()`
-2. **Reference it** in the `font` options
+The renderer selects faces with `doc.setFont(family, style)`, using exactly the
+style names `'normal'`, `'bold'`, `'italic'` and `'bolditalic'`. Wiring a font
+in by hand means getting those names to line up — and when they do not, jsPDF
+does not fail. It silently substitutes a core font in a *different family*, so
+the only symptom is a PDF where some words are in the wrong typeface.
 
-## Step-by-Step
+`registerFont` does the wiring and hands back a `font` config that matches.
 
-### 1. Prepare Your Font File
-
-You need the font in TTF, OTF, or another format [supported by jsPDF](https://artskydj.github.io/jsPDF/docs/module-addFont.html). Convert it to a base64 string or load it as a binary.
-
-### 2. Register the Font
+## Register and use
 
 ```ts
 import { jsPDF } from 'jspdf'
+import { MdTextRender, registerFont } from 'jspdf-md-renderer'
+import { interRegular, interBold, interItalic } from './fonts'  // base64 strings
 
 const doc = new jsPDF({ unit: 'mm', format: 'a4' })
 
-// Add fonts (you need the font file data)
-// Method 1: If your font file is base64 encoded
-doc.addFileToVFS('Roboto-Regular.ttf', robotoRegularBase64)
-doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal')
+const inter = registerFont(doc, {
+  family: 'Inter',
+  variants: {
+    normal: interRegular,
+    bold: interBold,
+    italic: interItalic,
+  },
+})
 
-doc.addFileToVFS('Roboto-Bold.ttf', robotoBoldBase64)
-doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold')
+await MdTextRender(doc, markdown, {
+  page: { margin: { top: 20, right: 20, bottom: 20, left: 20 } },
+  font: inter.font,
+})
 
-doc.addFileToVFS('Roboto-Italic.ttf', robotoItalicBase64)
-doc.addFont('Roboto-Italic.ttf', 'Roboto', 'italic')
-
-doc.addFileToVFS('FiraCode-Regular.ttf', firaCodeBase64)
-doc.addFont('FiraCode-Regular.ttf', 'FiraCode', 'normal')
+doc.save('branded.pdf')
 ```
 
-### 3. Use in Options
+`inter.font` is exactly the shape `RenderOption.font` expects — `regular`,
+`bold`, `italic` and `boldItalic`, each already pointing at the right family and
+style.
+
+::: warning Register before rendering
+`registerFont` must be called on the same `doc` you render into, before
+`MdTextRender`.
+:::
+
+## What it returns
 
 ```ts
-import { MdTextRender } from 'jspdf-md-renderer'
-
-const options = {
-  cursor: { x: 10, y: 10 },
-  page: {
-    maxContentWidth: 190,
-    maxContentHeight: 277,
-    lineSpace: 1.5,
-    defaultLineHeightFactor: 1.2,
-    defaultFontSize: 12,
-    defaultTitleFontSize: 14,
-    topmargin: 10,
-    xpading: 10,
-    xmargin: 10,
-    indent: 10,
-  },
+interface RegisteredFont {
+  family: string
+  registered: Array<'normal' | 'bold' | 'italic' | 'bolditalic'>
   font: {
-    bold: { name: 'Roboto', style: 'bold' },
-    regular: { name: 'Roboto', style: 'normal' },
-    light: { name: 'Roboto', style: 'normal' }, // Use regular if no light variant
-    code: { name: 'FiraCode', style: 'normal' },
-  },
-  endCursorYHandler: (y) => console.log('End Y:', y),
+    regular:    { name: string; style: string }
+    bold:       { name: string; style: string }
+    italic:     { name: string; style: string }
+    boldItalic: { name: string; style: string }
+  }
 }
-
-await MdTextRender(doc, markdownContent, options)
-doc.save('custom-font-document.pdf')
 ```
 
-## Complete Example
+`registered` lists the variants jsPDF actually accepted — which is not always
+the ones you passed. A malformed face is reported by jsPDF through an internal
+event rather than by throwing, so `registerFont` verifies each variant against
+the document's font list afterwards and only reports what really landed.
+
+## Missing variants
+
+Only `normal` is required. Any style you do not supply falls back to the normal
+face **within the same family**, so text stays in your typeface rather than
+jumping to Helvetica:
 
 ```ts
-import { jsPDF } from 'jspdf'
-import { MdTextRender } from 'jspdf-md-renderer'
-// Import your font data (base64 encoded TTF)
-import { robotoRegular, robotoBold, firaCode } from './fonts'
+const brand = registerFont(doc, {
+  family: 'Inter',
+  variants: { normal: interRegular },   // regular only
+})
 
-async function generateWithCustomFonts() {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-
-  // Register fonts
-  doc.addFileToVFS('Roboto-Regular.ttf', robotoRegular)
-  doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal')
-  doc.addFileToVFS('Roboto-Bold.ttf', robotoBold)
-  doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold')
-  doc.addFileToVFS('FiraCode-Regular.ttf', firaCode)
-  doc.addFont('FiraCode-Regular.ttf', 'FiraCode', 'normal')
-
-  const markdown = `
-# Custom Font Demo
-
-This document uses **Roboto** instead of the default Helvetica.
-
-## Why Custom Fonts?
-
-- Match your brand identity
-- Better readability for specific languages
-- Professional document appearance
-
-> Custom fonts make your PDFs stand out.
-`
-
-  await MdTextRender(doc, markdown, {
-    cursor: { x: 10, y: 10 },
-    page: {
-      maxContentWidth: 190,
-      maxContentHeight: 277,
-      lineSpace: 1.5,
-      defaultLineHeightFactor: 1.2,
-      defaultFontSize: 12,
-      defaultTitleFontSize: 14,
-      topmargin: 10,
-      xpading: 10,
-      xmargin: 10,
-      indent: 10,
-    },
-    font: {
-      bold: { name: 'Roboto', style: 'bold' },
-      regular: { name: 'Roboto', style: 'normal' },
-      light: { name: 'Roboto', style: 'normal' },
-      code: { name: 'FiraCode', style: 'normal' },
-    },
-    endCursorYHandler: () => {},
-  })
-
-  doc.save('custom-fonts.pdf')
-}
+brand.font.bold   // → { name: 'Inter', style: 'normal' }
+brand.registered  // → ['normal']
 ```
 
-::: tip Font Weight Mapping
-The `font` option maps to specific usage targets:
-- **`bold`** — used for headings, `**bold**` text, and list markers
-- **`regular`** — used for body text, paragraphs, and list items
-- **`light`** — used for lighter text elements (falls back to regular if not available)
-- **`code`** — used for fenced code blocks and inline codespans
+Bold and italic text will not be visually distinct, which is why a warning is
+emitted listing exactly which styles are missing. Silence it with your own
+handler once the trade-off is deliberate:
+
+```ts
+registerFont(doc, {
+  family: 'Inter',
+  variants: { normal: interRegular },
+  onWarning: (message) => logger.debug(message),
+})
+```
+
+## A separate family for code
+
+Call it once per family and combine the results:
+
+```ts
+const body = registerFont(doc, {
+  family: 'Inter',
+  variants: { normal: interRegular, bold: interBold },
+})
+const mono = registerFont(doc, {
+  family: 'FiraCode',
+  variants: { normal: firaCodeRegular },
+})
+
+await MdTextRender(doc, markdown, {
+  page: { margin: { top: 20, right: 20, bottom: 20, left: 20 } },
+  font: { ...body.font, code: mono.font.regular },
+})
+```
+
+| Slot | Used for |
+| --- | --- |
+| `regular` | Body text, paragraphs, list items |
+| `bold` | Headings and `**bold**` text |
+| `italic` / `boldItalic` | `*italic*` and `***bold italic***` |
+| `code` | Fenced code blocks and inline code spans |
+
+## Getting the font data
+
+`variants` takes base64-encoded font data. A `data:` URI prefix is accepted and
+stripped, so both of these work:
+
+```ts
+variants: { normal: 'AAEAAAAOAIAAAwBgT1MvMg...' }
+variants: { normal: 'data:font/ttf;base64,AAEAAAAOAIAAAwBgT1MvMg...' }
+```
+
+**Node.js**
+
+```ts
+import { readFileSync } from 'node:fs'
+
+const interRegular = readFileSync('./fonts/Inter-Regular.ttf').toString('base64')
+```
+
+**Browser**
+
+```ts
+const res = await fetch('/fonts/Inter-Regular.ttf')
+const buf = await res.arrayBuffer()
+const interRegular = btoa(String.fromCharCode(...new Uint8Array(buf)))
+```
+
+**Build step** — most bundlers can inline a font as a base64 data URI, which
+`registerFont` accepts as-is:
+
+```ts
+import interRegular from './fonts/Inter-Regular.ttf?inline'   // Vite
+```
+
+::: tip Keep an eye on file size
+Every registered variant is embedded in the PDF in full — jsPDF does not subset
+fonts. Four variants of a typical text face add roughly 400–800 KB to every
+document. Register only the styles you actually use, and prefer a subsetted
+font file if your documents use a small character set.
 :::
 
-::: warning Font Availability
-Make sure to register the font *before* calling `MdTextRender`. If a referenced font name doesn't exist in jsPDF, it will fall back to the default Helvetica.
-:::
+### File names
+
+Each variant is stored in jsPDF's virtual filesystem as
+`<family>-<style>.ttf`. Override that if you need control over the names:
+
+```ts
+registerFont(doc, {
+  family: 'Inter',
+  variants: { normal: interRegular, bold: interBold },
+  fileNames: { normal: 'Inter-Regular-v4.ttf' },
+})
+```
+
+## Doing it by hand
+
+`registerFont` is a convenience, not a requirement. The equivalent manual
+wiring:
+
+```ts
+doc.addFileToVFS('Inter-normal.ttf', interRegular)
+doc.addFont('Inter-normal.ttf', 'Inter', 'normal')
+doc.addFileToVFS('Inter-bold.ttf', interBold)
+doc.addFont('Inter-bold.ttf', 'Inter', 'bold')
+
+await MdTextRender(doc, markdown, {
+  page: { margin: { top: 20, right: 20, bottom: 20, left: 20 } },
+  font: {
+    regular: { name: 'Inter', style: 'normal' },
+    bold: { name: 'Inter', style: 'bold' },
+    // 'italic' was never registered — pointing at it here is the mistake
+    // registerFont exists to prevent.
+    italic: { name: 'Inter', style: 'normal' },
+    boldItalic: { name: 'Inter', style: 'bold' },
+  },
+})
+```
+
+Any format [jsPDF supports](https://artskydj.github.io/jsPDF/docs/module-addFont.html)
+works — TTF is the common case.
+
+## Related
+
+- [Options Reference](/api/options#fonts)
+- [Text Styles](/elements/text-styles)
+- [Render Result](/guide/render-result)

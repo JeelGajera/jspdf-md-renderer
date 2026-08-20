@@ -32,7 +32,7 @@ features:
   - icon: >-
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></svg>
     title: Customizable Rendering
-    details: Control fonts, spacing, headings, lists, tables, images, and page decorations.
+    details: Control fonts, spacing, headings, lists, tables, images and page decorations — or replace any block renderer outright.
   - icon: >-
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
     title: Browser and Node.js
@@ -50,39 +50,47 @@ features:
 ## Quick Start
 
 ```bash
-npm install jspdf-md-renderer
+npm install jspdf-md-renderer jspdf jspdf-autotable marked
 ```
 
 ```ts
 import { jsPDF } from 'jspdf'
 import { MdTextRender } from 'jspdf-md-renderer'
 
-const doc = new jsPDF()
+const doc = new jsPDF({ unit: 'mm', format: 'a4' })
 
-await MdTextRender(doc, '# Hello World\n\nRendered with **jspdf-md-renderer**!', {
-  cursor: { x: 10, y: 10 },
-  page: {
-    maxContentWidth: 190,
-    maxContentHeight: 277,
-    lineSpace: 1.5,
-    defaultLineHeightFactor: 1.2,
-    defaultFontSize: 12,
-    defaultTitleFontSize: 14,
-    topmargin: 10,
-    xpading: 10,
-    xmargin: 10,
-    indent: 10,
+const result = await MdTextRender(
+  doc,
+  '# Hello World\n\nRendered with **jspdf-md-renderer**!',
+  {
+    page: { margin: { top: 20, right: 20, bottom: 20, left: 20 } },
+    font: { regular: { name: 'helvetica', style: 'normal' } },
   },
-  font: {
-    bold: { name: 'helvetica', style: 'bold' },
-    regular: { name: 'helvetica', style: 'normal' },
-    light: { name: 'helvetica', style: 'light' },
-  },
-  endCursorYHandler: (y) => console.log('Ended at Y:', y),
-})
+)
 
+if (result.warnings.length) console.warn(result.warnings)
 doc.save('output.pdf')
 ```
+
+The content area is derived from the document's own page size, so the same
+options work on any format. See [Page Geometry](/guide/page-geometry).
+
+## Drawing a Block Yourself
+
+```ts
+await MdTextRender(doc, markdown, {
+  ...options,
+  components: {
+    hr: (ctx) => {
+      ctx.doc.setFillColor('#E2E8F0')
+      ctx.doc.rect(ctx.x, ctx.y, ctx.maxWidth, 0.6, 'F')
+      ctx.store.updateY(5, 'add')
+    },
+  },
+})
+```
+
+See [Component Overrides](/guide/component-overrides).
 
 ## Security Example (opt-in)
 

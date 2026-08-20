@@ -53,6 +53,18 @@ export default defineConfig({
                         },
                         { text: 'Installation', link: '/guide/installation' },
                         { text: 'Basic Usage', link: '/guide/basic-usage' },
+                        {
+                            text: 'Page Geometry',
+                            link: '/guide/page-geometry',
+                        },
+                        {
+                            text: 'Render Result',
+                            link: '/guide/render-result',
+                        },
+                        {
+                            text: 'Component Overrides',
+                            link: '/guide/component-overrides',
+                        },
                         { text: 'Browser Usage', link: '/guide/browser-usage' },
                         { text: 'Security Guide', link: '/guide/security' },
                     ],
