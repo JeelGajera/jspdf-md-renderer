@@ -117,6 +117,8 @@ export const validateOptions = (options: RenderOption): RenderOption => {
         ...(options.codeBlock ?? {}),
     };
     const spacing = {
+        // Defaults preserve 4.1.x output exactly; see RenderOption.spacing.
+        blankLines: 'preserve' as const,
         afterHeading: 2,
         afterParagraph: 3,
         afterCodeBlock: 3,
@@ -158,6 +160,17 @@ export const validateOptions = (options: RenderOption): RenderOption => {
         ...(options.image ?? {}),
     };
 
+    if (
+        spacing.blankLines !== 'preserve' &&
+        spacing.blankLines !== 'collapse'
+    ) {
+        spacing.blankLines = 'preserve';
+    }
+
+    // Historical behaviour: a single newline is a hard break. CommonMark says
+    // it is a space; opt in with `breaks: false`.
+    const breaks = options.breaks ?? true;
+
     // endCursorYHandler must exist
     const endCursorYHandler = options.endCursorYHandler ?? (() => {});
 
@@ -172,6 +185,7 @@ export const validateOptions = (options: RenderOption): RenderOption => {
         paragraph,
         codeBlock,
         spacing,
+        breaks,
         image,
         security: normalizeSecurityOptions(options.security),
         endCursorYHandler,

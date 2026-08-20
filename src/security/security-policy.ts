@@ -412,7 +412,10 @@ export const validateResourceUrl = async (
         if (security.validateUrl) {
             let relativeUrl: URL;
             try {
-                relativeUrl = new URL(normalizedValue, 'https://relative.local');
+                relativeUrl = new URL(
+                    normalizedValue,
+                    'https://relative.local',
+                );
             } catch {
                 handleSecurityViolation(
                     security,
@@ -471,9 +474,9 @@ export const validateResourceUrl = async (
         const protocolList =
             type === 'link'
                 ? security.allowedLinkProtocols ||
-                DEFAULT_SECURITY.allowedLinkProtocols
+                  DEFAULT_SECURITY.allowedLinkProtocols
                 : security.allowedImageProtocols ||
-                DEFAULT_SECURITY.allowedImageProtocols;
+                  DEFAULT_SECURITY.allowedImageProtocols;
 
         if (!protocolList.includes(protocol)) {
             handleSecurityViolation(
@@ -545,9 +548,9 @@ export const validateResourceUrl = async (
         if (type === 'image') {
             console.warn(
                 '[jspdf-md-renderer] Security warning: IP-based SSRF checks ' +
-                '(blockPrivateIPs, blockLinkLocalIPs, blockMetadataIPs) ' +
-                'cannot be fully enforced in browser environments. Route image ' +
-                'fetching through a trusted server-side proxy.',
+                    '(blockPrivateIPs, blockLinkLocalIPs, blockMetadataIPs) ' +
+                    'cannot be fully enforced in browser environments. Route image ' +
+                    'fetching through a trusted server-side proxy.',
             );
         }
     } else {

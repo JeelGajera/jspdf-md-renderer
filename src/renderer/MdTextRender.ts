@@ -122,6 +122,24 @@ export const MdTextRender = async (
             // Renders nothing by design (e.g. link reference definitions).
             case MdTokenType.Noop:
                 break;
+            case MdTokenType.Space:
+                // Historically these blank-line tokens fell through to the raw
+                // renderer and added a line of space on top of the configured
+                // spacing.* values, so the spacing options never fully
+                // determined the gap between blocks. 'collapse' opts out.
+                if (validOptions.spacing?.blankLines === 'collapse') break;
+                renderRawItem(
+                    doc,
+                    { type: MdTokenType.Raw, content: element.content },
+                    indentLevel,
+                    store,
+                    hasRawBullet,
+                    renderElement,
+                    start,
+                    ordered,
+                    validOptions.content?.textAlignment === 'justify',
+                );
+                break;
             case MdTokenType.Strong:
             case MdTokenType.Em:
             case MdTokenType.Del:

@@ -15,12 +15,7 @@ const renderHeading = (
     withSavedDocState(doc, () => {
         const depth = element?.depth ?? 1;
         const headingKey = `h${depth}` as
-            | 'h1'
-            | 'h2'
-            | 'h3'
-            | 'h4'
-            | 'h5'
-            | 'h6';
+            'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
         const fontSize =
             store.options.heading?.[headingKey] ??
             store.options.page.defaultTitleFontSize;

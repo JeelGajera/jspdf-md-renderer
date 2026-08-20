@@ -73,6 +73,46 @@ describe('golden snapshots with decorations', () => {
         );
     });
 
+    /**
+     * The corrected spacing and soft-break behaviour, which becomes the default
+     * in the next major. Pinning it now means flipping those defaults is a
+     * reviewable snapshot diff rather than an unbounded change.
+     */
+    it('renders with blank lines collapsed and CommonMark soft breaks', async () => {
+        const markdown = readFileSync(
+            join(FIXTURE_DIR, '16-blank-line-spacing.md'),
+            'utf-8',
+        );
+        const { doc, transcript } = recordDoc();
+
+        await MdTextRender(
+            doc,
+            markdown,
+            goldenOptions({
+                spacing: { blankLines: 'collapse' },
+                breaks: false,
+            }),
+        );
+
+        await expect(transcript()).toMatchFileSnapshot(
+            './__snapshots__/next-defaults-spacing.txt',
+        );
+    });
+
+    it('renders soft breaks as spaces when breaks is false', async () => {
+        const markdown = readFileSync(
+            join(FIXTURE_DIR, '17-soft-breaks.md'),
+            'utf-8',
+        );
+        const { doc, transcript } = recordDoc();
+
+        await MdTextRender(doc, markdown, goldenOptions({ breaks: false }));
+
+        await expect(transcript()).toMatchFileSnapshot(
+            './__snapshots__/next-defaults-breaks.txt',
+        );
+    });
+
     it('renders a themed document exercising the styling options', async () => {
         const markdown = readFileSync(
             join(FIXTURE_DIR, '22-mixed-document.md'),

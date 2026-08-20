@@ -1,0 +1,15 @@
+p1 text        text="first" x=10 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="line" x=17.334 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="second" x=24.397 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="line" x=37.901 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="third" x=44.964 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="line" x=53.54 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="A" x=10 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="paragraph" x=13.648 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="that" x=32.236 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="has" x=39.764 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="a" x=47.059 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="soft" x=50.28 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="break" x=57.614 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="inside" x=68.325 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="it." x=79.462 y=22.313 baseline=top font=helvetica/normal size=11 color=#000000
