@@ -67,6 +67,11 @@ const renderCodeBlock = (
     const radius = codeOpts.borderRadius ?? 2;
 
     let currentLineIndex = 0;
+    // Guards against a page geometry in which no chunk can ever fit. Without
+    // it, a page whose usable height is smaller than one line of code makes
+    // the loop add pages forever: it breaks the page, recomputes the same
+    // impossible fit, and breaks again, until the process runs out of memory.
+    let brokeForCurrentChunk = false;
 
     while (currentLineIndex < lines.length) {
         const availableHeight = store.options.page.maxContentHeight - store.Y;
@@ -77,9 +82,27 @@ const renderCodeBlock = (
         let linesToRenderCount = Math.floor(effectiveAvailable / lineHeight);
 
         if (linesToRenderCount <= 0) {
-            HandlePageBreaks(doc, store);
-            continue;
+            if (!brokeForCurrentChunk) {
+                // A fresh page may have room where the current one did not.
+                brokeForCurrentChunk = true;
+                HandlePageBreaks(doc, store);
+                continue;
+            }
+            // We already moved to a fresh page and a single line still does
+            // not fit, so no page ever will. Render one line anyway and let it
+            // overflow: losing the block entirely, or looping, is worse.
+            console.warn(
+                '[jspdf-md-renderer] Code block line height exceeds the usable ' +
+                    'page height (maxContentHeight - topmargin - 2 * codeBlock.padding). ' +
+                    'Rendering one line per page; content may overflow the page bounds. ' +
+                    'Increase page.maxContentHeight or reduce codeBlock.padding / font size.',
+            );
+            linesToRenderCount = 1;
         }
+
+        // A chunk is about to be emitted, so the next shortfall is allowed one
+        // fresh page of its own.
+        brokeForCurrentChunk = false;
 
         if (linesToRenderCount > remainingLines) {
             linesToRenderCount = remainingLines;
