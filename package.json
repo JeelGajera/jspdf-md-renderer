@@ -81,6 +81,6 @@
     "jsdelivr": "dist/index.umd.js",
     "sideEffects": false,
     "engines": {
-        "node": ">=20"
+        "node": ">=22"
     }
 }
