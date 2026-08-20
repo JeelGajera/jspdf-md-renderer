@@ -2,7 +2,9 @@ import jsPDF from 'jspdf';
 import { MdTokenType } from '../enums/mdTokenType';
 import { MdTextParser } from '../parser/MdTextParser';
 import { ParsedElement } from '../types/parsedElement';
-import { RenderOption } from '../types/renderOption';
+import { RenderOption, RenderResult } from '../types/renderOption';
+import { RenderWarnings } from '../store/renderWarnings';
+import { SecurityViolation } from '../types/security';
 import {
     renderHeading,
     renderHR,
@@ -37,25 +39,41 @@ import {
 } from '../security/security-transforms';
 
 /**
- * Renders parsed markdown text into jsPDF document.
+ * Renders markdown into a jsPDF document.
  *
  * @param doc - The jsPDF document.
  * @param text - The markdown content to render.
  * @param options - The render options (fonts, page margins, etc.).
+ * @returns A summary of the render, including anything that could not be drawn.
  */
 export const MdTextRender = async (
     doc: jsPDF,
     text: string,
     options: RenderOption,
-) => {
+): Promise<RenderResult> => {
     const validOptions = validateOptions(options, doc);
     const security = validOptions.security || {};
     const guardTimeout = createTimeoutGuard(security);
 
+    const violations: SecurityViolation[] = [];
+    // `security` is the merged copy `normalizeSecurityOptions` produced, never
+    // the caller's own object, so wrapping the handler here cannot leak back
+    // into options the caller intends to reuse across renders.
+    const callerViolationHandler = security.onSecurityViolation;
+    security.onSecurityViolation = (violation) => {
+        violations.push(violation);
+        callerViolationHandler?.(violation);
+    };
+
+    const warnings = new RenderWarnings({
+        listener: validOptions.onWarning,
+        logToConsole: !validOptions.silent,
+    });
+
     enforceMarkdownLimits(text, security);
     guardTimeout();
 
-    const store = new RenderStore(validOptions);
+    const store = new RenderStore(validOptions, warnings);
     markPageContentStart(doc, store);
     // Rendering twice into the same document used to stamp the header and
     // footer onto every page again, doubling them on the pages the earlier
@@ -66,12 +84,12 @@ export const MdTextRender = async (
                 internal: { getCurrentPageInfo: () => { pageNumber: number } };
             }
         ).internal?.getCurrentPageInfo?.()?.pageNumber ?? 1;
-    const parsedElements = await MdTextParser(text);
+    const parsedElements = await MdTextParser(text, warnings);
     guardTimeout();
 
-    enforceNestedDepthAndImageCount(parsedElements, security);
+    enforceNestedDepthAndImageCount(parsedElements, security, warnings);
     await applyLinkPolicy(parsedElements, security);
-    await prefetchImages(parsedElements, security);
+    await prefetchImages(parsedElements, security, warnings);
     guardTimeout();
 
     if (security.enabled && security.violationMode === 'placeholder') {
@@ -199,12 +217,16 @@ export const MdTextRender = async (
                 );
                 break;
             default:
-                console.warn(
-                    `Warning: Unsupported element type encountered: ${element.type}. 
-                    If you believe this element type should be supported, please create an issue at:
-                    https://github.com/JeelGajera/jspdf-md-renderer/issues
-                    with details of the element and expected behavior. Thanks for helping to improve this library!`,
-                );
+                // The element is not drawn, so this is content loss.
+                store.warn({
+                    code: 'UNSUPPORTED_ELEMENT',
+                    message:
+                        `Unsupported element type '${element.type}' was skipped. ` +
+                        'If it should be supported, please open an issue at ' +
+                        'https://github.com/JeelGajera/jspdf-md-renderer/issues',
+                    context: element.type,
+                    droppedNodes: 1,
+                });
                 break;
         }
     };
@@ -216,4 +238,20 @@ export const MdTextRender = async (
 
     applyPageDecorations(doc, validOptions, firstPage);
     validOptions.endCursorYHandler(store.Y);
+
+    const lastPage =
+        (
+            doc as unknown as {
+                internal: { getNumberOfPages: () => number };
+            }
+        ).internal?.getNumberOfPages?.() ?? firstPage;
+
+    return {
+        endY: store.Y,
+        startPage: firstPage,
+        pageCount: Math.max(0, lastPage - firstPage + 1),
+        warnings: warnings.list(),
+        droppedNodes: warnings.droppedNodes,
+        violations,
+    };
 };

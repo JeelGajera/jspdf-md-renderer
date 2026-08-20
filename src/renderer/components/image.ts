@@ -90,7 +90,12 @@ const renderImage = (
         store.updateY(store.options.spacing?.afterImage ?? 2, 'add');
         store.recordContentY();
     } catch (e) {
-        console.warn('[jspdf-md-renderer] Failed to render image', e);
+        store.warn({
+            code: 'IMAGE_RENDER_FAILED',
+            message: `Failed to render image: ${String(e)}`,
+            context: element.src ?? element.alt,
+            droppedNodes: 1,
+        });
     }
 };
 

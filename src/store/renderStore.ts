@@ -1,4 +1,5 @@
 import { Cursor, ResolvedRenderOption } from '../types';
+import { RenderWarning, RenderWarnings } from './renderWarnings';
 
 export class RenderStore {
     private cursor: Cursor = { x: 0, y: 0 };
@@ -11,9 +12,11 @@ export class RenderStore {
      * without disturbing anything drawn on the page beforehand.
      */
     private pageContentStarts_: Map<number, number> = new Map();
+    private warnings_: RenderWarnings;
 
-    constructor(options: ResolvedRenderOption) {
+    constructor(options: ResolvedRenderOption, warnings?: RenderWarnings) {
         this.options_ = options;
+        this.warnings_ = warnings ?? new RenderWarnings();
         this.cursor = { x: options.cursor.x, y: options.cursor.y };
         this.lastContentY_ = options.cursor.y;
     }
@@ -86,6 +89,14 @@ export class RenderStore {
      */
     public get lastContentY(): number {
         return this.lastContentY_;
+    }
+
+    /**
+     * Records something the render decided not to draw, so the caller can see
+     * it on the returned result instead of only in the console.
+     */
+    public warn(warning: RenderWarning) {
+        this.warnings_.warn(warning);
     }
 
     /** Records where this render's content begins on `page`. */

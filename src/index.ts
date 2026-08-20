@@ -1,7 +1,18 @@
 export { MdTextRender } from './renderer/MdTextRender';
 export { MdTextParser } from './parser/MdTextParser';
 export { renderInlineContent, renderPlainText } from './layout';
-export type { RenderOption } from './types/renderOption';
+export type {
+    RenderOption,
+    ResolvedRenderOption,
+    RenderResult,
+    PageMargin,
+    Cursor,
+} from './types/renderOption';
+export type {
+    RenderWarning,
+    RenderWarningCode,
+    WarningListener,
+} from './store/renderWarnings';
 export type { ParsedElement } from './types/parsedElement';
 export { SecurityViolationError } from './types/security';
 export { MarkdownParsingLimitError } from './security/pre-parse-guards';
