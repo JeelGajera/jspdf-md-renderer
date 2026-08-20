@@ -48,7 +48,7 @@ export const MdTextRender = async (
     text: string,
     options: RenderOption,
 ) => {
-    const validOptions = validateOptions(options);
+    const validOptions = validateOptions(options, doc);
     const security = validOptions.security || {};
     const guardTimeout = createTimeoutGuard(security);
 

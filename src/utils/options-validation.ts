@@ -1,4 +1,9 @@
-import { RenderOption } from '../types/renderOption';
+import jsPDF from 'jspdf';
+import {
+    PageMargin,
+    RenderOption,
+    ResolvedRenderOption,
+} from '../types/renderOption';
 import { normalizeSecurityOptions } from '../security/security-policy';
 
 const DEFAULT_HEADING_SIZES: Partial<NonNullable<RenderOption['heading']>> = {
@@ -37,12 +42,67 @@ const DEFAULT_PAGE = {
     indent: 8,
 };
 
-export const validateOptions = (options: RenderOption): RenderOption => {
+/** Default margin used for any side omitted from `page.margin`. */
+const DEFAULT_MARGIN_SIDE = 10;
+
+/**
+ * Derives the content area from the document's own page size.
+ *
+ * Supplying `maxContentWidth` and `maxContentHeight` by hand means keeping them
+ * consistent with the page format manually, and the two are not even the same
+ * kind of quantity — width is a width, while height is the absolute Y
+ * coordinate of the content bottom. Deriving both from margins removes that
+ * whole class of mistake.
+ *
+ * Any geometry field the caller set explicitly still wins, so a partial
+ * migration behaves predictably.
+ */
+const deriveGeometryFromMargin = (
+    margin: PageMargin,
+    doc: jsPDF,
+    explicit: NonNullable<RenderOption['page']>,
+): Partial<ResolvedRenderOption['page']> => {
+    const pageSize = doc?.internal?.pageSize;
+    if (!pageSize || typeof pageSize.getWidth !== 'function') return {};
+
+    const pageWidth = pageSize.getWidth();
+    const pageHeight = pageSize.getHeight();
+
+    const top = margin.top ?? DEFAULT_MARGIN_SIDE;
+    const right = margin.right ?? DEFAULT_MARGIN_SIDE;
+    const bottom = margin.bottom ?? DEFAULT_MARGIN_SIDE;
+    const left = margin.left ?? DEFAULT_MARGIN_SIDE;
+
+    const derived: Partial<ResolvedRenderOption['page']> = {};
+
+    if (explicit.maxContentWidth === undefined) {
+        derived.maxContentWidth = Math.max(1, pageWidth - left - right);
+    }
+    if (explicit.maxContentHeight === undefined) {
+        // An absolute Y bound, not a height — see the field's own doc comment.
+        derived.maxContentHeight = Math.max(1, pageHeight - bottom);
+    }
+    if (explicit.topmargin === undefined) derived.topmargin = top;
+    if (explicit.xpading === undefined) derived.xpading = left;
+    if (explicit.xmargin === undefined) derived.xmargin = left;
+
+    return derived;
+};
+
+export const validateOptions = (
+    options: RenderOption,
+    doc?: jsPDF,
+): ResolvedRenderOption => {
     if (!options)
         throw new Error('[jspdf-md-renderer] RenderOption is required');
 
     // Page validation
-    const page = { ...DEFAULT_PAGE, ...options.page };
+    const explicitPage = options.page ?? {};
+    const derived =
+        explicitPage.margin && doc
+            ? deriveGeometryFromMargin(explicitPage.margin, doc, explicitPage)
+            : {};
+    const page = { ...DEFAULT_PAGE, ...explicitPage, ...derived };
     if (page.maxContentWidth <= 0)
         throw new Error('[jspdf-md-renderer] page.maxContentWidth must be > 0');
     if (page.maxContentHeight <= 0)
@@ -57,7 +117,8 @@ export const validateOptions = (options: RenderOption): RenderOption => {
         );
     if (page.defaultLineHeightFactor < 1) page.defaultLineHeightFactor = 1.4;
 
-    // Font validation
+    // Font validation. `regular` is the only face a caller must supply; every
+    // other slot falls back to a core font.
     if (!options.font?.regular?.name) {
         throw new Error('[jspdf-md-renderer] font.regular.name is required');
     }
@@ -171,11 +232,16 @@ export const validateOptions = (options: RenderOption): RenderOption => {
     // it is a space; opt in with `breaks: false`.
     const breaks = options.breaks ?? true;
 
-    // endCursorYHandler must exist
+    // Superseded by the object MdTextRender returns, but still honoured.
     const endCursorYHandler = options.endCursorYHandler ?? (() => {});
+
+    // Rendering starts at the top-left of the content area unless the caller
+    // says otherwise, so a minimal configuration needs no cursor at all.
+    const cursor = options.cursor ?? { x: page.xpading, y: page.topmargin };
 
     return {
         ...options,
+        cursor,
         page,
         font,
         heading,
@@ -189,5 +255,5 @@ export const validateOptions = (options: RenderOption): RenderOption => {
         image,
         security: normalizeSecurityOptions(options.security),
         endCursorYHandler,
-    } as RenderOption;
+    } as ResolvedRenderOption;
 };

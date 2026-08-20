@@ -113,6 +113,53 @@ describe('golden snapshots with decorations', () => {
         );
     });
 
+    /**
+     * Margin-derived geometry. Pinned so a change to the derivation shows up as
+     * coordinate movement rather than passing silently.
+     */
+    it('renders with margin-derived geometry on A4', async () => {
+        const markdown = readFileSync(
+            join(FIXTURE_DIR, '22-mixed-document.md'),
+            'utf-8',
+        );
+        const { doc, transcript } = recordDoc();
+
+        await MdTextRender(doc, markdown, {
+            page: { margin: { top: 20, right: 25, bottom: 20, left: 25 } },
+            font: { regular: { name: 'helvetica', style: 'normal' } },
+        });
+
+        await expect(transcript()).toMatchFileSnapshot(
+            './__snapshots__/margin-a4.txt',
+        );
+    });
+
+    it('renders with margin-derived geometry on Letter in landscape', async () => {
+        const markdown = readFileSync(
+            join(FIXTURE_DIR, '18-page-break.md'),
+            'utf-8',
+        );
+        const { doc, transcript } = recordDoc({
+            unit: 'pt',
+            format: 'letter',
+            orientation: 'landscape',
+        });
+
+        await MdTextRender(doc, markdown, {
+            page: {
+                unit: 'pt',
+                margin: { top: 40, right: 40, bottom: 40, left: 40 },
+                defaultFontSize: 11,
+                indent: 20,
+            },
+            font: { regular: { name: 'helvetica', style: 'normal' } },
+        });
+
+        await expect(transcript()).toMatchFileSnapshot(
+            './__snapshots__/margin-letter-landscape.txt',
+        );
+    });
+
     it('renders a themed document exercising the styling options', async () => {
         const markdown = readFileSync(
             join(FIXTURE_DIR, '22-mixed-document.md'),
