@@ -3,6 +3,7 @@ import { MdTokenType } from '../enums/mdTokenType';
 import { MdTextParser } from '../parser/MdTextParser';
 import { ParsedElement } from '../types/parsedElement';
 import { RenderOption, RenderResult } from '../types/renderOption';
+import { ComponentName } from '../types/components';
 import { RenderWarnings } from '../store/renderWarnings';
 import { SecurityViolation } from '../types/security';
 import {
@@ -100,6 +101,62 @@ export const MdTextRender = async (
     // text rather than dropping the content silently.
     convertUnloadableImagesToAltText(parsedElements);
 
+    /**
+     * Runs the caller's override for a block if they supplied one, otherwise
+     * the built-in renderer.
+     *
+     * An override that throws must not lose the block: the failure is reported
+     * and the built-in runs instead, unless the override already invoked it.
+     */
+    const withOverride = (
+        name: ComponentName,
+        element: ParsedElement,
+        indentLevel: number,
+        store: RenderStore,
+        builtIn: () => void,
+    ) => {
+        const override = validOptions.components?.[name];
+        if (!override) {
+            builtIn();
+            return;
+        }
+
+        const indent = indentLevel * validOptions.page.indent;
+        let builtInRan = false;
+        const next = () => {
+            if (builtInRan) return;
+            builtInRan = true;
+            builtIn();
+        };
+
+        try {
+            override({
+                doc,
+                element,
+                indentLevel,
+                indent,
+                x: store.X + indent,
+                y: store.Y,
+                maxWidth: validOptions.page.maxContentWidth - indent,
+                store,
+                options: validOptions,
+                next,
+                render: (child, level = indentLevel) =>
+                    renderElement(child, level, store),
+            });
+        } catch (error) {
+            store.warn({
+                code: 'COMPONENT_OVERRIDE_FAILED',
+                message:
+                    `The '${name}' component override threw: ${String(error)}. ` +
+                    'The built-in renderer was used instead.',
+                context: name,
+            });
+            // Only if the override had not already drawn the block.
+            next();
+        }
+    };
+
     const renderElement = (
         element: ParsedElement,
         indentLevel: number = 0,
@@ -112,30 +169,42 @@ export const MdTextRender = async (
 
         switch (element.type) {
             case MdTokenType.Heading:
-                renderHeading(doc, element, indent, store);
+                withOverride('heading', element, indentLevel, store, () =>
+                    renderHeading(doc, element, indent, store),
+                );
                 break;
             case MdTokenType.Paragraph:
-                renderParagraph(doc, element, indent, store, renderElement);
+                withOverride('paragraph', element, indentLevel, store, () =>
+                    renderParagraph(doc, element, indent, store, renderElement),
+                );
                 break;
             case MdTokenType.List:
-                renderList(doc, element, indentLevel, store, renderElement);
+                withOverride('list', element, indentLevel, store, () =>
+                    renderList(doc, element, indentLevel, store, renderElement),
+                );
                 break;
             case MdTokenType.ListItem:
-                renderListItem(
-                    doc,
-                    element,
-                    indentLevel,
-                    store,
-                    renderElement,
-                    start,
-                    ordered,
+                withOverride('listItem', element, indentLevel, store, () =>
+                    renderListItem(
+                        doc,
+                        element,
+                        indentLevel,
+                        store,
+                        renderElement,
+                        start,
+                        ordered,
+                    ),
                 );
                 break;
             case MdTokenType.Hr:
-                renderHR(doc, store);
+                withOverride('hr', element, indentLevel, store, () =>
+                    renderHR(doc, store),
+                );
                 break;
             case MdTokenType.Code:
-                renderCodeBlock(doc, element, indentLevel, store);
+                withOverride('code', element, indentLevel, store, () =>
+                    renderCodeBlock(doc, element, indentLevel, store),
+                );
                 break;
             // Renders nothing by design (e.g. link reference definitions).
             case MdTokenType.Noop:
@@ -173,16 +242,20 @@ export const MdTextRender = async (
                 );
                 break;
             case MdTokenType.Blockquote:
-                renderBlockquote(
-                    doc,
-                    element,
-                    indentLevel,
-                    store,
-                    renderElement,
+                withOverride('blockquote', element, indentLevel, store, () =>
+                    renderBlockquote(
+                        doc,
+                        element,
+                        indentLevel,
+                        store,
+                        renderElement,
+                    ),
                 );
                 break;
             case MdTokenType.Image:
-                renderImage(doc, element, indentLevel, store);
+                withOverride('image', element, indentLevel, store, () =>
+                    renderImage(doc, element, indentLevel, store),
+                );
                 break;
             case MdTokenType.Br: {
                 store.updateX(validOptions.page.xpading, 'set');
@@ -200,7 +273,9 @@ export const MdTextRender = async (
                 break;
             }
             case MdTokenType.Table:
-                renderTable(doc, element, indentLevel, store);
+                withOverride('table', element, indentLevel, store, () =>
+                    renderTable(doc, element, indentLevel, store),
+                );
                 break;
             case MdTokenType.Raw:
             case MdTokenType.Text:

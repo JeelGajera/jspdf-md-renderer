@@ -2,6 +2,7 @@ import jsPDF, { jsPDFOptions } from 'jspdf';
 import { UserOptions } from 'jspdf-autotable';
 import { RenderSecurityOptions, SecurityViolation } from './security';
 import { RenderWarning, WarningListener } from '../store/renderWarnings';
+import { ComponentOverrides } from './components';
 
 export type RenderOption = {
     /**
@@ -231,6 +232,14 @@ export type RenderOption = {
      * to the `warnings` array on the result.
      */
     onWarning?: WarningListener;
+    /**
+     * Replace or decorate the built-in block renderers.
+     *
+     * Each override receives the drawing context and a `next()` that runs the
+     * built-in, so an override can decorate rather than replace. An override
+     * that throws is reported and falls back to the built-in.
+     */
+    components?: ComponentOverrides;
     /**
      * Suppresses the library's own `console.warn` output. Warnings are still
      * collected on the result and still reach `onWarning`.

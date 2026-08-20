@@ -9,6 +9,12 @@ export type {
     Cursor,
 } from './types/renderOption';
 export type {
+    ComponentName,
+    ComponentContext,
+    ComponentRenderer,
+    ComponentOverrides,
+} from './types/components';
+export type {
     RenderWarning,
     RenderWarningCode,
     WarningListener,
