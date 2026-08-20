@@ -16,30 +16,62 @@ llm_summary: |
 import type { RenderOption } from 'jspdf-md-renderer'
 
 const options: RenderOption = {
-  cursor: { x: 10, y: 10 },
-  page: {
-    format: 'a4',
-    unit: 'mm',
-    orientation: 'portrait',
-    maxContentWidth: 190,
-    maxContentHeight: 277,
-    lineSpace: 3,
-    defaultLineHeightFactor: 1.4,
-    defaultFontSize: 11,
-    defaultTitleFontSize: 14,
-    topmargin: 10,
-    xpading: 10,
-    xmargin: 10,
-    indent: 8,
-  },
-  font: {
-    bold: { name: 'helvetica', style: 'bold' },
-    regular: { name: 'helvetica', style: 'normal' },
-    light: { name: 'helvetica', style: 'light' },
-  },
-  endCursorYHandler: () => {},
+  page: { margin: { top: 20, right: 20, bottom: 20, left: 20 } },
+  font: { regular: { name: 'helvetica', style: 'normal' } },
 }
 ```
+
+That is a complete configuration. `font.regular` is the only value you must
+supply; everything else has a default.
+
+## Page Geometry
+
+`page.margin` derives the content area from the document's own page size, so it
+stays correct across formats and orientations.
+
+```ts
+page: {
+  margin: { top: 20, right: 20, bottom: 25, left: 20 },
+}
+```
+
+Omitted sides default to `10`. Rendering starts at the top-left of the content
+area unless you set `cursor`.
+
+### Explicit geometry (deprecated)
+
+The individual geometry fields still work and still win when both are given, so
+a partial migration is safe.
+
+```ts
+page: {
+  maxContentWidth: 190,   // width of the content column
+  maxContentHeight: 277,  // absolute Y of the content bottom — not a height
+  topmargin: 10,
+  xpading: 10,            // left edge of the content column
+  xmargin: 10,            // horizontal margin for headers and footers
+}
+```
+
+Keeping these consistent with the page format is manual, and `maxContentWidth`
+and `maxContentHeight` are not the same kind of quantity despite the matching
+names. Prefer `page.margin`.
+
+### Fonts
+
+```ts
+font: {
+  regular: { name: 'helvetica', style: 'normal' },  // required
+  bold: { name: 'helvetica', style: 'bold' },       // defaults to helvetica bold
+  italic: { name: 'helvetica', style: 'italic' },
+  boldItalic: { name: 'helvetica', style: 'bolditalic' },
+  code: { name: 'courier', style: 'normal' },
+}
+```
+
+`font.light` is accepted but never read; it is deprecated and has no effect.
+
+See [Custom Fonts](/examples/custom-fonts) for registering a non-core font.
 
 ## Layout and Typography
 
@@ -177,6 +209,77 @@ const options = {
   breaks: false,
 }
 ```
+
+## Render Result
+
+`MdTextRender` resolves to a summary of the render.
+
+```ts
+const result = await MdTextRender(doc, markdown, options)
+
+result.endY          // cursor position when rendering finished
+result.startPage     // page the render began on
+result.pageCount     // pages this render produced
+result.warnings      // everything that could not be drawn
+result.droppedNodes  // how much content that cost
+result.violations    // security violations raised during the render
+```
+
+Each warning carries a machine-readable `code`, a `message`, the `context` it
+happened in, and — where content was discarded — `droppedNodes`.
+
+Failures were previously silent: an image that failed to load, an unsupported
+element, or a subtree past the nesting limit produced a PDF that looked
+successful and was not. Check `warnings` when a document must be complete.
+
+### Warning delivery
+
+```ts
+{
+  silent: true,                       // suppress the library's console output
+  onWarning: (w) => logger.warn(w),   // fires as each warning is recorded
+}
+```
+
+Warnings are collected on the result regardless. A listener that throws is
+caught, so caller logging cannot take a render down.
+
+`endCursorYHandler` still fires and agrees with `endY`. It is deprecated in
+favour of the result.
+
+## Component Overrides
+
+Replace or decorate any block renderer.
+
+```ts
+{
+  components: {
+    heading: (ctx) => {
+      ctx.doc.setFillColor('#1A365D')
+      ctx.doc.rect(ctx.x, ctx.y, ctx.maxWidth, 10, 'F')
+      ctx.next()   // then draw the heading normally
+    },
+  },
+}
+```
+
+Overridable: `heading`, `paragraph`, `list`, `listItem`, `blockquote`, `code`,
+`table`, `image`, `hr`.
+
+| Context field | Meaning |
+| --- | --- |
+| `doc` | The jsPDF document |
+| `element` | The parsed element being rendered |
+| `indentLevel` / `indent` | Nesting level, and that level in document units |
+| `x` / `y` | Left edge and current vertical position |
+| `maxWidth` | Width available, already reduced by `indent` |
+| `store` / `options` | Cursor and page state, and the resolved options |
+| `next()` | Runs the built-in renderer. A no-op after the first call |
+| `render(el, level?)` | Lays out an element through the normal pipeline |
+
+An override that throws is reported as a `COMPONENT_OVERRIDE_FAILED` warning
+and the built-in runs instead, so a mistake degrades to default output rather
+than losing the block.
 
 ## Security Options (opt-in)
 
