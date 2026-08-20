@@ -90,7 +90,8 @@ existing snapshots are byte-identical under default options.
   `jspdf-md-renderer/types` never resolved. All public types are re-exported
   from the package root: `import type { RenderOption } from 'jspdf-md-renderer'`.
 - ESM and CJS now resolve to their matching declaration files.
-- `package.json` gains `sideEffects: false` and `engines.node >= 18`.
+- `package.json` gains `sideEffects: false` and `engines.node >= 20`,
+  matching the Node versions CI actually verifies.
 
 ### Release engineering
 
@@ -104,7 +105,9 @@ existing snapshots are byte-identical under default options.
 - `scripts/smoke-package.sh` packs the library, installs the tarball into a
   clean project and renders a document through CJS, ESM and UMD, asserting the
   declaration files are non-empty (guards the regression in #60).
-- CI runs against Node 20, 22 and 24 instead of 24 alone.
+- CI runs against Node 20, 22 and 24 instead of 24 alone. The bundle step is
+  skipped on Node 20, where the build tool itself is unsupported; the separate
+  `package` job builds and smoke-tests the real artifact.
 - Lint covers the whole repository rather than `src/**` only.
 
 ### Deprecations
