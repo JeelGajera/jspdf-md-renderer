@@ -65,6 +65,31 @@ const VARIANT_ORDER: FontVariantName[] = [
     'bolditalic',
 ];
 
+/**
+ * Whether the document actually ended up with this family and style.
+ *
+ * jsPDF surfaces a malformed font through an internal event channel instead of
+ * throwing, so registration can appear to succeed while leaving nothing usable
+ * behind.
+ */
+const isRegistered = (
+    doc: jsPDF,
+    family: string,
+    style: string,
+): boolean => {
+    const getFontList = (
+        doc as unknown as { getFontList?: () => Record<string, string[]> }
+    ).getFontList;
+    if (typeof getFontList !== 'function') return true;
+    try {
+        const styles = getFontList.call(doc)?.[family];
+        return Array.isArray(styles) && styles.includes(style);
+    } catch {
+        // If the list cannot be read, trust the call that did not throw.
+        return true;
+    }
+};
+
 /** Accepts either raw base64 or a `data:` URI, since both are common. */
 const stripDataUri = (value: string): string => {
     const comma = value.indexOf(',');
@@ -125,6 +150,18 @@ export const registerFont = (
         try {
             docWithVfs.addFileToVFS(fileName, stripDataUri(raw));
             docWithVfs.addFont(fileName, family, style);
+
+            // jsPDF reports a malformed font through its own event channel
+            // rather than by throwing, so a try/catch alone would report
+            // success for a face that was never usable. Confirm against the
+            // document's font list instead.
+            if (!isRegistered(doc, family, style)) {
+                throw new Error(
+                    'jsPDF did not accept the font data (it may be malformed ' +
+                        'or missing a unicode cmap)',
+                );
+            }
+
             registered.push(style);
         } catch (error) {
             missing.push(style);

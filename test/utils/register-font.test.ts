@@ -251,3 +251,37 @@ describe('against a real jsPDF document', () => {
         expect(active.fontStyle).toBe('bold');
     });
 });
+
+describe('malformed font data', () => {
+    it('detects a face jsPDF rejected without throwing', () => {
+        // jsPDF reports a bad font through its own event channel rather than by
+        // throwing, so registration can look successful while leaving nothing
+        // usable behind. Synthetic bytes are exactly that case.
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const messages: string[] = [];
+
+        const result = registerFont(doc, {
+            family: 'BrokenFamily',
+            variants: { normal: B64, bold: B64 },
+            onWarning: (m) => messages.push(m),
+        });
+
+        const list = (
+            doc as unknown as { getFontList: () => Record<string, string[]> }
+        ).getFontList();
+
+        // Whatever jsPDF actually accepted is what we report as registered.
+        for (const style of result.registered) {
+            expect(list.BrokenFamily ?? []).toContain(style);
+        }
+        // Anything it rejected falls back rather than selecting a broken face.
+        for (const style of ['bold', 'italic', 'bolditalic'] as const) {
+            if (!result.registered.includes(style)) {
+                const key = style === 'bolditalic' ? 'boldItalic' : style;
+                expect(
+                    result.font[key as 'bold' | 'italic' | 'boldItalic'].style,
+                ).toBe('normal');
+            }
+        }
+    });
+});
