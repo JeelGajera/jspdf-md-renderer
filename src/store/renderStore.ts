@@ -1,9 +1,9 @@
-import { Cursor, RenderOption } from '../types';
+import { Cursor, ResolvedRenderOption } from '../types';
 
 export class RenderStore {
     private cursor: Cursor = { x: 0, y: 0 };
     private lastContentY_: number = 0;
-    private options_: RenderOption;
+    private options_: ResolvedRenderOption;
     private inlineLock: boolean = false;
     /**
      * Index into a page's content stream at which this render's own drawing
@@ -12,7 +12,7 @@ export class RenderStore {
      */
     private pageContentStarts_: Map<number, number> = new Map();
 
-    constructor(options: RenderOption) {
+    constructor(options: ResolvedRenderOption) {
         this.options_ = options;
         this.cursor = { x: options.cursor.x, y: options.cursor.y };
         this.lastContentY_ = options.cursor.y;
@@ -26,7 +26,7 @@ export class RenderStore {
         this.cursor = newCursor;
     }
 
-    public get options(): RenderOption {
+    public get options(): ResolvedRenderOption {
         return this.options_;
     }
 

@@ -1,10 +1,10 @@
 import jsPDF from 'jspdf';
-import { RenderOption } from '../types/renderOption';
+import { ResolvedRenderOption } from '../types/renderOption';
 import { withSavedDocState } from './doc-helpers';
 
 export const applyPageDecorations = (
     doc: jsPDF,
-    options: RenderOption,
+    options: ResolvedRenderOption,
     fromPage: number = 1,
 ): void => {
     const totalPages = (
@@ -22,7 +22,7 @@ export const applyPageDecorations = (
 
 const applyHeader = (
     doc: jsPDF,
-    options: RenderOption,
+    options: ResolvedRenderOption,
     pageNum: number,
     totalPages: number,
 ): void => {
@@ -51,7 +51,7 @@ const applyHeader = (
 
 const applyFooter = (
     doc: jsPDF,
-    options: RenderOption,
+    options: ResolvedRenderOption,
     pageNum: number,
     totalPages: number,
 ): void => {

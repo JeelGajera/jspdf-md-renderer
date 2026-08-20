@@ -3,29 +3,73 @@ import { UserOptions } from 'jspdf-autotable';
 import { RenderSecurityOptions } from './security';
 
 export type RenderOption = {
-    cursor: {
+    /**
+     * Where rendering starts. Defaults to the top-left of the content area —
+     * `{ x: page.xpading, y: page.topmargin }`, or the margin origin when
+     * `page.margin` is used.
+     *
+     * Note that only the first line honours `cursor.x`; subsequent blocks start
+     * at the left edge of the content column.
+     */
+    cursor?: {
         x: number;
         y: number;
     };
-    page: {
+    page?: {
         format?: string | number[];
-        unit: jsPDFOptions['unit'];
+        unit?: jsPDFOptions['unit'];
         orientation?: jsPDFOptions['orientation'];
-        maxContentWidth: number;
-        maxContentHeight: number;
-        lineSpace: number;
-        defaultLineHeightFactor: number;
-        defaultFontSize: number;
-        defaultTitleFontSize: number;
-        topmargin: number;
-        xpading: number;
-        xmargin: number;
-        indent: number;
+        /**
+         * Page margins in document units. When present, the content area is
+         * derived from the document's own page size, and the individual
+         * geometry fields below are computed rather than supplied.
+         *
+         * Prefer this over setting `maxContentWidth`/`maxContentHeight` by hand:
+         * those must be kept consistent with the page format manually, and an
+         * inconsistent pair is the most common source of layout surprises.
+         */
+        margin?: PageMargin;
+        /**
+         * Width of the content column in document units.
+         * @deprecated Prefer `page.margin`, which derives this from the document.
+         */
+        maxContentWidth?: number;
+        /**
+         * Absolute Y coordinate of the bottom of the content area — not a
+         * height, despite the name.
+         * @deprecated Prefer `page.margin`, which derives this from the document.
+         */
+        maxContentHeight?: number;
+        lineSpace?: number;
+        defaultLineHeightFactor?: number;
+        defaultFontSize?: number;
+        defaultTitleFontSize?: number;
+        /**
+         * Y coordinate at which content starts on each page.
+         * @deprecated Prefer `page.margin.top`.
+         */
+        topmargin?: number;
+        /**
+         * X coordinate of the left edge of the content column.
+         * @deprecated Prefer `page.margin.left`.
+         */
+        xpading?: number;
+        /**
+         * Horizontal margin used when positioning headers and footers.
+         * @deprecated Prefer `page.margin`.
+         */
+        xmargin?: number;
+        indent?: number;
     };
-    font: {
-        bold: FontItem;
+    font?: {
+        /** Defaults to helvetica bold. */
+        bold?: FontItem;
         regular: FontItem;
-        light: FontItem;
+        /**
+         * @deprecated Never read by the renderer. Supplying it has no effect
+         * and it will be removed in a future major version.
+         */
+        light?: FontItem;
         italic?: FontItem;
         boldItalic?: FontItem;
         code?: FontItem;
@@ -182,13 +226,68 @@ export type RenderOption = {
      */
     breaks?: boolean;
     pageBreakHandler?: (doc: jsPDF) => void;
-    endCursorYHandler: (y: number) => void;
+    /**
+     * Called with the final Y position once rendering completes.
+     *
+     * @deprecated Prefer the `endY` field of the object `MdTextRender` returns.
+     */
+    endCursorYHandler?: (y: number) => void;
     security?: RenderSecurityOptions;
 };
 
 export type Cursor = { x: number; y: number };
 
+/** Page margins in document units. */
+export type PageMargin = {
+    top?: number;
+    right?: number;
+    bottom?: number;
+    left?: number;
+};
+
 type FontItem = {
     name: string;
     style: string;
+};
+
+/**
+ * `RenderOption` after `validateOptions` has filled in every default.
+ *
+ * `RenderOption` is the permissive shape a caller supplies; this is the
+ * complete shape the renderer works with. Keeping them separate means the
+ * renderer's assumptions are checked by the compiler rather than upheld by
+ * convention, and callers are not forced to supply values the library already
+ * has sensible defaults for.
+ */
+export type ResolvedRenderOption = Omit<
+    RenderOption,
+    'cursor' | 'page' | 'font' | 'endCursorYHandler'
+> & {
+    cursor: Cursor;
+    page: {
+        format?: string | number[];
+        unit: jsPDFOptions['unit'];
+        orientation?: jsPDFOptions['orientation'];
+        margin?: PageMargin;
+        maxContentWidth: number;
+        maxContentHeight: number;
+        lineSpace: number;
+        defaultLineHeightFactor: number;
+        defaultFontSize: number;
+        defaultTitleFontSize: number;
+        topmargin: number;
+        xpading: number;
+        xmargin: number;
+        indent: number;
+    };
+    font: {
+        bold: FontItem;
+        regular: FontItem;
+        light?: FontItem;
+        italic: FontItem;
+        boldItalic: FontItem;
+        code: FontItem;
+    };
+    breaks: boolean;
+    endCursorYHandler: (y: number) => void;
 };
