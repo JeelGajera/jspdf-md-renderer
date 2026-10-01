@@ -434,22 +434,33 @@ export const prefetchImages = async (
                         security,
                     );
                     if (!response.ok) {
+                        await response.body?.cancel().catch(() => {});
                         throw new Error(
                             `Failed to fetch image: ${response.statusText}`,
                         );
                     }
-                    const blob = await response.blob();
-                    if (
-                        security?.enabled &&
-                        security.maxImageSizeBytes &&
-                        blob.size > security.maxImageSizeBytes
-                    ) {
-                        handleSecurityViolation(security, {
+
+                    let blob: Blob;
+                    try {
+                        blob = await readImageBlob(
+                            response,
+                            security?.enabled
+                                ? (security.maxImageSizeBytes ?? 0)
+                                : 0,
+                        );
+                    } catch (error) {
+                        if (!(error instanceof ImageTooLargeError)) {
+                            throw error;
+                        }
+                        handleSecurityViolation(security!, {
                             code: 'IMAGE_SIZE_EXCEEDED',
                             type: 'image',
-                            message: 'Fetched image exceeds maxImageSizeBytes',
-                            value: String(blob.size),
-                            context: 'blob-size',
+                            message:
+                                error.source === 'content-length'
+                                    ? 'Declared image size exceeds maxImageSizeBytes'
+                                    : 'Fetched image exceeds maxImageSizeBytes',
+                            value: String(error.bytes),
+                            context: error.source,
                         });
                         element.data = undefined;
                         element.src = undefined;
@@ -540,7 +551,9 @@ const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
  *
  * A timeout is applied per request, because `security.renderTimeoutMs` is only
  * sampled at checkpoints between render phases and cannot interrupt a socket
- * that never answers.
+ * that never answers. It covers reading the body as well as receiving the
+ * headers: a server that answers promptly and then sends its body one byte at
+ * a time used to hold the render open indefinitely.
  */
 export const secureImageFetch = async (
     url: string,
@@ -571,15 +584,19 @@ export const secureImageFetch = async (
             }
         }
 
-        const response = await fetchWithTimeout(
+        const { response, release } = await fetchWithDeadline(
             currentUrl,
             timeoutMs,
             enforce ? 'manual' : 'follow',
         );
 
         if (!enforce || !REDIRECT_STATUSES.has(response.status)) {
-            return response;
+            return keepDeadlineUntilBodyEnds(response, release);
         }
+
+        // A redirect's own body is never read.
+        release?.();
+        await response.body?.cancel().catch(() => {});
 
         const location = response.headers.get('location');
         if (!location) return response;
@@ -599,28 +616,123 @@ export const secureImageFetch = async (
     );
 };
 
-const fetchWithTimeout = async (
+/**
+ * Starts a request that is aborted after `timeoutMs`. The deadline keeps
+ * running once the headers arrive; `release` stops it.
+ */
+const fetchWithDeadline = async (
     url: string,
     timeoutMs: number,
     redirect: RequestRedirect,
-): Promise<Response> => {
+): Promise<{ response: Response; release: (() => void) | null }> => {
     if (timeoutMs <= 0 || typeof AbortController === 'undefined') {
-        return fetch(url, { redirect });
+        return { response: await fetch(url, { redirect }), release: null };
     }
 
+    const timedOut = new Error(
+        `[jspdf-md-renderer] Image request timed out after ${timeoutMs}ms: ${url}`,
+    );
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const timer = setTimeout(() => controller.abort(timedOut), timeoutMs);
+    // Never keep a Node process alive just to fire a deadline whose request
+    // is already over.
+    (timer as { unref?: () => void }).unref?.();
+    const release = () => clearTimeout(timer);
+
     try {
-        return await fetch(url, { redirect, signal: controller.signal });
+        const response = await fetch(url, {
+            redirect,
+            signal: controller.signal,
+        });
+        return { response, release };
     } catch (error) {
-        if ((error as Error)?.name === 'AbortError') {
-            throw new Error(
-                `[jspdf-md-renderer] Image request timed out after ${timeoutMs}ms: ${url}`,
-                { cause: error },
-            );
-        }
-        throw error;
-    } finally {
-        clearTimeout(timer);
+        release();
+        throw controller.signal.aborted ? timedOut : error;
     }
+};
+
+/**
+ * Releases the deadline once the body has been read to the end. Until then an
+ * expired deadline aborts the read with the timeout error.
+ */
+const keepDeadlineUntilBodyEnds = (
+    response: Response,
+    release: (() => void) | null,
+): Response => {
+    if (!release) return response;
+    if (!response.body || typeof TransformStream === 'undefined') {
+        release();
+        return response;
+    }
+
+    const body = response.body.pipeThrough(
+        new TransformStream<Uint8Array, Uint8Array>({ flush: release }),
+    );
+    return new Response(body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+    });
+};
+
+/** A remote image larger than `security.maxImageSizeBytes`. */
+class ImageTooLargeError extends Error {
+    constructor(
+        /** Bytes declared by Content-Length, or received before stopping. */
+        readonly bytes: number,
+        /** Whether the size came from the header or from the body itself. */
+        readonly source: 'content-length' | 'blob-size',
+    ) {
+        super(`[jspdf-md-renderer] Image exceeds maxImageSizeBytes (${bytes})`);
+        this.name = 'ImageTooLargeError';
+    }
+}
+
+/**
+ * Reads a response body, giving up as soon as it exceeds `maxBytes`.
+ *
+ * The limit used to be checked only after the whole body had been buffered,
+ * so a server could make a render hold any amount of data in memory. A
+ * Content-Length over the limit is now rejected before any of the body is
+ * read, and an undeclared or understated body is cut off at the limit.
+ */
+const readImageBlob = async (
+    response: Response,
+    maxBytes: number,
+): Promise<Blob> => {
+    if (maxBytes <= 0) return response.blob();
+
+    const declared = Number(response.headers.get('content-length') ?? NaN);
+    if (Number.isFinite(declared) && declared > maxBytes) {
+        await response.body?.cancel().catch(() => {});
+        throw new ImageTooLargeError(declared, 'content-length');
+    }
+
+    if (!response.body || typeof TransformStream === 'undefined') {
+        const blob = await response.blob();
+        if (blob.size > maxBytes) {
+            throw new ImageTooLargeError(blob.size, 'blob-size');
+        }
+        return blob;
+    }
+
+    let received = 0;
+    const limited = response.body.pipeThrough(
+        new TransformStream<Uint8Array, Uint8Array>({
+            transform(chunk, controller) {
+                received += chunk.byteLength;
+                if (received > maxBytes) {
+                    // Erroring the stream also cancels the request.
+                    controller.error(
+                        new ImageTooLargeError(received, 'blob-size'),
+                    );
+                    return;
+                }
+                controller.enqueue(chunk);
+            },
+        }),
+    );
+    // Wrapped in a Response so the blob's type is derived from Content-Type
+    // exactly as `response.blob()` derives it.
+    return new Response(limited, { headers: response.headers }).blob();
 };
