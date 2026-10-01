@@ -1,21 +1,25 @@
 import { RenderWarnings } from '../store/renderWarnings';
 
 /**
- * Internal hash prefix used to encode image attributes in the URL fragment.
- * This is stripped during token conversion and never reaches the image fetcher.
+ * Image attributes: `![alt](src){width=200 height=150 align=center}`.
+ *
+ * The `{…}` block is not markdown, so marked leaves it as the start of the text
+ * token that follows the image. It is read from there, after parsing.
+ *
+ * Earlier versions instead rewrote the raw document with a regex before it
+ * reached marked. That regex backtracked quadratically on crafted input — a few
+ * hundred kilobytes of `![` blocked the event loop for minutes — and because it
+ * ran ahead of the parser it also rewrote attribute syntax inside code spans and
+ * fenced code, and broke images that carried a title. Working on tokens avoids
+ * all three: marked has already claimed code and titles, and only the start of a
+ * single token is ever examined.
  */
-const ATTR_HASH_PREFIX = '__jmr_';
 
 /**
- * Regex to match an image tag followed by an attribute block.
- * Captures:
- *   Group 1: Everything before the closing `)` (i.e., `![alt](url`)
- *   Group 2: The image URL inside the parentheses
- *   Group 3: The attribute block content (e.g., `width=200 height=150 align=center`)
- *
- * Pattern: ![...](url){key=value ...}
+ * The attribute block at the start of the text that follows an image.
+ * Anchored, so it is attempted once per image and runs in linear time.
  */
-const IMAGE_WITH_ATTRS_REGEX = /(!\[[^\]]*\]\()([^)]+)(\))\s*\{([^}]+)\}/g;
+const LEADING_ATTR_BLOCK = /^\s*\{([^}]+)\}/;
 
 /**
  * Regex to extract individual key=value pairs from the attribute block.
@@ -38,18 +42,6 @@ export interface ImageAttributes {
     height?: number;
     align?: 'left' | 'center' | 'right';
 }
-
-/**
- * Encodes image attributes into a URL hash fragment.
- * Example: {width: 200, height: 100, align: 'center'} → '#__jmr_w=200&h=100&a=center'
- */
-const encodeAttrsToFragment = (attrs: ImageAttributes): string => {
-    const parts: string[] = [];
-    if (attrs.width !== undefined) parts.push(`w=${attrs.width}`);
-    if (attrs.height !== undefined) parts.push(`h=${attrs.height}`);
-    if (attrs.align) parts.push(`a=${attrs.align}`);
-    return parts.length > 0 ? `#${ATTR_HASH_PREFIX}${parts.join('&')}` : '';
-};
 
 /**
  * Parses an attribute string like "width=200 height=150 align=center"
@@ -112,81 +104,26 @@ const parseRawAttributes = (
 };
 
 /**
- * Pre-processes markdown text to embed image attributes into URL fragments.
- *
- * Transforms `![alt](url){width=200 align=center}` into
- * `![alt](url#__jmr_w=200&a=center)` so that each image token
- * carries its own attributes — no shared state needed.
+ * Reads an attribute block from the start of the text that follows an image.
  *
  * Supported attributes:
  * - `width` or `w`: Image width in pixels (number)
  * - `height` or `h`: Image height in pixels (number)
  * - `align`: Image alignment - 'left', 'center', or 'right'
  *
- * @param text - The raw markdown text
+ * @param text - The text immediately after the image token
  * @param warnings - Collector for attributes that could not be applied
- * @returns The cleaned markdown text with attributes encoded in URLs
+ * @returns The parsed attributes and the text left after the block, or null
+ *          when the text does not start with an attribute block
  */
-export const preprocessImageAttributes = (
+export const takeImageAttributes = (
     text: string,
     warnings?: RenderWarnings,
-): string => {
-    return text.replace(
-        IMAGE_WITH_ATTRS_REGEX,
-        (_fullMatch, before, url, closeParen, attrsContent) => {
-            const attrs = parseRawAttributes(attrsContent, warnings);
-            const fragment = encodeAttrsToFragment(attrs);
-            // Reconstruct: ![alt](url#__jmr_w=200&h=100)
-            return `${before}${url}${fragment}${closeParen}`;
-        },
-    );
-};
-
-/**
- * Extracts image attributes from a URL that may contain an encoded fragment.
- * Returns the clean URL (without the attribute fragment) and parsed attributes.
- *
- * @param href - The image URL, possibly containing `#__jmr_...` fragment
- * @returns Object with cleanHref and parsed attrs
- */
-export const parseImageAttrsFromHref = (
-    href: string,
-): { cleanHref: string; attrs: ImageAttributes } => {
-    const fragmentIdx = href.indexOf(`#${ATTR_HASH_PREFIX}`);
-    if (fragmentIdx === -1) {
-        return { cleanHref: href, attrs: {} };
-    }
-
-    const cleanHref = href.substring(0, fragmentIdx);
-    const fragment = href.substring(fragmentIdx + 1 + ATTR_HASH_PREFIX.length);
-
-    const attrs: ImageAttributes = {};
-    const pairs = fragment.split('&');
-    for (const pair of pairs) {
-        const [key, value] = pair.split('=');
-        switch (key) {
-            case 'w': {
-                const num = parseFloat(value);
-                if (!isNaN(num) && num > 0) attrs.width = num;
-                break;
-            }
-            case 'h': {
-                const num = parseFloat(value);
-                if (!isNaN(num) && num > 0) attrs.height = num;
-                break;
-            }
-            case 'a': {
-                if (
-                    VALID_ALIGNMENTS.includes(
-                        value as (typeof VALID_ALIGNMENTS)[number],
-                    )
-                ) {
-                    attrs.align = value as ImageAttributes['align'];
-                }
-                break;
-            }
-        }
-    }
-
-    return { cleanHref, attrs };
+): { attrs: ImageAttributes; rest: string } | null => {
+    const match = LEADING_ATTR_BLOCK.exec(text);
+    if (!match) return null;
+    return {
+        attrs: parseRawAttributes(match[1], warnings),
+        rest: text.slice(match[0].length),
+    };
 };

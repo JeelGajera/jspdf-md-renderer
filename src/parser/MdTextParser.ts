@@ -2,10 +2,7 @@
 import { TokensList, marked } from 'marked';
 import { MdTokenType } from '../enums/mdTokenType';
 import { ParsedElement } from '../types/parsedElement';
-import {
-    preprocessImageAttributes,
-    parseImageAttrsFromHref,
-} from './imageExtension';
+import { takeImageAttributes } from './imageExtension';
 import { RenderWarnings } from '../store/renderWarnings';
 import {
     enforceAbsoluteMarkdownLengthLimit,
@@ -28,12 +25,9 @@ export const MdTextParser = async (
     enforceAbsoluteMarkdownLengthLimit(text);
     enforceStructuralSafetyLimits(text);
 
-    // Pre-process: encode {width=N height=N align=X} into image URL fragments
-    const processedText = preprocessImageAttributes(text, warnings);
-
     let tokens: TokensList;
     try {
-        tokens = await marked.lexer(processedText, {
+        tokens = await marked.lexer(text, {
             async: true,
             gfm: true,
         });
@@ -64,11 +58,33 @@ const convertTokens = (
     warnings?: RenderWarnings,
 ): ParsedElement[] => {
     const parsedElements: ParsedElement[] = [];
-    tokens.forEach((token) => {
+    for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
         try {
             const handler = tokenHandlers[token.type];
             if (handler) {
-                parsedElements.push(handler(token, warnings));
+                const element = handler(token, warnings);
+                parsedElements.push(element);
+                if (element.type === MdTokenType.Image) {
+                    // `{width=… align=…}` arrives as the start of the text
+                    // token after the image. A token left empty by removing
+                    // it is skipped, so a lone image still parses as a single
+                    // block image rather than an image followed by text.
+                    const next = tokens[i + 1];
+                    const taken =
+                        next?.type === MdTokenType.Text &&
+                        typeof next.text === 'string'
+                            ? takeImageAttributes(next.text, warnings)
+                            : null;
+                    if (taken) {
+                        Object.assign(element, taken.attrs);
+                        if (taken.rest) {
+                            next.text = taken.rest;
+                        } else {
+                            i++;
+                        }
+                    }
+                }
             } else {
                 parsedElements.push({
                     type: MdTokenType.Raw,
@@ -85,7 +101,7 @@ const convertTokens = (
                 droppedNodes: 1,
             });
         }
-    });
+    }
     return parsedElements;
 };
 
@@ -96,36 +112,36 @@ const tokenHandlers: Record<
     string,
     (token: any, warnings?: RenderWarnings) => ParsedElement
 > = {
-    [MdTokenType.Heading]: (token) => ({
+    [MdTokenType.Heading]: (token, warnings) => ({
         type: MdTokenType.Heading,
         depth: token.depth,
         content: token.text,
-        items: token.tokens ? convertTokens(token.tokens) : [],
+        items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Paragraph]: (token) => ({
+    [MdTokenType.Paragraph]: (token, warnings) => ({
         type: MdTokenType.Paragraph,
         content: token.text,
-        items: token.tokens ? convertTokens(token.tokens) : [],
+        items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.List]: (token) => ({
+    [MdTokenType.List]: (token, warnings) => ({
         type: MdTokenType.List,
         ordered: token.ordered,
         start: token.start,
-        items: token.items ? convertTokens(token.items) : [],
+        items: token.items ? convertTokens(token.items, warnings) : [],
     }),
-    [MdTokenType.ListItem]: (token) => ({
+    [MdTokenType.ListItem]: (token, warnings) => ({
         type: MdTokenType.ListItem,
         content: token.text,
         task: token.task ?? false,
         checked: token.checked ?? false,
-        items: token.tokens ? convertTokens(token.tokens) : [],
+        items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
     [MdTokenType.Code]: (token) => ({
         type: MdTokenType.Code,
         lang: token.lang,
         code: token.text,
     }),
-    [MdTokenType.Table]: (token) => ({
+    [MdTokenType.Table]: (token, warnings) => ({
         type: MdTokenType.Table,
         // `align` comes straight from the delimiter row (`|:--|--:|`) and was
         // previously discarded, so every column rendered left-aligned.
@@ -133,63 +149,61 @@ const tokenHandlers: Record<
         header: token.header.map((header: any) => ({
             type: MdTokenType.TableHeader,
             content: header.text,
-            items: header.tokens ? convertTokens(header.tokens) : [],
+            items: header.tokens ? convertTokens(header.tokens, warnings) : [],
         })),
         rows: token.rows.map((row: any[]) =>
             row.map((cell: any) => ({
                 type: MdTokenType.TableCell,
                 content: cell.text,
-                items: cell.tokens ? convertTokens(cell.tokens) : [],
+                items: cell.tokens ? convertTokens(cell.tokens, warnings) : [],
             })),
         ),
     }),
-    [MdTokenType.Image]: (token) => {
-        // Decode attributes from URL fragment and get clean URL
-        const { cleanHref, attrs } = parseImageAttrsFromHref(token.href);
-        return {
-            type: MdTokenType.Image,
-            src: cleanHref,
-            alt: token.text,
-            width: attrs.width,
-            height: attrs.height,
-            align: attrs.align,
-        };
-    },
-    [MdTokenType.Link]: (token) => ({
+    // Width, height and alignment come from a trailing `{…}` block and are
+    // applied by `convertTokens`, which can see the token that follows.
+    [MdTokenType.Image]: (token) => ({
+        type: MdTokenType.Image,
+        src: token.href,
+        alt: token.text,
+        width: undefined,
+        height: undefined,
+        align: undefined,
+    }),
+    [MdTokenType.Link]: (token, warnings) => ({
         type: MdTokenType.Link,
         href: token.href,
         text: token.text,
-        items: token.tokens ? convertTokens(token.tokens) : [],
+        items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Strong]: (token) => ({
+    [MdTokenType.Strong]: (token, warnings) => ({
         type: MdTokenType.Strong,
         content: token.text,
-        items: token.tokens ? convertTokens(token.tokens) : [],
+        items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Em]: (token) => ({
+    [MdTokenType.Em]: (token, warnings) => ({
         type: MdTokenType.Em,
         content: token.text,
-        items: token.tokens ? convertTokens(token.tokens) : [],
+        items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Text]: (token) => ({
+    [MdTokenType.Text]: (token, warnings) => ({
         type: MdTokenType.Text,
         content: token.text,
-        items: token.tokens ? convertTokens(token.tokens) : [],
+        items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Hr]: (token) => ({
+    [MdTokenType.Hr]: (token, warnings) => ({
         type: MdTokenType.Hr,
         content: token.raw,
-        items: token.tokens ? convertTokens(token.tokens) : [],
+        items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.CodeSpan]: (token) => ({
+    [MdTokenType.CodeSpan]: (token, warnings) => ({
         type: MdTokenType.CodeSpan,
         content: token.text,
-        items: token.tokens ? convertTokens(token.tokens) : [],
+        items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Blockquote]: (token) => ({
+    [MdTokenType.Blockquote]: (token, warnings) => ({
         type: MdTokenType.Blockquote,
         content: token.text,
-        items: token.tokens ? convertTokens(token.tokens) : [],
+        items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
     [MdTokenType.Html]: (token) => {
         const raw = String(token.raw ?? token.text ?? '').trim();
@@ -253,10 +267,10 @@ const tokenHandlers: Record<
         content: token.text,
     }),
     // GFM strikethrough. Previously rendered as literal `~~text~~`.
-    [MdTokenType.Del]: (token) => ({
+    [MdTokenType.Del]: (token, warnings) => ({
         type: MdTokenType.Del,
         content: token.text,
-        items: token.tokens ? convertTokens(token.tokens) : [],
+        items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
     // A link reference definition is metadata, not content. It was being
     // printed into the document as body text.
