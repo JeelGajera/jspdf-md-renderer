@@ -27,7 +27,14 @@ const getDataUrlPayloadByteSize = (dataUrl: string): number | null => {
 
     if (metadata.includes(';base64')) {
         const normalized = payload.replace(/\s/g, '');
-        const padding = normalized.match(/=*$/)?.[0].length ?? 0;
+        // Counted directly: `/=*$/` retried from every `=` in a long run.
+        let padding = 0;
+        while (
+            padding < normalized.length &&
+            normalized[normalized.length - 1 - padding] === '='
+        ) {
+            padding++;
+        }
         return Math.floor((normalized.length * 3) / 4) - padding;
     }
 
@@ -157,6 +164,39 @@ export const detectImageFormat = (element: ParsedElement): string => {
     return 'JPEG'; // Default fallback format for jsPDF
 };
 
+const SVG_WIDTH = /\swidth=(?:'|")([0-9.]+)[a-zA-Z]*(?:'|")/gi;
+const SVG_HEIGHT = /\sheight=(?:'|")([0-9.]+)[a-zA-Z]*(?:'|")/gi;
+const SVG_VIEWBOX = /\sviewBox=(?:'|")[^'"]*(?:'|")/gi;
+
+/**
+ * Finds `attribute` in the first `<svg …>` opening tag that has it.
+ *
+ * Returns what `/<svg[^>]*<attribute>/i` matched — the text from `<svg` to the
+ * end of the tag's last occurrence of the attribute, then its capture groups —
+ * in linear time. That regex was retried from every `<svg` and rescanned the
+ * rest of the input each time. Here each tag is scanned once: a `<svg` that
+ * falls inside an earlier, unclosed tag can only hold matches that tag had.
+ */
+const findSvgAttribute = (svg: string, attribute: RegExp): string[] | null => {
+    const opening = /<svg/gi;
+    let start: RegExpExecArray | null;
+    while ((start = opening.exec(svg)) !== null) {
+        const close = svg.indexOf('>', start.index);
+        const tag = svg.slice(start.index, close === -1 ? svg.length : close);
+
+        let last: RegExpMatchArray | null = null;
+        for (const match of tag.matchAll(attribute)) last = match;
+        if (last) {
+            const end = (last.index ?? 0) + last[0].length;
+            return [tag.slice(0, end), ...last.slice(1)];
+        }
+
+        if (close === -1) return null;
+        opening.lastIndex = close + 1;
+    }
+    return null;
+};
+
 /**
  * Extracts width and height from an SVG data URI if possible.
  */
@@ -182,15 +222,9 @@ const extractSvgDimensions = (
             svgString = decodeURIComponent(dataUri.split(',')[1] || '');
         }
 
-        const widthMatch = svgString.match(
-            /<svg[^>]*\swidth=(?:'|")([0-9.]+)[a-zA-Z]*(?:'|")/i,
-        );
-        const heightMatch = svgString.match(
-            /<svg[^>]*\sheight=(?:'|")([0-9.]+)[a-zA-Z]*(?:'|")/i,
-        );
-        const viewBoxMatch = svgString.match(
-            /<svg[^>]*\sviewBox=(?:'|")[^'"]*(?:'|")/i,
-        );
+        const widthMatch = findSvgAttribute(svgString, SVG_WIDTH);
+        const heightMatch = findSvgAttribute(svgString, SVG_HEIGHT);
+        const viewBoxMatch = findSvgAttribute(svgString, SVG_VIEWBOX);
 
         let w = widthMatch ? parseFloat(widthMatch[1]) : 0;
         let h = heightMatch ? parseFloat(heightMatch[1]) : 0;

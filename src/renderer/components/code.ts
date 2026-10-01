@@ -39,7 +39,9 @@ const renderCodeBlock = (
 
     // Trim content to remove trailing whitespace/newlines that cause extra space
     const rawContent = element.code ?? '';
-    const content = rawContent.replace(/[\r\n\s]+$/, '');
+    // trimEnd strips exactly what `/[\r\n\s]+$/` did, in linear time; the
+    // regex rescanned every whitespace run from each of its positions.
+    const content = rawContent.trimEnd();
 
     // Guard against empty content
     if (!content) {

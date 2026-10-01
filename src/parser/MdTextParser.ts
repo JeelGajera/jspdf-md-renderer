@@ -105,6 +105,69 @@ const convertTokens = (
     return parsedElements;
 };
 
+/*
+ * HTML helpers.
+ *
+ * An HTML token can run to the end of the document, so these must stay linear
+ * in its length. The regexes they replace — `/^<(\w+)[^>]*>(.*?)<\/\1>$/is`,
+ * `/<!--[\s\S]*?-->/g` and `/<[^>]*>/g` — each rescanned the rest of the token
+ * from every candidate start, and 60 KB of crafted HTML took seconds.
+ */
+
+/**
+ * Splits `<tag …>inner</tag>` into its lower-cased tag name and inner text,
+ * when `raw` both starts and ends with the same tag.
+ *
+ * Matches exactly what `/^<(\w+)[^>]*>(.*?)<\/\1>$/is` did, starting from the
+ * closing tag so the name is known before the opening tag is examined.
+ */
+const matchWrappingTag = (
+    raw: string,
+): { tag: string; inner: string } | null => {
+    if (!raw.endsWith('>')) return null;
+    const closeStart = raw.lastIndexOf('</');
+    if (closeStart < 1) return null;
+    const name = raw.slice(closeStart + 2, -1);
+    if (!/^\w+$/.test(name)) return null;
+
+    // The opening tag starts with the same name; anything up to its first
+    // '>' is attributes.
+    const tag = name.toLowerCase();
+    if (raw[0] !== '<') return null;
+    if (raw.slice(1, 1 + name.length).toLowerCase() !== tag) return null;
+    const openEnd = raw.indexOf('>', 1 + name.length);
+    if (openEnd === -1 || openEnd >= closeStart) return null;
+
+    return { tag, inner: raw.slice(openEnd + 1, closeStart) };
+};
+
+/** Removes every complete `<!-- … -->` comment. */
+const stripComments = (raw: string): string => {
+    let out = '';
+    let from = 0;
+    for (;;) {
+        const start = raw.indexOf('<!--', from);
+        const end = start === -1 ? -1 : raw.indexOf('-->', start + 4);
+        // An unterminated comment is left as text, as no later one can close.
+        if (end === -1) return out + raw.slice(from);
+        out += raw.slice(from, start);
+        from = end + 3;
+    }
+};
+
+/** Removes every `<…>` run, each ending at the first `>` after its `<`. */
+const stripTags = (raw: string): string => {
+    let out = '';
+    let from = 0;
+    for (;;) {
+        const start = raw.indexOf('<', from);
+        const end = start === -1 ? -1 : raw.indexOf('>', start + 1);
+        if (end === -1) return out + raw.slice(from);
+        out += raw.slice(from, start);
+        from = end + 1;
+    }
+};
+
 /**
  * Map each token type to its handler function.
  */
@@ -220,13 +283,11 @@ const tokenHandlers: Record<
             i: MdTokenType.Em,
         };
 
-        const inlineMatch = raw.match(/^<(\w+)[^>]*>(.*?)<\/\1>$/is);
+        const inlineMatch = matchWrappingTag(raw);
         if (inlineMatch) {
-            const tag = inlineMatch[1].toLowerCase();
-            const innerText = inlineMatch[2];
-            const mappedType = inlineTagMap[tag];
+            const mappedType = inlineTagMap[inlineMatch.tag];
             if (mappedType) {
-                return { type: mappedType, content: innerText };
+                return { type: mappedType, content: inlineMatch.inner };
             }
         }
 
@@ -236,12 +297,9 @@ const tokenHandlers: Record<
         }
 
         // Unknown HTML: render as raw text, strip tags.
-        // Comments are removed first and as whole units: `<[^>]+>` stops at the
+        // Comments are removed first and as whole units: a tag ends at the
         // first '>', so `<!-- a > b -->` left `b -->` behind as visible text.
-        const strippedText = raw
-            .replace(/<!--[\s\S]*?-->/g, '')
-            .replace(/<[^>]*>/g, '')
-            .trim();
+        const strippedText = stripTags(stripComments(raw)).trim();
         if (strippedText) {
             return { type: MdTokenType.Raw, content: strippedText };
         }
