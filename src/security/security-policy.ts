@@ -175,6 +175,8 @@ const metadataHosts = new Set([
 
 const isLocalhostHost = (host: string): boolean =>
     host === 'localhost' ||
+    // Reserved for loopback (RFC 6761), and resolved there by browsers.
+    host.endsWith('.localhost') ||
     host === '127.0.0.1' ||
     host === '::1' || // IPv6 loopback
     host === '[::1]'; // bracketed IPv6 loopback
@@ -627,7 +629,11 @@ export const validateResourceUrl = async (
     }
 
     const host = parsed.hostname.toLowerCase();
-    if (security.blockLocalhost && isLocalhostHost(host)) {
+    // A trailing dot names the same host — `localhost.` is `localhost` — so
+    // the name checks ignore it. Resolution below keeps the exact hostname,
+    // so it looks up what fetch will connect to.
+    const hostName = host.replace(/\.$/, '');
+    if (security.blockLocalhost && isLocalhostHost(hostName)) {
         handleSecurityViolation(
             security,
             createViolation(
@@ -640,7 +646,7 @@ export const validateResourceUrl = async (
         );
         return false;
     }
-    if (security.blockMetadataIPs && metadataHosts.has(host)) {
+    if (security.blockMetadataIPs && metadataHosts.has(hostName)) {
         handleSecurityViolation(
             security,
             createViolation(

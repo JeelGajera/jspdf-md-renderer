@@ -83,7 +83,7 @@ What each option blocks:
 
 | Option | Addresses |
 | --- | --- |
-| `blockLocalhost` | `localhost`, all of `127.0.0.0/8`, `0.0.0.0/8`, `::1`, `::` |
+| `blockLocalhost` | `localhost` and `*.localhost`, all of `127.0.0.0/8`, `0.0.0.0/8`, `::1`, `::` |
 | `blockPrivateIPs` | `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `fc00::/7` |
 | `blockLinkLocalIPs` | `169.254.0.0/16`, `fe80::/10` |
 | `blockMetadataIPs` | `169.254.169.254`, `100.100.100.200`, `fd00:ec2::254`, and the hostnames `metadata.google.internal`, `metadata`, `instance-data` |

@@ -46,6 +46,27 @@ describe('link validation does not resolve hostnames', () => {
         ).toBe(false);
     });
 
+    it.each([
+        ['http://localhost./admin', 'LOCALHOST_BLOCKED'],
+        ['http://app.localhost/admin', 'LOCALHOST_BLOCKED'],
+        ['http://metadata.google.internal./', 'METADATA_IP_BLOCKED'],
+    ])(
+        'blocks the local hostname spelling %s without resolving it',
+        async (url, code) => {
+            const lookup = spyOnLookup();
+            const codes: string[] = [];
+            const security = createSecurity({
+                onSecurityViolation: (v) => codes.push(v.code),
+            });
+
+            expect(await validateResourceUrl(url, 'link', security)).toBe(
+                false,
+            );
+            expect(codes).toEqual([code]);
+            expect(lookup).not.toHaveBeenCalled();
+        },
+    );
+
     it('still resolves image hosts', async () => {
         const lookup = spyOnLookup();
         vi.stubGlobal(
