@@ -403,7 +403,13 @@ const options = {
 - `allowedImageDomains` semantics:
   - `undefined` -> allow all domains
   - `[]` -> deny all domains
-- `maxImageSizeBytes` uses decoded bytes for data URLs
+- `maxImageSizeBytes` uses decoded bytes for data URLs; a remote image is
+  abandoned as soon as it passes the limit
+- `imageFetchTimeoutMs` covers reading the body as well as the headers
+- `blockLocalhost` covers all of `127.0.0.0/8`, `0.0.0.0/8`, `::1` and `::`, and
+  IPv6 addresses that embed an IPv4 address are held to the IPv4 rules
+- Image hosts are resolved and checked; links are only checked against an
+  address written into the URL itself
 - `SecurityViolationError` is exported for throw-mode handling
 - Redirects on remote image fetches are followed manually, and every hop is
   revalidated against the same policy (bounded to 5 hops)
@@ -413,6 +419,15 @@ const options = {
 Browser caveat:
 - IP-level SSRF checks are best-effort in browser runtime due to DNS API limitations.
 - For strict SSRF policy, fetch remote images through a trusted server-side proxy.
+
+DNS caveat:
+- An image host is resolved for the checks and again by `fetch` to connect, so
+  a DNS server that answers differently the second time can redirect the
+  request. Use `allowedImageDomains` or a server-side proxy where that matters.
+
+Use jsPDF 4.2.1 or later when rendering markdown you do not control: earlier
+versions have published denial-of-service advisories in the image decoders
+that markdown images reach.
 
 ## API Exports
 

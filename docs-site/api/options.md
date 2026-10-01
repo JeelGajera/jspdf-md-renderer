@@ -344,7 +344,9 @@ is reported as a warning so the omission is never silent.
 
 ### Remote Image Fetching
 
-`imageFetchTimeoutMs` bounds each individual remote image request. It is separate
+`imageFetchTimeoutMs` bounds each individual remote image request, including
+reading its body. `maxImageSizeBytes` is enforced while the body downloads, and a
+`Content-Length` over the limit is rejected before it starts. The timeout is separate
 from `renderTimeoutMs`, which is only sampled at checkpoints between render
 phases and therefore cannot interrupt a request to a host that never responds.
 

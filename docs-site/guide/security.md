@@ -79,7 +79,31 @@ security: {
 }
 ```
 
-These checks include IPv4 and IPv6/private-mapped variants.
+What each option blocks:
+
+| Option | Addresses |
+| --- | --- |
+| `blockLocalhost` | `localhost`, all of `127.0.0.0/8`, `0.0.0.0/8`, `::1`, `::` |
+| `blockPrivateIPs` | `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `fc00::/7` |
+| `blockLinkLocalIPs` | `169.254.0.0/16`, `fe80::/10` |
+| `blockMetadataIPs` | `169.254.169.254`, `100.100.100.200`, `fd00:ec2::254`, and the hostnames `metadata.google.internal`, `metadata`, `instance-data` |
+
+IPv6 addresses that carry an IPv4 address — `::ffff:a.b.c.d`, `::a.b.c.d`,
+NAT64 `64:ff9b::/96` and 6to4 `2002::/16` — are held to the rules for that
+IPv4 address.
+
+Image hosts are resolved and every address they resolve to is checked. Links
+are not resolved: the renderer never fetches them, and the reader who clicks
+one does so from their own network. A link is only removed for an address
+written into the URL itself.
+
+### DNS rebinding
+
+The checks resolve an image host, and then `fetch` resolves it again to
+connect. A DNS server that answers differently the second time can direct the
+request elsewhere. Where that matters, set `allowedImageDomains` to hosts you
+control, or fetch remote images through a server-side proxy that enforces its
+own egress policy.
 
 ### Redirects
 
@@ -106,7 +130,9 @@ security: {
 ```
 
 Notes:
-- `maxImageSizeBytes` for data URLs uses decoded payload bytes.
+- `maxImageSizeBytes` for data URLs uses decoded payload bytes. For remote
+  images, a `Content-Length` over the limit is rejected before downloading, and
+  a body is abandoned as soon as it passes the limit.
 - depth/image-count limits sanitize the parsed tree before rendering.
 - `maxNestedDepth` counts **structural containers** — lists, list items,
   blockquotes and tables. Inline wrappers such as emphasis and links do not
@@ -114,10 +140,17 @@ Notes:
   Exceeding it drops the nested content, raises a
   `MAX_NESTED_DEPTH_EXCEEDED` violation, and reports how many nodes were
   dropped, so the omission is never silent.
-- `imageFetchTimeoutMs` bounds each individual remote image request; `0`
-  disables it. It is separate from `renderTimeoutMs`, which is only sampled at
-  checkpoints between render phases and so cannot interrupt a request to a host
-  that never responds.
+- `imageFetchTimeoutMs` bounds each individual remote image request, including
+  reading its body; `0` disables it. It is separate from `renderTimeoutMs`,
+  which is only sampled at checkpoints between render phases and so cannot
+  interrupt a request to a host that never responds.
+
+## jsPDF Version
+
+Images in the markdown are decoded by jsPDF. Versions of jsPDF before 4.2.1
+have published denial-of-service advisories in their image decoders, which
+untrusted markdown can reach through a `data:` image. Use jsPDF 4.2.1 or later
+when rendering markdown you do not control.
 
 ## Custom Hook Controls
 
