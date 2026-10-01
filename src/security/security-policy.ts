@@ -173,35 +173,67 @@ const metadataHosts = new Set([
     'instance-data',
 ]);
 
-const isIPv4InCidr = (
-    ip: string,
-    cidrBase: string,
-    cidrMask: number,
-): boolean => {
-    const toNum = (s: string): number =>
-        s.split('.').reduce((acc, part) => (acc << 8) + Number(part), 0) >>> 0;
-    const ipNum = toNum(ip);
-    const baseNum = toNum(cidrBase);
-    const mask = cidrMask === 0 ? 0 : (0xffffffff << (32 - cidrMask)) >>> 0;
-    return (ipNum & mask) === (baseNum & mask);
-};
-
 const isLocalhostHost = (host: string): boolean =>
     host === 'localhost' ||
     host === '127.0.0.1' ||
     host === '::1' || // IPv6 loopback
     host === '[::1]'; // bracketed IPv6 loopback
 
-const isPrivateIPv4 = (ip: string): boolean =>
-    isIPv4InCidr(ip, '10.0.0.0', 8) ||
-    isIPv4InCidr(ip, '172.16.0.0', 12) ||
-    isIPv4InCidr(ip, '192.168.0.0', 16);
+/**
+ * The kinds of non-public address the `block*` options refer to. An address
+ * can be several at once — 169.254.169.254 is both link-local and metadata.
+ */
+type AddressClass = 'localhost' | 'private' | 'linkLocal' | 'metadata';
 
-const isLinkLocalIPv4 = (ip: string): boolean =>
-    isIPv4InCidr(ip, '169.254.0.0', 16);
+/** Parses a dotted-quad IPv4 address into its 32-bit value. */
+const parseIPv4 = (ip: string): number | null => {
+    const parts = ip.split('.');
+    if (parts.length !== 4) return null;
+    let value = 0;
+    for (const part of parts) {
+        if (!/^\d{1,3}$/.test(part) || Number(part) > 255) return null;
+        value = value * 256 + Number(part);
+    }
+    return value;
+};
 
-const isMetadataIP = (ip: string): boolean =>
-    ip === '169.254.169.254' || ip === '100.100.100.200';
+const inIPv4Range = (ip: number, base: number, bits: number): boolean => {
+    const size = 2 ** (32 - bits);
+    return Math.floor(ip / size) === Math.floor(base / size);
+};
+
+const ipv4 = (a: number, b: number, c: number, d: number): number =>
+    ((a * 256 + b) * 256 + c) * 256 + d;
+
+/**
+ * Classifies an IPv4 address.
+ *
+ * Loopback is the whole of 127.0.0.0/8, and 0.0.0.0/8 ("this host") is treated
+ * as local too: connecting to 0.0.0.0 reaches services listening only on
+ * 127.0.0.1. Checking for the single string '127.0.0.1' let every other
+ * spelling of the local host through `blockLocalhost`.
+ */
+const ipv4Classes = (ip: number): AddressClass[] => {
+    const classes: AddressClass[] = [];
+    if (
+        inIPv4Range(ip, ipv4(127, 0, 0, 0), 8) ||
+        inIPv4Range(ip, ipv4(0, 0, 0, 0), 8)
+    ) {
+        classes.push('localhost');
+    }
+    if (
+        inIPv4Range(ip, ipv4(10, 0, 0, 0), 8) ||
+        inIPv4Range(ip, ipv4(172, 16, 0, 0), 12) ||
+        inIPv4Range(ip, ipv4(192, 168, 0, 0), 16)
+    ) {
+        classes.push('private');
+    }
+    if (inIPv4Range(ip, ipv4(169, 254, 0, 0), 16)) classes.push('linkLocal');
+    if (ip === ipv4(169, 254, 169, 254) || ip === ipv4(100, 100, 100, 200)) {
+        classes.push('metadata');
+    }
+    return classes;
+};
 
 /**
  * Parses an IPv6 address string into a BigInt for range comparison.
@@ -256,66 +288,94 @@ const parseIPv6ToBigInt = (ip: string): bigint | null => {
     }
 };
 
-const MAX_IPV6 = (1n << 128n) - 1n;
-const isIPv6InRange = (
-    ip: string,
-    prefixBigInt: bigint,
-    prefixLength: number,
-): boolean => {
-    const ipNum = parseIPv6ToBigInt(ip);
-    if (ipNum === null) return false;
-    const mask =
-        prefixLength === 0
-            ? 0n
-            : (MAX_IPV6 << BigInt(128 - prefixLength)) & MAX_IPV6;
-    return (ipNum & mask) === (prefixBigInt & mask);
+const inIPv6Range = (ip: bigint, prefix: bigint, bits: number): boolean =>
+    ip >> BigInt(128 - bits) === prefix >> BigInt(128 - bits);
+
+/** fd00:ec2::254, the IPv6 address of the AWS instance metadata service. */
+const AWS_METADATA_IPV6 = (0xfd00_0ec2n << 96n) | 0x254n;
+
+/**
+ * The IPv4 address an IPv6 address carries, for the forms that route to it.
+ *
+ * Each of these reaches the embedded IPv4 host, so it must be held to the IPv4
+ * rules — otherwise `[::ffff:127.0.0.1]` is simply another way to write
+ * localhost.
+ */
+const embeddedIPv4 = (ip: bigint): number | null => {
+    const low32 = Number(ip & 0xffff_ffffn);
+    const high96 = ip >> 32n;
+    // ::ffff:a.b.c.d (IPv4-mapped) and ::a.b.c.d (IPv4-compatible)
+    if (high96 === 0xffffn || high96 === 0n) return low32;
+    // 64:ff9b::a.b.c.d (NAT64 well-known prefix)
+    if (high96 === 0x0064_ff9b_0000_0000_0000_0000n) return low32;
+    // 2002:aabb:ccdd::/48 (6to4)
+    if (ip >> 112n === 0x2002n) return Number((ip >> 80n) & 0xffff_ffffn);
+    return null;
 };
 
-const isLoopbackIPv6 = (ip: string): boolean => {
-    const num = parseIPv6ToBigInt(ip);
-    return num === 1n;
+const ipv6Classes = (ip: bigint): AddressClass[] => {
+    const classes: AddressClass[] = [];
+    // ::1 (loopback) and :: (unspecified, which reaches the local host)
+    if (ip === 1n || ip === 0n) classes.push('localhost');
+    if (inIPv6Range(ip, 0xfc00n << 112n, 7)) classes.push('private');
+    if (inIPv6Range(ip, 0xfe80n << 112n, 10)) classes.push('linkLocal');
+    if (ip === AWS_METADATA_IPV6) classes.push('metadata');
+
+    const embedded = embeddedIPv4(ip);
+    if (embedded !== null) classes.push(...ipv4Classes(embedded));
+    return classes;
 };
 
-const isUniqueLocalIPv6 = (ip: string): boolean =>
-    isIPv6InRange(ip, 0xfc00n << 112n, 7);
-
-const isLinkLocalIPv6 = (ip: string): boolean =>
-    isIPv6InRange(ip, 0xfe80n << 112n, 10);
-
-const extractIPv4Mapped = (ip: string): string | null => {
-    const stripped = ip.replace(/^\[|\]$/g, '');
-
-    // Fast path for dotted form (::ffff:169.254.169.254).
-    const dottedMatch = stripped.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
-    if (dottedMatch) return dottedMatch[1];
-
-    // General path for hex form (::ffff:a9fe:a9fe) and equivalent compressed forms.
-    const ipNum = parseIPv6ToBigInt(stripped);
-    if (ipNum === null) return null;
-    if (ipNum >> 32n !== 0xffffn) return null;
-
-    const low32 = Number(ipNum & 0xffffffffn);
-    const octet1 = (low32 >>> 24) & 0xff;
-    const octet2 = (low32 >>> 16) & 0xff;
-    const octet3 = (low32 >>> 8) & 0xff;
-    const octet4 = low32 & 0xff;
-    return `${octet1}.${octet2}.${octet3}.${octet4}`;
+/** Classifies an IP address literal; anything that is not one has no class. */
+const addressClasses = (address: string): AddressClass[] => {
+    const stripped = address.replace(/^\[|\]$/g, '');
+    const v4 = parseIPv4(stripped);
+    if (v4 !== null) return ipv4Classes(v4);
+    const v6 = stripped.includes(':') ? parseIPv6ToBigInt(stripped) : null;
+    return v6 === null ? [] : ipv6Classes(v6);
 };
 
-const isIPv4MappedPrivate = (ip: string): boolean => {
-    const mapped = extractIPv4Mapped(ip);
-    return mapped ? isPrivateIPv4(mapped) : false;
-};
-
-const isIPv4MappedLinkLocal = (ip: string): boolean => {
-    const mapped = extractIPv4Mapped(ip);
-    return mapped ? isLinkLocalIPv4(mapped) : false;
-};
-
-const isIPv4MappedMetadata = (ip: string): boolean => {
-    const mapped = extractIPv4Mapped(ip);
-    return mapped ? isMetadataIP(mapped) : false;
-};
+/**
+ * Which option blocks which class, in the order they are checked. The order
+ * decides the violation code when an address belongs to several classes.
+ */
+const ADDRESS_RULES: ReadonlyArray<{
+    addressClass: AddressClass;
+    option: keyof Pick<
+        RenderSecurityOptions,
+        | 'blockLocalhost'
+        | 'blockPrivateIPs'
+        | 'blockLinkLocalIPs'
+        | 'blockMetadataIPs'
+    >;
+    code: SecurityViolationCode;
+    message: string;
+}> = [
+    {
+        addressClass: 'localhost',
+        option: 'blockLocalhost',
+        code: 'LOCALHOST_BLOCKED',
+        message: 'Localhost IP is blocked',
+    },
+    {
+        addressClass: 'private',
+        option: 'blockPrivateIPs',
+        code: 'PRIVATE_IP_BLOCKED',
+        message: 'Private IP is blocked',
+    },
+    {
+        addressClass: 'linkLocal',
+        option: 'blockLinkLocalIPs',
+        code: 'LINK_LOCAL_IP_BLOCKED',
+        message: 'Link-local IP is blocked',
+    },
+    {
+        addressClass: 'metadata',
+        option: 'blockMetadataIPs',
+        code: 'METADATA_IP_BLOCKED',
+        message: 'Metadata IP is blocked',
+    },
+];
 
 /**
  * Resolves a hostname to IP addresses.
@@ -604,116 +664,24 @@ export const validateResourceUrl = async (
         }
     } else {
         for (const ip of ips) {
-            if (security.blockLocalhost && isLocalhostHost(ip)) {
-                handleSecurityViolation(
-                    security,
-                    createViolation(
-                        'LOCALHOST_BLOCKED',
-                        type,
-                        'Localhost IP is blocked',
-                        rawValue,
-                        context,
-                    ),
-                );
-                return false;
-            }
-            if (security.blockPrivateIPs && isPrivateIPv4(ip)) {
-                handleSecurityViolation(
-                    security,
-                    createViolation(
-                        'PRIVATE_IP_BLOCKED',
-                        type,
-                        'Private IP is blocked',
-                        rawValue,
-                        context,
-                    ),
-                );
-                return false;
-            }
-            if (security.blockLinkLocalIPs && isLinkLocalIPv4(ip)) {
-                handleSecurityViolation(
-                    security,
-                    createViolation(
-                        'LINK_LOCAL_IP_BLOCKED',
-                        type,
-                        'Link-local IP is blocked',
-                        rawValue,
-                        context,
-                    ),
-                );
-                return false;
-            }
-            if (security.blockMetadataIPs && isMetadataIP(ip)) {
-                handleSecurityViolation(
-                    security,
-                    createViolation(
-                        'METADATA_IP_BLOCKED',
-                        type,
-                        'Metadata IP is blocked',
-                        rawValue,
-                        context,
-                    ),
-                );
-                return false;
-            }
-
-            if (security.blockLocalhost && isLoopbackIPv6(ip)) {
-                handleSecurityViolation(
-                    security,
-                    createViolation(
-                        'LOCALHOST_BLOCKED',
-                        type,
-                        'IPv6 loopback is blocked',
-                        rawValue,
-                        context,
-                    ),
-                );
-                return false;
-            }
-            if (
-                security.blockPrivateIPs &&
-                (isUniqueLocalIPv6(ip) || isIPv4MappedPrivate(ip))
-            ) {
-                handleSecurityViolation(
-                    security,
-                    createViolation(
-                        'PRIVATE_IP_BLOCKED',
-                        type,
-                        'IPv6 private address is blocked',
-                        rawValue,
-                        context,
-                    ),
-                );
-                return false;
-            }
-            if (
-                security.blockLinkLocalIPs &&
-                (isLinkLocalIPv6(ip) || isIPv4MappedLinkLocal(ip))
-            ) {
-                handleSecurityViolation(
-                    security,
-                    createViolation(
-                        'LINK_LOCAL_IP_BLOCKED',
-                        type,
-                        'IPv6 link-local address is blocked',
-                        rawValue,
-                        context,
-                    ),
-                );
-                return false;
-            }
-            if (security.blockMetadataIPs && isIPv4MappedMetadata(ip)) {
-                handleSecurityViolation(
-                    security,
-                    createViolation(
-                        'METADATA_IP_BLOCKED',
-                        type,
-                        'IPv4-mapped metadata IP is blocked',
-                        rawValue,
-                        context,
-                    ),
-                );
-                return false;
+            const classes = addressClasses(ip);
+            for (const rule of ADDRESS_RULES) {
+                if (
+                    security[rule.option] &&
+                    classes.includes(rule.addressClass)
+                ) {
+                    handleSecurityViolation(
+                        security,
+                        createViolation(
+                            rule.code,
+                            type,
+                            rule.message,
+                            rawValue,
+                            context,
+                        ),
+                    );
+                    return false;
+                }
             }
         }
     }
