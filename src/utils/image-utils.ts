@@ -665,14 +665,25 @@ const keepDeadlineUntilBodyEnds = (
         return response;
     }
 
-    const body = response.body.pipeThrough(
-        new TransformStream<Uint8Array, Uint8Array>({ flush: release }),
-    );
-    return new Response(body, {
+    const init: ResponseInit = {
         status: response.status,
         statusText: response.statusText,
         headers: response.headers,
-    });
+    };
+    try {
+        // Checked before the body is piped, which would lock it.
+        new Response(null, init);
+    } catch {
+        // The constructor rejects some status lines a server can send. The
+        // deadline still governs the original body, so return that instead;
+        // the timer is unref'd and only fires, harmlessly, after the request.
+        return response;
+    }
+
+    const body = response.body.pipeThrough(
+        new TransformStream<Uint8Array, Uint8Array>({ flush: release }),
+    );
+    return new Response(body, init);
 };
 
 /** A remote image larger than `security.maxImageSizeBytes`. */
