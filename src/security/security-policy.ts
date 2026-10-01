@@ -377,15 +377,21 @@ const ADDRESS_RULES: ReadonlyArray<{
     },
 ];
 
+/** The host itself when it is an IP literal, otherwise nothing. */
+const literalAddresses = (host: string): string[] => {
+    const stripped = host.replace(/^\[|\]$/g, '');
+    const isLiteralV4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(stripped);
+    return isLiteralV4 || stripped.includes(':') ? [stripped] : [];
+};
+
 /**
  * Resolves a hostname to IP addresses.
  * Returns null when resolution is unavailable (browser runtime).
  */
 const resolveHostToIPs = async (host: string): Promise<string[] | null> => {
+    const literal = literalAddresses(host);
+    if (literal.length > 0) return literal;
     const stripped = host.replace(/^\[|\]$/g, '');
-    const isLiteralV4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(stripped);
-    if (isLiteralV4) return [stripped];
-    if (stripped.includes(':')) return [stripped];
 
     if (!isNodeEnvironment()) {
         return null;
@@ -648,7 +654,13 @@ export const validateResourceUrl = async (
         return false;
     }
 
-    const ips = await resolveHostToIPs(host);
+    // A link is never fetched by the renderer: whoever opens the PDF follows
+    // it, from their own network, so the renderer's DNS says nothing about
+    // where it leads. Resolving every link only slowed renders and let a
+    // document make the server look up hostnames of its choosing. Addresses
+    // written into the link itself are still checked.
+    const ips =
+        type === 'link' ? literalAddresses(host) : await resolveHostToIPs(host);
     if (ips === null) {
         if (type === 'image') {
             warnSecurity(security, {
