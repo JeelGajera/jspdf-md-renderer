@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { TokensList, marked } from 'marked';
+import { marked, type Token, type Tokens, type TokensList } from 'marked';
 import { MdTokenType } from '../enums/mdTokenType';
 import { ParsedElement } from '../types/parsedElement';
 import { takeImageAttributes } from './imageExtension';
@@ -53,8 +52,15 @@ export const MdTextParser = async (
  * @param tokens - The list of markdown tokens.
  * @returns Parsed elements in a custom structure.
  */
+const isMarkedTextToken = (
+    token: Token | undefined,
+): token is Tokens.Text =>
+    token?.type === MdTokenType.Text &&
+    'text' in token &&
+    typeof token.text === 'string';
+
 const convertTokens = (
-    tokens: TokensList | any[],
+    tokens: Token[],
     warnings?: RenderWarnings,
 ): ParsedElement[] => {
     const parsedElements: ParsedElement[] = [];
@@ -63,7 +69,7 @@ const convertTokens = (
         try {
             const handler = tokenHandlers[token.type];
             if (handler) {
-                const element = handler(token, warnings);
+                const element = handler(token as never, warnings);
                 parsedElements.push(element);
                 if (element.type === MdTokenType.Image) {
                     // `{width=… align=…}` arrives as the start of the text
@@ -71,12 +77,10 @@ const convertTokens = (
                     // it is skipped, so a lone image still parses as a single
                     // block image rather than an image followed by text.
                     const next = tokens[i + 1];
-                    const taken =
-                        next?.type === MdTokenType.Text &&
-                        typeof next.text === 'string'
-                            ? takeImageAttributes(next.text, warnings)
-                            : null;
-                    if (taken) {
+                    const taken = isMarkedTextToken(next)
+                        ? takeImageAttributes(next.text, warnings)
+                        : null;
+                    if (taken && isMarkedTextToken(next)) {
                         Object.assign(element, taken.attrs);
                         if (taken.rest) {
                             next.text = taken.rest;
@@ -171,51 +175,58 @@ const stripTags = (raw: string): string => {
 /**
  * Map each token type to its handler function.
  */
-const tokenHandlers: Record<
-    string,
-    (token: any, warnings?: RenderWarnings) => ParsedElement
-> = {
-    [MdTokenType.Heading]: (token, warnings) => ({
+type TokenWithOptionalChildren<T extends Token> = T & { tokens?: Token[] };
+
+// Each handler is strongly typed to the corresponding marked token. `never`
+// is used only at the dynamic dispatch boundary, where token.type selects
+// the matching handler at runtime.
+type TokenHandler = (
+    token: never,
+    warnings?: RenderWarnings,
+) => ParsedElement;
+
+const tokenHandlers: Record<string, TokenHandler> = {
+    [MdTokenType.Heading]: (token: Tokens.Heading, warnings) => ({
         type: MdTokenType.Heading,
         depth: token.depth,
         content: token.text,
         items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Paragraph]: (token, warnings) => ({
+    [MdTokenType.Paragraph]: (token: Tokens.Paragraph, warnings) => ({
         type: MdTokenType.Paragraph,
         content: token.text,
         items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.List]: (token, warnings) => ({
+    [MdTokenType.List]: (token: Tokens.List, warnings) => ({
         type: MdTokenType.List,
         ordered: token.ordered,
-        start: token.start,
+        start: token.start as ParsedElement['start'],
         items: token.items ? convertTokens(token.items, warnings) : [],
     }),
-    [MdTokenType.ListItem]: (token, warnings) => ({
+    [MdTokenType.ListItem]: (token: Tokens.ListItem, warnings) => ({
         type: MdTokenType.ListItem,
         content: token.text,
         task: token.task ?? false,
         checked: token.checked ?? false,
         items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Code]: (token) => ({
+    [MdTokenType.Code]: (token: Tokens.Code) => ({
         type: MdTokenType.Code,
         lang: token.lang,
         code: token.text,
     }),
-    [MdTokenType.Table]: (token, warnings) => ({
+    [MdTokenType.Table]: (token: Tokens.Table, warnings) => ({
         type: MdTokenType.Table,
         // `align` comes straight from the delimiter row (`|:--|--:|`) and was
         // previously discarded, so every column rendered left-aligned.
         columnAlign: token.align ?? [],
-        header: token.header.map((header: any) => ({
+        header: token.header.map((header) => ({
             type: MdTokenType.TableHeader,
             content: header.text,
             items: header.tokens ? convertTokens(header.tokens, warnings) : [],
         })),
-        rows: token.rows.map((row: any[]) =>
-            row.map((cell: any) => ({
+        rows: token.rows.map((row) =>
+            row.map((cell) => ({
                 type: MdTokenType.TableCell,
                 content: cell.text,
                 items: cell.tokens ? convertTokens(cell.tokens, warnings) : [],
@@ -224,7 +235,7 @@ const tokenHandlers: Record<
     }),
     // Width, height and alignment come from a trailing `{…}` block and are
     // applied by `convertTokens`, which can see the token that follows.
-    [MdTokenType.Image]: (token) => ({
+    [MdTokenType.Image]: (token: Tokens.Image) => ({
         type: MdTokenType.Image,
         src: token.href,
         alt: token.text,
@@ -232,43 +243,46 @@ const tokenHandlers: Record<
         height: undefined,
         align: undefined,
     }),
-    [MdTokenType.Link]: (token, warnings) => ({
+    [MdTokenType.Link]: (token: Tokens.Link, warnings) => ({
         type: MdTokenType.Link,
         href: token.href,
         text: token.text,
         items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Strong]: (token, warnings) => ({
+    [MdTokenType.Strong]: (token: Tokens.Strong, warnings) => ({
         type: MdTokenType.Strong,
         content: token.text,
         items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Em]: (token, warnings) => ({
+    [MdTokenType.Em]: (token: Tokens.Em, warnings) => ({
         type: MdTokenType.Em,
         content: token.text,
         items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Text]: (token, warnings) => ({
+    [MdTokenType.Text]: (token: Tokens.Text, warnings) => ({
         type: MdTokenType.Text,
         content: token.text,
         items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Hr]: (token, warnings) => ({
+    [MdTokenType.Hr]: (token: TokenWithOptionalChildren<Tokens.Hr>, warnings) => ({
         type: MdTokenType.Hr,
         content: token.raw,
         items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.CodeSpan]: (token, warnings) => ({
+    [MdTokenType.CodeSpan]: (
+        token: TokenWithOptionalChildren<Tokens.Codespan>,
+        warnings,
+    ) => ({
         type: MdTokenType.CodeSpan,
         content: token.text,
         items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Blockquote]: (token, warnings) => ({
+    [MdTokenType.Blockquote]: (token: Tokens.Blockquote, warnings) => ({
         type: MdTokenType.Blockquote,
         content: token.text,
         items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Html]: (token) => {
+    [MdTokenType.Html]: (token: Tokens.HTML | Tokens.Tag) => {
         const raw = String(token.raw ?? token.text ?? '').trim();
 
         if (/^<br\s*\/?>$/i.test(raw)) {
@@ -320,12 +334,12 @@ const tokenHandlers: Record<
     // An escape token carries the escaped character in `text` and the source
     // backslash in `raw`. Falling through to the generic `raw` branch printed
     // the backslash, so `\\*` rendered as `\\*` instead of `*`.
-    [MdTokenType.Escape]: (token) => ({
+    [MdTokenType.Escape]: (token: Tokens.Escape) => ({
         type: MdTokenType.Text,
         content: token.text,
     }),
     // GFM strikethrough. Previously rendered as literal `~~text~~`.
-    [MdTokenType.Del]: (token, warnings) => ({
+    [MdTokenType.Del]: (token: Tokens.Del, warnings) => ({
         type: MdTokenType.Del,
         content: token.text,
         items: token.tokens ? convertTokens(token.tokens, warnings) : [],
@@ -340,7 +354,7 @@ const tokenHandlers: Record<
     // used to fall through to the generic `raw` branch and be turned into extra
     // vertical space on top of the configured `spacing.*` values. Labelling
     // them lets the renderer decide, per `spacing.blankLines`.
-    [MdTokenType.Space]: (token) => ({
+    [MdTokenType.Space]: (token: Tokens.Space) => ({
         type: MdTokenType.Space,
         content: token.raw,
     }),
