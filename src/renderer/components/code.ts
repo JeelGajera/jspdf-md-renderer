@@ -3,6 +3,28 @@ import { ParsedElement } from '../../types';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
 import { RenderStore } from '../../store/renderStore';
 
+/**
+ * Expands tab characters to tab stops, so tab-indented code keeps its
+ * indentation in the monospace code font. A tab after two characters only
+ * advances to the next multiple of `tabSize` (a tab is not a single space),
+ * matching how editors render it. Column positions reset for each line.
+ */
+const expandTabsToStops = (text: string, tabSize: number): string => {
+    let result = '';
+    let column = 0;
+    for (const char of text) {
+        if (char === '\t') {
+            const toNext = tabSize - (column % tabSize);
+            result += ' '.repeat(toNext);
+            column += toNext;
+        } else {
+            result += char;
+            column += 1;
+        }
+    }
+    return result;
+};
+
 const renderCodeBlock = (
     doc: jsPDF,
     element: ParsedElement,
@@ -50,8 +72,16 @@ const renderCodeBlock = (
         return;
     }
 
+    // Expand tabs to tab stops before wrapping, so tab-indented code keeps its
+    // indentation (a tab must not render as a single character).
+    const tabSize = codeOpts.tabSize ?? 4;
+    const tabExpanded = content
+        .split('\n')
+        .map((line) => expandTabsToStops(line, tabSize))
+        .join('\n');
+
     // Split into lines
-    const lines: string[] = doc.splitTextToSize(content, maxWidth);
+    const lines: string[] = doc.splitTextToSize(tabExpanded, maxWidth);
 
     // Remove trailing empty lines
     while (lines.length > 0 && lines[lines.length - 1].trim() === '') {

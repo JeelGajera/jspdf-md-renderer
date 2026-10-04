@@ -267,6 +267,7 @@ const options = {
     padding: 5,
     showLanguageLabel: true,
     textColor: '#111827',
+    tabSize: 4,
   },
   spacing: {
     afterHeading: 2,

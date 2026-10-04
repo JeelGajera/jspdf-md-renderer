@@ -172,6 +172,7 @@ codeBlock: {
   showLanguageLabel: true,
   textColor: '#111827',
   labelColor: '#6B7280',
+  tabSize: 4,
 },
 codespan: {
   backgroundColor: '#EEEEEE',

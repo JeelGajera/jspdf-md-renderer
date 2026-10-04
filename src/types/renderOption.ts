@@ -156,6 +156,12 @@ export type RenderOption = {
         textColor?: string;
         /** Language label color as hex. Default: '#666666' */
         labelColor?: string;
+        /**
+         * Width of a tab stop, in characters, used to expand tab characters in
+         * code before wrapping. A tab advances to the next multiple of this
+         * value, matching how editors render tab-indented code. Default: 4.
+         */
+        tabSize?: number;
     };
     spacing?: {
         /** Space below headings in doc units. Default: 2 */
