@@ -90,6 +90,9 @@ const renderSingleWord = (
             if (word.isStrikethrough && word.text) {
                 renderStrikethrough(doc, word, x, y);
             }
+            if (word.isLink && store.options.link?.underline) {
+                renderUnderline(doc, word, x, y);
+            }
         }
 
         if (word.isLink && word.href) {
@@ -134,6 +137,29 @@ const renderStrikethrough = (
     const savedDraw = doc.getDrawColor();
     const savedWidth = doc.getLineWidth();
     // Match the rule colour to the text so it reads as one decorated run.
+    doc.setDrawColor(doc.getTextColor());
+    doc.setLineWidth(Math.max(0.1, doc.getFontSize() / 100));
+    doc.line(x, lineY, x + word.width, lineY);
+    doc.setDrawColor(savedDraw);
+    doc.setLineWidth(savedWidth);
+};
+
+/**
+ * Draws the underline rule for a linked word. The link colour has already been
+ * applied to the text, so drawing in the current text colour keeps the
+ * underline matched to the link. Each word draws its own rule, so a link that
+ * wraps onto a second line is underlined per fragment.
+ */
+const renderUnderline = (
+    doc: jsPDF,
+    word: StyledWordInfo,
+    x: number,
+    y: number,
+): void => {
+    const h = doc.getTextDimensions('H').h;
+    const lineY = y + h;
+    const savedDraw = doc.getDrawColor();
+    const savedWidth = doc.getLineWidth();
     doc.setDrawColor(doc.getTextColor());
     doc.setLineWidth(Math.max(0.1, doc.getFontSize() / 100));
     doc.line(x, lineY, x + word.width, lineY);

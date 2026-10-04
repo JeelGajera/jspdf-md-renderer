@@ -137,7 +137,14 @@ export type RenderOption = {
         fontSizeScale?: number;
     };
     link?: {
-        linkColor: [number, number, number];
+        /** Color for linked words as an RGB triple. Default: blue `[0, 0, 255]`. */
+        linkColor?: [number, number, number];
+        /**
+         * When `true`, linked words are underlined in the link colour,
+         * including links that wrap across lines. Default: `false` (keeps
+         * existing documents rendering unchanged).
+         */
+        underline?: boolean;
     };
     table?: UserOptions;
     image?: {
