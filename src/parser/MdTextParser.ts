@@ -1,4 +1,10 @@
-import { marked, type Token, type Tokens, type TokensList } from 'marked';
+import {
+    marked,
+    type MarkedToken,
+    type Token,
+    type Tokens,
+    type TokensList,
+} from 'marked';
 import { MdTokenType } from '../enums/mdTokenType';
 import { ParsedElement } from '../types/parsedElement';
 import { takeImageAttributes } from './imageExtension';
@@ -46,19 +52,18 @@ export const MdTextParser = async (
     return convertTokens(tokens, warnings);
 };
 
+/** Narrow a marked token to the text-token shape used by image attributes. */
+const isMarkedTextToken = (token: Token | undefined): token is Tokens.Text =>
+    token?.type === MdTokenType.Text &&
+    'text' in token &&
+    typeof token.text === 'string';
+
 /**
  * Convert the markdown tokens to ParsedElements.
  *
  * @param tokens - The list of markdown tokens.
  * @returns Parsed elements in a custom structure.
  */
-const isMarkedTextToken = (
-    token: Token | undefined,
-): token is Tokens.Text =>
-    token?.type === MdTokenType.Text &&
-    'text' in token &&
-    typeof token.text === 'string';
-
 const convertTokens = (
     tokens: Token[],
     warnings?: RenderWarnings,
@@ -67,9 +72,11 @@ const convertTokens = (
     for (let i = 0; i < tokens.length; i++) {
         const token = tokens[i];
         try {
-            const handler = tokenHandlers[token.type];
+            const handler = tokenHandlers[token.type as MarkedToken['type']] as
+                | ((token: Token, warnings?: RenderWarnings) => ParsedElement)
+                | undefined;
             if (handler) {
-                const element = handler(token as never, warnings);
+                const element = handler(token, warnings);
                 parsedElements.push(element);
                 if (element.type === MdTokenType.Image) {
                     // `{width=… align=…}` arrives as the start of the text
@@ -77,13 +84,14 @@ const convertTokens = (
                     // it is skipped, so a lone image still parses as a single
                     // block image rather than an image followed by text.
                     const next = tokens[i + 1];
-                    const taken = isMarkedTextToken(next)
-                        ? takeImageAttributes(next.text, warnings)
+                    const nextText = isMarkedTextToken(next) ? next : undefined;
+                    const taken = nextText
+                        ? takeImageAttributes(nextText.text, warnings)
                         : null;
-                    if (taken && isMarkedTextToken(next)) {
+                    if (taken && nextText) {
                         Object.assign(element, taken.attrs);
                         if (taken.rest) {
-                            next.text = taken.rest;
+                            nextText.text = taken.rest;
                         } else {
                             i++;
                         }
@@ -177,15 +185,15 @@ const stripTags = (raw: string): string => {
  */
 type TokenWithOptionalChildren<T extends Token> = T & { tokens?: Token[] };
 
-// Each handler is strongly typed to the corresponding marked token. `never`
-// is used only at the dynamic dispatch boundary, where token.type selects
-// the matching handler at runtime.
-type TokenHandler = (
-    token: never,
-    warnings?: RenderWarnings,
-) => ParsedElement;
+// Keep each handler key coupled to the corresponding marked token shape.
+type TokenHandlers = {
+    [K in MarkedToken['type']]?: (
+        token: Extract<MarkedToken, { type: K }>,
+        warnings?: RenderWarnings,
+    ) => ParsedElement;
+};
 
-const tokenHandlers: Record<string, TokenHandler> = {
+const tokenHandlers: TokenHandlers = {
     [MdTokenType.Heading]: (token: Tokens.Heading, warnings) => ({
         type: MdTokenType.Heading,
         depth: token.depth,
@@ -200,6 +208,8 @@ const tokenHandlers: Record<string, TokenHandler> = {
     [MdTokenType.List]: (token: Tokens.List, warnings) => ({
         type: MdTokenType.List,
         ordered: token.ordered,
+        // Marked uses '' for unordered lists; the renderer only reads `start`
+        // for ordered lists, so preserving the existing cast is safe.
         start: token.start as ParsedElement['start'],
         items: token.items ? convertTokens(token.items, warnings) : [],
     }),
@@ -264,7 +274,10 @@ const tokenHandlers: Record<string, TokenHandler> = {
         content: token.text,
         items: token.tokens ? convertTokens(token.tokens, warnings) : [],
     }),
-    [MdTokenType.Hr]: (token: TokenWithOptionalChildren<Tokens.Hr>, warnings) => ({
+    [MdTokenType.Hr]: (
+        token: TokenWithOptionalChildren<Tokens.Hr>,
+        warnings,
+    ) => ({
         type: MdTokenType.Hr,
         content: token.raw,
         items: token.tokens ? convertTokens(token.tokens, warnings) : [],
