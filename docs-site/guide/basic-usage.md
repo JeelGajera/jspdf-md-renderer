@@ -22,7 +22,7 @@ llm_summary: |
 import { jsPDF } from 'jspdf'
 import { MdTextRender, type RenderOption } from 'jspdf-md-renderer'
 
-const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
 
 const options: RenderOption = {
   page: { margin: { top: 20, right: 20, bottom: 20, left: 20 } },
@@ -37,6 +37,9 @@ doc.save('report.pdf')
 defaults to `10`. See [Page Geometry](/guide/page-geometry) for how the content
 area is derived, and for migrating from the explicit `maxContentWidth` /
 `maxContentHeight` fields.
+
+> **Tip:** pass `compress: true` to `new jsPDF()` for much smaller files —
+> jsPDF writes compressed content streams with identical output.
 
 ## Common Optional Sections
 
