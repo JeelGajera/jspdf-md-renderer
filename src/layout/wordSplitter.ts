@@ -85,7 +85,7 @@ export const applyStyleToDoc = (
             );
             break;
         default:
-            doc.setFont(regularFont, 'normal');
+            doc.setFont(regularFont, store.options.font.regular?.style || 'normal');
             break;
     }
 };
