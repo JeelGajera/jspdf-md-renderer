@@ -24,7 +24,12 @@ const MINIMAL = {
 
 describe('guide/getting-started', () => {
     it('renders with the minimal configuration', async () => {
-        const doc = A4();
+        const doc = new jsPDF({
+            unit: 'mm',
+            format: 'a4',
+            orientation: 'portrait',
+            compress: true,
+        });
         const result = await MdTextRender(
             doc,
             '# My First PDF\n\nThis PDF was generated from **Markdown**.',
