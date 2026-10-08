@@ -46,7 +46,10 @@ supply; the content area is derived from the document's own page size, and
 everything else has a default.
 
 ::: tip Smaller files with `compress: true`
-jsPDF writes uncompressed content streams by default. `compress: true` makes it compress them, which usually makes the file several times smaller with no change to the pages.
+jsPDF writes uncompressed content streams by default. `compress: true` makes it
+compress them, so the pages render the same but the file is much smaller —
+roughly 5× on a text-heavy document (fixtures from issue #77 rendered ten
+times across 45 pages: ~114 KB instead of ~555 KB).
 :::
 
 ::: tip Upgrading from 4.2 or earlier
