@@ -59,9 +59,9 @@ if (result.warnings.length) {
 doc.save('report.pdf')
 ```
 
-> **Tip:** `compress: true` makes jsPDF write compressed content streams —
-> the same document renders much smaller (e.g. ~114 KB instead of ~555 KB)
-> with identical output.
+> **Tip:** `compress` is a jsPDF option (not one of this library's) — pass
+> `compress: true` to `new jsPDF()` to write compressed content streams,
+> roughly 5x smaller on a text-heavy document. The pages render the same.
 
 The content area is derived from the document's own page size, so it stays
 correct across formats and orientations. Everything else has a default.
