@@ -39,7 +39,8 @@ area is derived, and for migrating from the explicit `maxContentWidth` /
 `maxContentHeight` fields.
 
 ::: tip Smaller files with `compress: true`
-jsPDF writes uncompressed content streams by default. `compress: true` makes it compress them, which usually makes the file several times smaller with no change to the pages.
+jsPDF writes uncompressed content streams by default. `compress: true` makes it
+compress them, so the pages render the same with a much smaller file.
 :::
 
 ## Common Optional Sections
