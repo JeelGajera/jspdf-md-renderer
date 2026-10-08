@@ -38,8 +38,9 @@ defaults to `10`. See [Page Geometry](/guide/page-geometry) for how the content
 area is derived, and for migrating from the explicit `maxContentWidth` /
 `maxContentHeight` fields.
 
-> **Tip:** pass `compress: true` to `new jsPDF()` for much smaller files —
-> jsPDF writes compressed content streams with identical output.
+::: tip Smaller files with `compress: true`
+jsPDF writes uncompressed content streams by default. `compress: true` makes it compress them, which usually makes the file several times smaller with no change to the pages.
+:::
 
 ## Common Optional Sections
 
