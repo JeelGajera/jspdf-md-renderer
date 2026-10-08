@@ -22,7 +22,7 @@ import { renderInlineContent } from '../layout';
 import { RenderStore } from '../store/renderStore';
 import { prefetchImages } from '../utils/image-utils';
 import { validateOptions } from '../utils/options-validation';
-import { getCharHight } from '../utils/doc-helpers';
+import { getCharHight, withSavedDocState } from '../utils/doc-helpers';
 import {
     HandlePageBreaks,
     markPageContentStart,
@@ -328,12 +328,18 @@ export const MdTextRender = async (
         }
     };
 
-    for (const item of parsedElements) {
-        guardTimeout();
-        renderElement(item, 0, store);
-    }
+    // Drawing changes the graphics state (task-list checkboxes set the draw
+    // color and line width, code spans set the fill color, ...). Restore
+    // whatever the caller had configured so content they draw afterwards is
+    // unaffected. See issue #75.
+    withSavedDocState(doc, () => {
+        for (const item of parsedElements) {
+            guardTimeout();
+            renderElement(item, 0, store);
+        }
 
-    applyPageDecorations(doc, validOptions, firstPage);
+        applyPageDecorations(doc, validOptions, firstPage);
+    });
     validOptions.endCursorYHandler(store.Y);
 
     const lastPage =
