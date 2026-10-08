@@ -45,9 +45,9 @@ That is a complete configuration. `font.regular` is the only value you must
 supply; the content area is derived from the document's own page size, and
 everything else has a default.
 
-> **Tip:** `compress: true` makes jsPDF write compressed content streams, so
-> the PDF is much smaller (e.g. ~114 KB instead of ~555 KB) with identical
-> output.
+::: tip Smaller files with `compress: true`
+jsPDF writes uncompressed content streams by default. `compress: true` makes it compress them, which usually makes the file several times smaller with no change to the pages.
+:::
 
 ::: tip Upgrading from 4.2 or earlier
 Earlier versions required `cursor`, `endCursorYHandler`, `font.bold`,
