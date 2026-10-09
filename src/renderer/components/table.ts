@@ -147,6 +147,23 @@ const renderTable = (
                 doc.internal.pageSize.getWidth() -
                     (marginLeft + availableWidth),
             ),
+            // Issue #82: autotable otherwise uses its own top/bottom margins,
+            // so multi-page tables run into the page's bottom margin and
+            // continuation pages start above the top margin. Pass the vertical
+            // margins too — but only when the caller set `page.margin`
+            // explicitly. With legacy geometry fields, autotable's default
+            // margin applies today and existing documents may rely on where
+            // it puts things, so that case keeps today's behaviour.
+            ...(options.page.margin
+                ? {
+                      top: options.page.topmargin,
+                      bottom: Math.max(
+                          0,
+                          doc.internal.pageSize.getHeight() -
+                              options.page.maxContentHeight,
+                      ),
+                  }
+                : {}),
         },
         tableWidth: availableWidth,
         ...userTableOptions,

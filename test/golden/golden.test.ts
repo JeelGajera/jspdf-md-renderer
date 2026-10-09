@@ -184,3 +184,48 @@ describe('golden snapshots with decorations', () => {
         );
     });
 });
+
+describe('table page margins (issue #82)', () => {
+    /**
+     * A multi-page table must stay inside the requested content area when
+     * `page.margin` is set. autotable used to apply its own top/bottom
+     * margins, so continuation pages started above the top margin and rows
+     * ran into the bottom margin. With legacy geometry fields the previous
+     * behaviour is kept, so this only pins the explicit-margin case.
+     */
+    it('keeps table rows inside the content area on every page', async () => {
+        const markdown = readFileSync(
+            join(FIXTURE_DIR, '21-table-margins.md'),
+            'utf-8',
+        );
+        const { doc, ops, transcript } = recordDoc();
+
+        // Raw options (not goldenOptions): goldenOptions pins legacy geometry
+        // fields, which win over margin derivation. Here we want the explicit
+        // `page.margin` path, exactly as in the "margin-a4" test above.
+        await MdTextRender(doc, markdown, {
+            page: { margin: { top: 40, bottom: 40, left: 20, right: 20 } },
+            font: { regular: { name: 'helvetica', style: 'normal' } },
+        });
+
+        const pages = (
+            doc.internal as unknown as { getNumberOfPages: () => number }
+        ).getNumberOfPages();
+        expect(pages).toBeGreaterThan(2);
+
+        // Content area on A4 (297 mm tall) with 40 mm top/bottom margins.
+        const contentTop = 40;
+        const contentBottom = 257;
+        const outOfBounds = ops.filter(
+            (op) =>
+                op.op === 'text' &&
+                typeof op.y === 'number' &&
+                (op.y < contentTop - 0.001 || op.y > contentBottom + 0.001),
+        );
+        expect(outOfBounds).toEqual([]);
+
+        await expect(`pages: ${pages}\n\n${transcript()}`).toMatchFileSnapshot(
+            './__snapshots__/21-table-margins-explicit-margin.txt',
+        );
+    });
+});
