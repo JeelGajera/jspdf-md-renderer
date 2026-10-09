@@ -3,6 +3,38 @@ import { ParsedElement } from '../../types';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
 import { RenderStore } from '../../store/renderStore';
 
+/**
+ * Expand tabs to tab stops (issue #76). A tab advances the cursor to the next
+ * multiple of `tabSize`, so a tab after two characters becomes two spaces at a
+ * tab size of 4 rather than a fixed four-space run. Widths are measured in
+ * characters: the code font is monospace, so one character column equals one
+ * glyph width.
+ */
+const expandTabsToStops = (text: string, tabSize: number): string => {
+    if (!text.includes('\t')) {
+        return text;
+    }
+
+    return text
+        .split('\n')
+        .map((line) => {
+            let column = 0;
+            let expanded = '';
+            for (const char of line) {
+                if (char === '\t') {
+                    const spaces = tabSize - (column % tabSize);
+                    expanded += ' '.repeat(spaces);
+                    column += spaces;
+                } else {
+                    expanded += char;
+                    column += 1;
+                }
+            }
+            return expanded;
+        })
+        .join('\n');
+};
+
 const renderCodeBlock = (
     doc: jsPDF,
     element: ParsedElement,
@@ -41,7 +73,10 @@ const renderCodeBlock = (
     const rawContent = element.code ?? '';
     // trimEnd strips exactly what `/[\r\n\s]+$/` did, in linear time; the
     // regex rescanned every whitespace run from each of its positions.
-    const content = rawContent.trimEnd();
+    // Tabs render one character wide in the code font, so expand them to tab
+    // stops before measuring (issue #76).
+    const tabSize = codeOpts.tabSize ?? 4;
+    const content = expandTabsToStops(rawContent.trimEnd(), tabSize);
 
     // Guard against empty content
     if (!content) {

@@ -156,6 +156,8 @@ export type RenderOption = {
         textColor?: string;
         /** Language label color as hex. Default: '#666666' */
         labelColor?: string;
+        /** Tab stop width used to expand tabs in code blocks. Default: 4 */
+        tabSize?: number;
     };
     spacing?: {
         /** Space below headings in doc units. Default: 2 */
