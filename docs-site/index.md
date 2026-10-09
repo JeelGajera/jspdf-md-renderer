@@ -57,7 +57,7 @@ npm install jspdf-md-renderer jspdf jspdf-autotable marked
 import { jsPDF } from 'jspdf'
 import { MdTextRender } from 'jspdf-md-renderer'
 
-const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true })
 
 const result = await MdTextRender(
   doc,

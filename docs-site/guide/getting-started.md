@@ -31,7 +31,7 @@ const markdown = `
 This PDF was generated from **Markdown**.
 `
 
-const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
 
 await MdTextRender(doc, markdown, {
   page: { margin: { top: 20, right: 20, bottom: 20, left: 20 } },
@@ -44,6 +44,13 @@ doc.save('my-first-pdf.pdf')
 That is a complete configuration. `font.regular` is the only value you must
 supply; the content area is derived from the document's own page size, and
 everything else has a default.
+
+::: tip Smaller files with `compress: true`
+jsPDF writes uncompressed content streams by default. `compress: true` makes it
+compress them, so the pages render the same but the file is much smaller —
+roughly 5× on a text-heavy document (fixtures from issue #77 rendered ten
+times across 45 pages: ~114 KB instead of ~555 KB).
+:::
 
 ::: tip Upgrading from 4.2 or earlier
 Earlier versions required `cursor`, `endCursorYHandler`, `font.bold`,
