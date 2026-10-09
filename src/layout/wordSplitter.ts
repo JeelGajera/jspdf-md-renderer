@@ -4,6 +4,7 @@ import { ParsedElement } from '../types/parsedElement';
 import { TextStyle, StyledWordInfo } from '../types/styledWordInfo';
 import { RenderStore } from '../store/renderStore';
 import { calculateImageDimensions } from '../utils/image-utils';
+import { getDocUnit } from '../utils/doc-helpers';
 
 /**
  * Maps a ParsedElement type string to a TextStyle.
@@ -134,7 +135,7 @@ export const flattenToWords = (
                 store.options.page.maxContentWidth,
                 store.options.page.maxContentHeight -
                     store.options.page.topmargin,
-                store.options.page.unit || 'mm',
+                getDocUnit(doc) ?? store.options.page.unit ?? 'mm',
             );
             result.push({
                 text: '',
