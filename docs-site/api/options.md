@@ -181,6 +181,20 @@ codespan: {
 }
 ```
 
+### Links
+
+```ts
+link: {
+  linkColor: [0, 0, 255],
+  underline: false,
+}
+```
+
+`linkColor` is the RGB colour for linked words and defaults to blue. Set
+`underline: true` to draw linked words underlined in the link colour (including
+links that wrap onto a second line); it defaults to `false` so existing
+documents render unchanged.
+
 ### Table Width Behavior
 
 Tables follow the same content column as other block elements:

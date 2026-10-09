@@ -183,4 +183,18 @@ describe('golden snapshots with decorations', () => {
             './__snapshots__/themed.txt',
         );
     });
+
+    it('underlines linked words when link.underline is set', async () => {
+        const { doc, transcript } = recordDoc();
+
+        await MdTextRender(
+            doc,
+            'See [the documentation](https://example.com) for details.',
+            goldenOptions({ link: { underline: true } }),
+        );
+
+        await expect(transcript()).toMatchFileSnapshot(
+            './__snapshots__/link-underline.txt',
+        );
+    });
 });

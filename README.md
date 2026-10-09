@@ -268,6 +268,10 @@ const options = {
     showLanguageLabel: true,
     textColor: '#111827',
   },
+  link: {
+    linkColor: [0, 0, 255],
+    underline: false,
+  },
   spacing: {
     afterHeading: 2,
     afterParagraph: 4,
