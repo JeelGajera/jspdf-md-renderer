@@ -75,7 +75,7 @@ const renderCodeBlock = (
     // regex rescanned every whitespace run from each of its positions.
     // Tabs render one character wide in the code font, so expand them to tab
     // stops before measuring (issue #76).
-    const tabSize = codeOpts.tabSize ?? 4;
+    const tabSize = codeOpts.tabSize as number; // validated in validateOptions (issue #76)
     const content = expandTabsToStops(rawContent.trimEnd(), tabSize);
 
     // Guard against empty content
