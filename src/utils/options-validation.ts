@@ -180,8 +180,19 @@ export const validateOptions = (
         padding: 4,
         fontSizeScale: 0.9,
         showLanguageLabel: true,
+        tabSize: 4,
         ...(options.codeBlock ?? {}),
     };
+    // A bad tabSize would crash tab expansion (' '.repeat with a negative or
+    // huge count throws RangeError) or silently drop tabs, so fall back to
+    // the default unless it's an integer in a sensible range (issue #76).
+    if (
+        !Number.isInteger(codeBlock.tabSize) ||
+        codeBlock.tabSize < 1 ||
+        codeBlock.tabSize > 16
+    ) {
+        codeBlock.tabSize = 4;
+    }
     const spacing = {
         // Defaults preserve 4.1.x output exactly; see RenderOption.spacing.
         blankLines: 'preserve' as const,

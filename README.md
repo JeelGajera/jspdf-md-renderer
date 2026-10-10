@@ -272,6 +272,7 @@ const options = {
     padding: 5,
     showLanguageLabel: true,
     textColor: '#111827',
+    tabSize: 4, // spaces per tab stop in code blocks
   },
   spacing: {
     afterHeading: 2,
