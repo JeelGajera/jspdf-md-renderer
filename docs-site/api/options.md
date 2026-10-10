@@ -172,7 +172,7 @@ codeBlock: {
   showLanguageLabel: true,
   textColor: '#111827',
   labelColor: '#6B7280',
-  tabSize: 4,
+  tabSize: 4, // spaces per tab stop in code blocks
 },
 codespan: {
   backgroundColor: '#EEEEEE',
