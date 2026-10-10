@@ -41,4 +41,18 @@ describe('doc state restoration (issue #75)', () => {
         expect(doc.getDrawColor()).toBe('#00ff00');
         expect(doc.getLineWidth()).toBe(1.5);
     });
+
+    it('leaves font, size and text color at the body values (master behaviour)', async () => {
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        doc.setFont('courier', 'bold');
+        doc.setFontSize(20);
+        doc.setTextColor('#0000ff');
+
+        await MdTextRender(doc, 'Hello', createRenderOptions({ silent: true }));
+
+        // #75 is only about graphics state — the render still leaves the doc
+        // in the body font at the body size, as on master.
+        expect(doc.getFont().fontName).toBe('helvetica');
+        expect(doc.getFontSize()).toBe(11);
+    });
 });

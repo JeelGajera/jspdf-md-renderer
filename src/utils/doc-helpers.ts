@@ -12,28 +12,39 @@ export const getCharWidth = (doc: jsPDF): number => {
 };
 
 /**
- * Saves the current jsPDF font, size, text color, fill color, draw color and
- * line width, executes `fn`, then restores those properties — even if `fn`
- * throws.
- *
- * Components change the graphics state freely while drawing (task-list
- * checkboxes set the draw color and line width, code spans set the fill
- * color, ...), so restoring here keeps whatever the caller had configured
- * intact for anything they draw afterwards.
+ * Saves the current jsPDF font, size, and text color, executes `fn`,
+ * then restores those properties — even if `fn` throws.
  */
 export const withSavedDocState = <T>(doc: jsPDF, fn: () => T): T => {
     const savedFont = doc.getFont();
     const savedSize = doc.getFontSize();
     const savedColor = doc.getTextColor();
-    const savedFillColor = doc.getFillColor();
-    const savedDrawColor = doc.getDrawColor();
-    const savedLineWidth = doc.getLineWidth();
     try {
         return fn();
     } finally {
         doc.setFont(savedFont.fontName, savedFont.fontStyle);
         doc.setFontSize(savedSize);
         doc.setTextColor(savedColor);
+    }
+};
+
+/**
+ * Saves the current jsPDF fill color, draw color and line width, executes
+ * `fn`, then restores those graphics-state properties — even if `fn`
+ * throws.
+ *
+ * Unlike `withSavedDocState`, the font, size and text color are left where
+ * the render leaves them: issue #75 is only about the graphics state, and
+ * callers rely on the doc being in the body font at the body size
+ * afterwards (e.g. footers drawn with `doc.text()`).
+ */
+export const withSavedGraphicsState = <T>(doc: jsPDF, fn: () => T): T => {
+    const savedFillColor = doc.getFillColor();
+    const savedDrawColor = doc.getDrawColor();
+    const savedLineWidth = doc.getLineWidth();
+    try {
+        return fn();
+    } finally {
         // Only touch the graphics state when it actually changed, so renders
         // that leave it alone emit no extra PDF operators.
         if (doc.getFillColor() !== savedFillColor) {
