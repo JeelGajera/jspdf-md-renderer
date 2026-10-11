@@ -18,6 +18,8 @@ Markdown links use standard syntax:
 
 - Link text renders inline.
 - Link color can be customized via `link.linkColor`.
+- Links can be underlined via `link.underline` (default `false`) — useful for
+  greyscale printing where color alone does not read as a link.
 - PDF link action is added when allowed.
 
 ## Security-Aware Behavior
@@ -35,7 +37,8 @@ When `security.enabled` is `true`:
 
 | Option | Effect |
 |--------|--------|
-| `link.linkColor` | RGB tuple for link text color |
+| `link.linkColor` | RGB tuple for link text color (optional, default blue) |
+| `link.underline` | Underline link text (`true`/`false`, default `false`) |
 | `security.disablePdfLinks` | Removes clickable PDF action |
 | `security.allowedLinkProtocols` | Allowed protocols (for example `https:`) |
 | `security.validateUrl` | Custom link/image URL validation hook |
