@@ -119,7 +119,7 @@ const bytesToBase64 = (bytes: Uint8Array): string => {
  * Uses 96 DPI as the standard web pixel density.
  *
  * @param px - Value in pixels
- * @param unit - The document unit ('mm' | 'pt' | 'in' | 'px')
+ * @param unit - The document unit ('mm' | 'pt' | 'in' | 'cm' | 'pc' | 'px')
  * @returns Value in document units
  */
 export const pxToDocUnit = (px: number, unit: string = 'mm'): number => {
@@ -128,6 +128,10 @@ export const pxToDocUnit = (px: number, unit: string = 'mm'): number => {
             return (px * 72) / DEFAULT_DPI;
         case 'in':
             return px / DEFAULT_DPI;
+        case 'cm':
+            return (px * 2.54) / DEFAULT_DPI;
+        case 'pc':
+            return (px * 6) / DEFAULT_DPI;
         case 'px':
             return px;
         case 'mm':
