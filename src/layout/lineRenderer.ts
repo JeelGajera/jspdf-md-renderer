@@ -90,6 +90,9 @@ const renderSingleWord = (
             if (word.isStrikethrough && word.text) {
                 renderStrikethrough(doc, word, x, y);
             }
+            if (word.isLink && word.linkUnderline && word.text) {
+                renderUnderline(doc, word, x, y);
+            }
         }
 
         if (word.isLink && word.href) {
@@ -136,6 +139,26 @@ const renderStrikethrough = (
     // Match the rule colour to the text so it reads as one decorated run.
     doc.setDrawColor(doc.getTextColor());
     doc.setLineWidth(Math.max(0.1, doc.getFontSize() / 100));
+    doc.line(x, lineY, x + word.width, lineY);
+    doc.setDrawColor(savedDraw);
+    doc.setLineWidth(savedWidth);
+};
+
+const renderUnderline = (
+    doc: jsPDF,
+    word: StyledWordInfo,
+    x: number,
+    y: number,
+): void => {
+    const h = doc.getTextDimensions('H').h;
+    // Text is drawn with baseline 'top', so the underline sits just below
+    // the text block with a small gap for descenders.
+    const lineY = y + h * 1.08;
+    const savedDraw = doc.getDrawColor();
+    const savedWidth = doc.getLineWidth();
+    // Match the rule colour to the text so it reads as one decorated run.
+    doc.setDrawColor(doc.getTextColor());
+    doc.setLineWidth(Math.max(0.1, doc.getFontSize() / 120));
     doc.line(x, lineY, x + word.width, lineY);
     doc.setDrawColor(savedDraw);
     doc.setLineWidth(savedWidth);
