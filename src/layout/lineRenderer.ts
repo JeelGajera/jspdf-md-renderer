@@ -2,7 +2,11 @@
 import jsPDF from 'jspdf';
 import { StyledLine, StyledWordInfo } from '../types/styledWordInfo';
 import { RenderStore } from '../store/renderStore';
-import { getCharHight, withSavedDocState } from '../utils/doc-helpers';
+import {
+    getCharHight,
+    getCurrentPageNumber,
+    withSavedDocState,
+} from '../utils/doc-helpers';
 import { applyStyleToDoc } from './wordSplitter';
 import { detectImageFormat } from '../utils/image-utils';
 
@@ -97,7 +101,21 @@ const renderSingleWord = (
                 word.isImage && word.imageHeight
                     ? word.imageHeight
                     : doc.getTextDimensions('H').h;
-            doc.link(x, y, word.width, h, { url: word.href });
+            if (word.href.startsWith('#')) {
+                // Anchor links jump to headings, but the target may be drawn
+                // later in the document, so the link area is collected here
+                // and resolved into a real link once rendering is complete.
+                store.deferAnchorLink({
+                    anchor: word.href.slice(1),
+                    page: getCurrentPageNumber(doc),
+                    x,
+                    y,
+                    w: word.width,
+                    h,
+                });
+            } else {
+                doc.link(x, y, word.width, h, { url: word.href });
+            }
         }
     });
 };
