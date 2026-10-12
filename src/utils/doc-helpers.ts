@@ -58,3 +58,16 @@ export const withSavedGraphicsState = <T>(doc: jsPDF, fn: () => T): T => {
         }
     }
 };
+
+/**
+ * 1-based number of the page jsPDF is currently drawing on. Falls back to 1
+ * for document stubs (like the MockDoc in tests) that lack jsPDF internals.
+ */
+export const getCurrentPageNumber = (doc: jsPDF): number =>
+    (
+        doc as unknown as {
+            internal?: {
+                getCurrentPageInfo?: () => { pageNumber: number };
+            };
+        }
+    ).internal?.getCurrentPageInfo?.()?.pageNumber ?? 1;

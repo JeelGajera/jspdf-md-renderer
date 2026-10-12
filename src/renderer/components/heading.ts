@@ -3,7 +3,12 @@ import jsPDF from 'jspdf';
 import { ParsedElement } from '../../types/parsedElement';
 import { RenderStore } from '../../store/renderStore';
 import { renderInlineContent, renderPlainText } from '../../layout';
-import { getCharHight, withSavedDocState } from '../../utils/doc-helpers';
+import {
+    getCharHight,
+    getCurrentPageNumber,
+    withSavedDocState,
+} from '../../utils/doc-helpers';
+import { headingPlainText } from '../../utils/headingAnchors';
 import { breakIfOverflow } from '../../utils/handlePageBreak';
 
 const renderHeading = (
@@ -40,6 +45,14 @@ const renderHeading = (
         doc.setTextColor(headingColor);
 
         breakIfOverflow(doc, store, getCharHight(doc) * 1.8);
+
+        // Anchor target for `[text](#slug)` links: recorded after the page
+        // break so the page and Y point at where the heading is drawn.
+        store.registerHeadingAnchor(
+            headingPlainText(element),
+            getCurrentPageNumber(doc),
+            store.Y,
+        );
 
         const maxWidth = store.options.page.maxContentWidth - indent;
 

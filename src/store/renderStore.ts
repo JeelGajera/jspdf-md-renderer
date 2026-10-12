@@ -1,5 +1,10 @@
 import { Cursor, ResolvedRenderOption } from '../types';
 import { RenderWarning, RenderWarnings } from './renderWarnings';
+import {
+    HeadingAnchor,
+    PendingAnchorLink,
+    slugifyHeading,
+} from '../utils/headingAnchors';
 
 export class RenderStore {
     private cursor: Cursor = { x: 0, y: 0 };
@@ -13,6 +18,18 @@ export class RenderStore {
      */
     private pageContentStarts_: Map<number, number> = new Map();
     private warnings_: RenderWarnings;
+    /**
+     * Heading anchors drawn so far, keyed by their GitHub-style slug.
+     * Lets `[text](#slug)` links jump to the heading's page and position.
+     */
+    private headingAnchors_: Map<string, HeadingAnchor> = new Map();
+    /** How many times each slug base has been used, for `-1`, `-2` suffixes. */
+    private headingAnchorCounts_: Map<string, number> = new Map();
+    /**
+     * `#anchor` links collected during rendering. Resolved once rendering is
+     * complete, because a link can point at a heading drawn after it.
+     */
+    private pendingAnchorLinks_: PendingAnchorLink[] = [];
 
     constructor(options: ResolvedRenderOption, warnings?: RenderWarnings) {
         this.options_ = options;
@@ -109,6 +126,42 @@ export class RenderStore {
     /** Where this render's content begins on `page`, if known. */
     public getPageContentStart(page: number): number | undefined {
         return this.pageContentStarts_.get(page);
+    }
+
+    /**
+     * Records a heading's draw position for `[text](#slug)` links. The slug
+     * is GitHub-style (`My Heading` → `my-heading`); repeated headings get
+     * `-1`, `-2` suffixes. Returns the slug that was registered.
+     */
+    public registerHeadingAnchor(
+        plainText: string,
+        page: number,
+        top: number,
+    ): string {
+        const base = slugifyHeading(plainText);
+        const seen = this.headingAnchorCounts_.get(base) ?? 0;
+        this.headingAnchorCounts_.set(base, seen + 1);
+        const slug = seen === 0 ? base : `${base}-${seen}`;
+        this.headingAnchors_.set(slug, { slug, page, top });
+        return slug;
+    }
+
+    /** The draw position of the heading with `slug`, if one was drawn. */
+    public getHeadingAnchor(slug: string): HeadingAnchor | undefined {
+        return this.headingAnchors_.get(slug);
+    }
+
+    /**
+     * Defers an `#anchor` link for resolution after rendering completes,
+     * when every heading position is known.
+     */
+    public deferAnchorLink(link: PendingAnchorLink): void {
+        this.pendingAnchorLinks_.push(link);
+    }
+
+    /** `#anchor` links collected during rendering, in draw order. */
+    public get pendingAnchorLinks(): readonly PendingAnchorLink[] {
+        return this.pendingAnchorLinks_;
     }
 
     // Convenience methods to get individual x and y values

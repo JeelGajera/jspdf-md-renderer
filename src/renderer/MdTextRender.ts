@@ -39,6 +39,7 @@ import {
     convertBlockedImagesToPlaceholder,
     convertUnloadableImagesToAltText,
 } from '../security/security-transforms';
+import { resolveAnchorLinks } from '../utils/headingAnchors';
 
 /**
  * Renders markdown into a jsPDF document.
@@ -341,6 +342,9 @@ export const MdTextRender = async (
 
         applyPageDecorations(doc, validOptions, firstPage);
     });
+    // `#anchor` links are created here, once every heading position is known,
+    // so links pointing at headings drawn later in the document resolve too.
+    resolveAnchorLinks(doc, store);
     validOptions.endCursorYHandler(store.Y);
 
     const lastPage =
