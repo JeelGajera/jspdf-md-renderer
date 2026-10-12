@@ -75,6 +75,12 @@ await app.listen({ port: 3000 });
 
 ## Try It
 
+::: tip Bookmarks
+Pass `outline: true` in the render options and the report's headings become
+clickable PDF bookmarks, nested by heading depth. See
+[Options Reference](/api/options#pdf-bookmarks-outline).
+:::
+
 ::: tip Interactive
 Try this example in the [Playground](/playground/) — paste the markdown above and click **Generate PDF**.
 :::

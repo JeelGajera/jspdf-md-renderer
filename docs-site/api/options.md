@@ -96,6 +96,18 @@ Behavior notes:
 - `heading.bold` defaults to `true`.
 - Size fallback chain is: `heading.hN` -> `page.defaultTitleFontSize`.
 
+### PDF Bookmarks (Outline)
+
+```ts
+outline: true,              // one bookmark per heading, nested by depth
+outline: { maxDepth: 2 },   // only h1 and h2 become bookmarks
+```
+
+Opt-in PDF bookmarks generated from headings. Each entry's title is the
+heading's plain text without markup, nested by heading depth (an `##` under
+the preceding `#`), and pointing at the page the heading was drawn on.
+Off by default, so existing documents render unchanged.
+
 ### Lists and Spacing
 
 ```ts

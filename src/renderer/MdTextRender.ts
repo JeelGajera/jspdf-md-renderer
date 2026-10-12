@@ -39,6 +39,7 @@ import {
     convertBlockedImagesToPlaceholder,
     convertUnloadableImagesToAltText,
 } from '../security/security-transforms';
+import { buildOutline } from '../utils/outline';
 
 /**
  * Renders markdown into a jsPDF document.
@@ -341,6 +342,8 @@ export const MdTextRender = async (
 
         applyPageDecorations(doc, validOptions, firstPage);
     });
+    // Opt-in PDF bookmarks: one nested outline entry per heading.
+    buildOutline(doc, store.outlineEntries);
     validOptions.endCursorYHandler(store.Y);
 
     const lastPage =

@@ -230,6 +230,17 @@ export type RenderOption = {
      */
     breaks?: boolean;
     /**
+     * Opt-in PDF bookmarks (document outline) generated from headings.
+     *
+     * - `true`: one outline entry per heading, nested by heading depth.
+     * - `{ maxDepth }`: only headings at or above that depth are included.
+     *
+     * Off by default, so existing documents render unchanged. Each entry's
+     * title is the heading's plain text without markup, and it points at
+     * the page the heading was drawn on.
+     */
+    outline?: boolean | { maxDepth?: number };
+    /**
      * Called for each thing the render decided not to draw. Fires in addition
      * to the `warnings` array on the result.
      */
