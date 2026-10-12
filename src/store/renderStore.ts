@@ -1,6 +1,16 @@
 import { Cursor, ResolvedRenderOption } from '../types';
 import { RenderWarning, RenderWarnings } from './renderWarnings';
 
+/** A heading recorded for the PDF outline (bookmarks). */
+export type OutlineEntry = {
+    /** Heading depth, 1–6. */
+    depth: number;
+    /** The heading's plain text without markup. */
+    title: string;
+    /** 1-based page the heading was drawn on. */
+    page: number;
+};
+
 export class RenderStore {
     private cursor: Cursor = { x: 0, y: 0 };
     private lastContentY_: number = 0;
@@ -13,6 +23,11 @@ export class RenderStore {
      */
     private pageContentStarts_: Map<number, number> = new Map();
     private warnings_: RenderWarnings;
+    /**
+     * Headings recorded for the opt-in PDF outline, in document order.
+     * Built into nested outline items once rendering is complete.
+     */
+    private outlineEntries_: OutlineEntry[] = [];
 
     constructor(options: ResolvedRenderOption, warnings?: RenderWarnings) {
         this.options_ = options;
@@ -109,6 +124,19 @@ export class RenderStore {
     /** Where this render's content begins on `page`, if known. */
     public getPageContentStart(page: number): number | undefined {
         return this.pageContentStarts_.get(page);
+    }
+
+    /**
+     * Records a heading for the opt-in PDF outline (bookmarks). Entries are
+     * turned into nested outline items once rendering is complete.
+     */
+    public addOutlineEntry(entry: OutlineEntry): void {
+        this.outlineEntries_.push(entry);
+    }
+
+    /** Headings recorded for the outline, in document order. */
+    public get outlineEntries(): readonly OutlineEntry[] {
+        return this.outlineEntries_;
     }
 
     // Convenience methods to get individual x and y values

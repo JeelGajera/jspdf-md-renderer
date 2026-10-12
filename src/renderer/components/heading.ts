@@ -4,6 +4,10 @@ import { ParsedElement } from '../../types/parsedElement';
 import { RenderStore } from '../../store/renderStore';
 import { renderInlineContent, renderPlainText } from '../../layout';
 import { getCharHight, withSavedDocState } from '../../utils/doc-helpers';
+import {
+    currentPageNumber,
+    headingPlainText,
+} from '../../utils/outline';
 import { breakIfOverflow } from '../../utils/handlePageBreak';
 
 const renderHeading = (
@@ -40,6 +44,25 @@ const renderHeading = (
         doc.setTextColor(headingColor);
 
         breakIfOverflow(doc, store, getCharHight(doc) * 1.8);
+
+        // Opt-in PDF bookmarks: record the heading's depth, plain-text
+        // title and page. Read after the page break so the entry points at
+        // the page the heading is drawn on.
+        const outlineOpt = store.options.outline;
+        if (outlineOpt) {
+            const maxDepth =
+                typeof outlineOpt === 'object' &&
+                outlineOpt.maxDepth !== undefined
+                    ? Math.max(0, Math.min(6, Math.floor(outlineOpt.maxDepth)))
+                    : 6;
+            if (depth <= maxDepth) {
+                store.addOutlineEntry({
+                    depth,
+                    title: headingPlainText(element),
+                    page: currentPageNumber(doc),
+                });
+            }
+        }
 
         const maxWidth = store.options.page.maxContentWidth - indent;
 
