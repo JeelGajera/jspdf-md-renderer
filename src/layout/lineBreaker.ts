@@ -3,7 +3,7 @@ import jsPDF from 'jspdf';
 import { StyledWordInfo, StyledLine } from '../types/styledWordInfo';
 import { RenderStore } from '../store/renderStore';
 import { getCharHight } from '../utils/doc-helpers';
-import { measureStyledWidth } from './wordSplitter';
+import { applyStyleToDoc } from './wordSplitter';
 
 const splitOversizedWord = (
     doc: jsPDF,
@@ -15,44 +15,84 @@ const splitOversizedWord = (
         return [word];
     }
 
-    const chunks: StyledWordInfo[] = [];
-    let remaining = word.text;
+    // Set the word's font once for the whole split instead of once per
+    // measured prefix: every probe below is then a single getTextWidth
+    // instead of a font save/apply/restore cycle (#90).
+    const savedFont = doc.getFont();
+    const savedSize = doc.getFontSize();
+    applyStyleToDoc(doc, word.style, store);
+    const charSpace = doc.getCharSpace?.() ?? 0;
+    const styledWidth = (text: string): number =>
+        doc.getTextWidth(text) + text.length * charSpace;
 
-    while (remaining.length > 0) {
-        let chunk = '';
+    try {
+        // Work in code points so a split can never cut a surrogate pair,
+        // matching the old char-by-char walk.
+        const codePoints = Array.from(word.text);
+        const chunks: StyledWordInfo[] = [];
+        let start = 0;
 
-        for (const ch of remaining) {
-            const candidate = chunk + ch;
-            const candidateWidth = measureStyledWidth(
-                doc,
-                candidate,
-                word.style,
-                store,
-            );
-            if (candidateWidth > maxWidth && chunk.length > 0) break;
-            chunk = candidate;
-            if (candidateWidth >= maxWidth) break;
+        while (start < codePoints.length) {
+            // Binary-search the break point. The old char-by-char loop
+            // stopped at the first prefix wider than maxWidth (keeping the
+            // previous prefix), or at the first prefix reaching maxWidth
+            // when no prefix exceeded it. Probing whole prefixes keeps
+            // kerning identical, so break points are unchanged.
+            const rest = codePoints.length - start;
+            const prefixWidth = (len: number): number =>
+                styledWidth(codePoints.slice(start, start + len).join(''));
+            let lo = 1;
+            let hi = rest;
+            let over = -1;
+            while (lo <= hi) {
+                const mid = (lo + hi) >> 1;
+                if (prefixWidth(mid) > maxWidth) {
+                    over = mid;
+                    hi = mid - 1;
+                } else {
+                    lo = mid + 1;
+                }
+            }
+            let len: number;
+            if (over === -1) {
+                // No prefix exceeds maxWidth: keep the first prefix that
+                // reaches it, or the whole remainder.
+                let reach = rest;
+                lo = 1;
+                hi = rest;
+                while (lo <= hi) {
+                    const mid = (lo + hi) >> 1;
+                    if (prefixWidth(mid) >= maxWidth) {
+                        reach = mid;
+                        hi = mid - 1;
+                    } else {
+                        lo = mid + 1;
+                    }
+                }
+                len = reach;
+            } else {
+                len = Math.max(1, over - 1);
+            }
+
+            const chunk = codePoints.slice(start, start + len).join('');
+            chunks.push({
+                ...word,
+                text: chunk,
+                width: styledWidth(chunk),
+                hasTrailingSpace: false,
+            });
+            start += len;
         }
 
-        if (!chunk) {
-            chunk = remaining.charAt(0);
+        if (chunks.length > 0) {
+            chunks[chunks.length - 1].hasTrailingSpace = word.hasTrailingSpace;
         }
 
-        chunks.push({
-            ...word,
-            text: chunk,
-            width: measureStyledWidth(doc, chunk, word.style, store),
-            hasTrailingSpace: false,
-        });
-
-        remaining = remaining.slice(chunk.length);
+        return chunks;
+    } finally {
+        doc.setFont(savedFont.fontName, savedFont.fontStyle);
+        doc.setFontSize(savedSize);
     }
-
-    if (chunks.length > 0) {
-        chunks[chunks.length - 1].hasTrailingSpace = word.hasTrailingSpace;
-    }
-
-    return chunks;
 };
 
 export const breakIntoLines = (
