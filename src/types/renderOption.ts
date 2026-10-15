@@ -4,6 +4,19 @@ import { RenderSecurityOptions, SecurityViolation } from './security';
 import { RenderWarning, WarningListener } from '../store/renderWarnings';
 import { ComponentOverrides } from './components';
 
+/**
+ * Supplies image data for a markdown image `src`, replacing the built-in
+ * `fetch` for that image. Return `undefined` to fall back to the built-in
+ * fetch.
+ *
+ * - A returned `string` is used as the image's `data:` URL as-is.
+ * - `Uint8Array` bytes or a `Blob` are converted to a `data:` URL the same
+ *   way fetched images are.
+ */
+export type ImageLoader = (
+    src: string,
+) => Promise<string | Uint8Array | Blob | undefined>;
+
 export type RenderOption = {
     /**
      * Where rendering starts. Defaults to the top-left of the content area —
@@ -143,6 +156,26 @@ export type RenderOption = {
     image?: {
         /** Default alignment for images: 'left' | 'center' | 'right'. Default: 'left' */
         defaultAlign?: 'left' | 'center' | 'right';
+        /**
+         * Supplies image data for a `src` instead of the built-in `fetch`.
+         *
+         * Called with the raw `src` before the built-in fetch runs, so it can
+         * read local files in Node, send auth headers, resolve relative paths
+         * against a base URL, or serve from a cache. Return `undefined` to
+         * fall back to the built-in fetch for that image.
+         *
+         * - A returned `string` is used as the image's `data:` URL as-is.
+         * - `Uint8Array` bytes or a `Blob` are converted to a `data:` URL the
+         *   same way fetched images are.
+         *
+         * Security interplay (unchanged by this hook): with
+         * `security.enabled`, the URL checks run *before* the loader is
+         * called, so a blocked URL never reaches it, and
+         * `security.maxImageSizeBytes` applies to whatever the loader
+         * returns. The loader itself is not responsible for validating URLs
+         * or enforcing size limits — the renderer does that around it.
+         */
+        load?: ImageLoader;
     };
     codeBlock?: {
         backgroundColor?: string;

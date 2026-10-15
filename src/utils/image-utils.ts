@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { MdTokenType } from '../enums/mdTokenType';
-import { ParsedElement } from '../types';
+import { ImageLoader, ParsedElement } from '../types';
 import {
     handleSecurityViolation,
     isDataUrl,
@@ -339,11 +339,14 @@ export const calculateImageDimensions = (
 /**
  * Recursively traverses parsed elements and loads image data for Image tokens.
  * @param elements - The parsed elements to process.
+ * @param imageLoad - Optional caller-supplied image loader, called with the
+ * src before the built-in fetch. Returning `undefined` falls back to it.
  */
 export const prefetchImages = async (
     elements: ParsedElement[],
     security?: RenderSecurityOptions,
     warnings?: RenderWarnings,
+    imageLoad?: ImageLoader,
 ): Promise<void> => {
     for (const element of elements) {
         if (element.type === MdTokenType.Image && element.src) {
@@ -428,46 +431,107 @@ export const prefetchImages = async (
                         continue;
                     }
                 } else {
-                    // Try to fetch the image
-                    const response = await secureImageFetch(
-                        element.src,
-                        security,
-                    );
-                    if (!response.ok) {
-                        await response.body?.cancel().catch(() => {});
-                        throw new Error(
-                            `Failed to fetch image: ${response.statusText}`,
-                        );
-                    }
+                    // A caller-supplied loader runs before the built-in fetch.
+                    // It sees the src only after the security checks above, so
+                    // a blocked URL never reaches it. Returning `undefined`
+                    // falls back to the built-in fetch.
+                    const loaded = await imageLoad?.(element.src);
 
-                    let blob: Blob;
-                    try {
-                        blob = await readImageBlob(
-                            response,
-                            security?.enabled
-                                ? (security.maxImageSizeBytes ?? 0)
-                                : 0,
+                    if (loaded === undefined) {
+                        // Try to fetch the image
+                        const response = await secureImageFetch(
+                            element.src,
+                            security,
                         );
-                    } catch (error) {
-                        if (!(error instanceof ImageTooLargeError)) {
-                            throw error;
+                        if (!response.ok) {
+                            await response.body?.cancel().catch(() => {});
+                            throw new Error(
+                                `Failed to fetch image: ${response.statusText}`,
+                            );
                         }
-                        handleSecurityViolation(security!, {
-                            code: 'IMAGE_SIZE_EXCEEDED',
-                            type: 'image',
-                            message:
-                                error.source === 'content-length'
-                                    ? 'Declared image size exceeds maxImageSizeBytes'
-                                    : 'Fetched image exceeds maxImageSizeBytes',
-                            value: String(error.bytes),
-                            context: error.source,
-                        });
-                        element.data = undefined;
-                        element.src = undefined;
-                        continue;
-                    }
 
-                    element.data = await blobToDataUrl(blob);
+                        let blob: Blob;
+                        try {
+                            blob = await readImageBlob(
+                                response,
+                                security?.enabled
+                                    ? (security.maxImageSizeBytes ?? 0)
+                                    : 0,
+                            );
+                        } catch (error) {
+                            if (!(error instanceof ImageTooLargeError)) {
+                                throw error;
+                            }
+                            handleSecurityViolation(security!, {
+                                code: 'IMAGE_SIZE_EXCEEDED',
+                                type: 'image',
+                                message:
+                                    error.source === 'content-length'
+                                        ? 'Declared image size exceeds maxImageSizeBytes'
+                                        : 'Fetched image exceeds maxImageSizeBytes',
+                                value: String(error.bytes),
+                                context: error.source,
+                            });
+                            element.data = undefined;
+                            element.src = undefined;
+                            continue;
+                        }
+
+                        element.data = await blobToDataUrl(blob);
+                    } else {
+                        // Bytes or a Blob are converted the same way fetched
+                        // images are; a string is used as the data: URL as-is.
+                        // maxImageSizeBytes applies to whatever the loader
+                        // returns, just like it does to fetched images.
+                        const maxBytes =
+                            security?.enabled && security.maxImageSizeBytes
+                                ? security.maxImageSizeBytes
+                                : 0;
+                        const rejectOversized = (
+                            bytes: number | null,
+                        ): boolean => {
+                            if (
+                                maxBytes > 0 &&
+                                bytes !== null &&
+                                bytes > maxBytes
+                            ) {
+                                handleSecurityViolation(security!, {
+                                    code: 'IMAGE_SIZE_EXCEEDED',
+                                    type: 'image',
+                                    message:
+                                        'Image loader returned data exceeding maxImageSizeBytes',
+                                    value: String(bytes),
+                                    context: 'image-loader-size',
+                                });
+                                element.data = undefined;
+                                element.src = undefined;
+                                return true;
+                            }
+                            return false;
+                        };
+
+                        if (typeof loaded === 'string') {
+                            if (
+                                rejectOversized(
+                                    getDataUrlPayloadByteSize(loaded),
+                                )
+                            ) {
+                                continue;
+                            }
+                            element.data = loaded;
+                        } else {
+                            const blob =
+                                loaded instanceof Blob
+                                    ? loaded
+                                    : // slice() re-backs the view with a plain
+                                      // ArrayBuffer, satisfying BlobPart.
+                                      new Blob([loaded.slice()]);
+                            if (rejectOversized(blob.size)) {
+                                continue;
+                            }
+                            element.data = await blobToDataUrl(blob);
+                        }
+                    }
                 }
 
                 // If in browser, asynchronously rasterize SVG to a transparent PNG for jsPDF's synchronous engine
@@ -530,7 +594,7 @@ export const prefetchImages = async (
         }
 
         if (element.items && element.items.length > 0) {
-            await prefetchImages(element.items, security, warnings);
+            await prefetchImages(element.items, security, warnings, imageLoad);
         }
     }
 };
