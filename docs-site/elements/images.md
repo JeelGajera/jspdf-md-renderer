@@ -41,6 +41,33 @@ Use `{...}` after image markdown:
 - Block image: image-only paragraph supports alignment.
 - Inline image: image in text flow ignores block alignment and follows line layout.
 
+## Custom Image Loader
+
+Supply image data yourself with `image.load`, instead of (or before) the built-in `fetch`:
+
+```ts
+await MdTextRender(doc, markdown, {
+    image: {
+        // Read a local file in Node, send auth headers, resolve a relative
+        // path against a base URL, or serve from a cache.
+        load: async (src) => {
+            if (src.startsWith('./assets/')) {
+                const bytes = await fs.readFile(`./public/${src}`);
+                return new Uint8Array(bytes); // or a Blob, or a data: URL string
+            }
+            return undefined; // fall back to the built-in fetch
+        },
+    },
+});
+```
+
+- Called with the raw `src` before the built-in fetch runs.
+- Return `undefined` to fall back to the built-in fetch for that image.
+- A returned `string` is used as the image's `data:` URL as-is; `Uint8Array` bytes or a `Blob` are converted to a `data:` URL the same way fetched images are.
+- A throwing loader is treated like a failed fetch: the image is skipped with an `IMAGE_LOAD_FAILED` warning.
+
+**What the loader is and isn't responsible for:** with `security.enabled`, the URL checks run *before* the loader is called, so a blocked URL never reaches it, and `security.maxImageSizeBytes` applies to whatever the loader returns. The loader itself doesn't need to validate URLs or enforce size limits — the renderer does that around it.
+
 ## Security-Aware Behavior
 
 When `security.enabled` is `true`, image handling can enforce:
@@ -68,6 +95,7 @@ In browser runtimes, DNS resolution APIs are not available, so IP-level SSRF che
 | Option | Effect |
 |--------|--------|
 | `image.defaultAlign` | Default alignment for block images |
+| `image.load` | Custom image loader `(src) => Promise<string \| Uint8Array \| Blob \| undefined>`; `undefined` falls back to built-in fetch |
 | `spacing.afterImage` | Spacing after images |
 | `security.allowRemoteImages` | Allow or deny http/https image fetches |
 | `security.allowedImageDomains` | Optional host allowlist (`undefined` allow-all, `[]` deny-all) |

@@ -94,7 +94,12 @@ export const MdTextRender = async (
 
     enforceNestedDepthAndImageCount(parsedElements, security, warnings);
     await applyLinkPolicy(parsedElements, security);
-    await prefetchImages(parsedElements, security, warnings);
+    await prefetchImages(
+        parsedElements,
+        security,
+        warnings,
+        validOptions.image?.load,
+    );
     guardTimeout();
 
     if (security.enabled && security.violationMode === 'placeholder') {

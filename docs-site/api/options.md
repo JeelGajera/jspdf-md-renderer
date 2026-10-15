@@ -356,6 +356,36 @@ re-validated against the same protocol, domain and SSRF rules as the original
 URL, with the chain bounded to 5 hops. A host that is permitted cannot redirect
 the fetch to one that is not.
 
+### Custom Image Loader (`image.load`)
+
+`image.load?: (src: string) => Promise<string | Uint8Array | Blob | undefined>`
+lets the caller supply image data instead of the built-in `fetch` — for reading
+local files in Node, sending auth headers, resolving relative paths against a
+base URL, or serving from a cache:
+
+```ts
+image: {
+    load: async (src) => {
+        if (src.startsWith('./assets/')) {
+            return new Uint8Array(await fs.readFile(`./public/${src}`));
+        }
+        return undefined; // fall back to the built-in fetch
+    },
+}
+```
+
+- The loader is called with the raw `src` before the built-in fetch runs.
+  Returning `undefined` falls back to the built-in fetch for that image.
+- A returned `string` is used as the image's `data:` URL as-is; `Uint8Array`
+  bytes or a `Blob` are converted to a `data:` URL the same way fetched
+  images are. A throwing loader is treated like a failed fetch (the image is
+  skipped with an `IMAGE_LOAD_FAILED` warning).
+- Security interplay: with `security.enabled`, the URL checks run *before*
+  the loader is called, so a blocked URL never reaches it, and
+  `security.maxImageSizeBytes` applies to whatever the loader returns. The
+  loader is not responsible for validating URLs or enforcing size limits —
+  the renderer does that around it.
+
 ### Domain Allowlist Semantics
 
 - `allowedImageDomains: undefined` -> allow all domains.
