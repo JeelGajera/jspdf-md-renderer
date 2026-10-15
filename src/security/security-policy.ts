@@ -6,7 +6,7 @@ import {
     ViolationAction,
     ViolationMode,
 } from '../types/security';
-import { RenderWarning, RenderWarnings } from '../store/renderWarnings';
+import { RenderWarning, WarningSink } from '../store/renderWarnings';
 
 /**
  * Warning collector for the render a normalized security config belongs to.
@@ -20,13 +20,13 @@ import { RenderWarning, RenderWarnings } from '../store/renderWarnings';
  */
 const renderWarningsBySecurity = new WeakMap<
     RenderSecurityOptions,
-    RenderWarnings
+    WarningSink
 >();
 
 /** Associates a render's warning collector with its security config. */
 export const attachRenderWarnings = (
     security: RenderSecurityOptions,
-    warnings: RenderWarnings,
+    warnings: WarningSink,
 ): void => {
     renderWarningsBySecurity.set(security, warnings);
 };
