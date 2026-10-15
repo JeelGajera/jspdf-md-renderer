@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import { MdTokenType } from '../enums/mdTokenType';
 import { ParsedElement } from '../types';
 import {
+    attachRenderWarnings,
     handleSecurityViolation,
     isDataUrl,
     isSvgDataUrl,
@@ -9,9 +10,14 @@ import {
 } from '../security/security-policy';
 import {
     RenderSecurityOptions,
+    SecurityViolation,
     SecurityViolationError,
 } from '../types/security';
-import { RenderWarnings, WarningSink } from '../store/renderWarnings';
+import {
+    RenderWarning,
+    RenderWarnings,
+    WarningSink,
+} from '../store/renderWarnings';
 
 /**
  * Standard DPI for web/screen pixels.
@@ -337,7 +343,331 @@ export const calculateImageDimensions = (
 };
 
 /**
+ * How many image loads may be in flight at once.
+ *
+ * Remote images used to load strictly one after another, so a document with
+ * 20 remote images paid the sum of 20 round trips before anything was drawn.
+ * They now load concurrently, but unbounded concurrency would let a single
+ * document open hundreds of sockets at once; a handful at a time keeps the
+ * wall-clock win without the stampede.
+ */
+const MAX_CONCURRENT_IMAGE_LOADS = 6;
+
+/**
+ * One thing a single image load wants reported, in the order it happened.
+ * Reports are collected per image while loads run concurrently, then replayed
+ * in document order, so warnings and violations stay deterministic.
+ */
+type DeferredImageReport =
+    | {
+          kind: 'violation';
+          violation: Omit<SecurityViolation, 'timestamp'>;
+      }
+    | {
+          kind: 'warning';
+          warning: RenderWarning;
+          /**
+           * `console.warn` fallback for the historical no-sink path, used only
+           * when the render has no warning collector. Absent for warnings
+           * that were silent without a collector.
+           */
+          consoleMessage?: string;
+          consoleError?: unknown;
+      };
+
+/**
+ * Collects every image element that has a `src`, in document order:
+ * depth-first, an image before the items nested inside it — the same order
+ * the old sequential loop processed them in.
+ */
+const collectImageElements = (
+    elements: ParsedElement[],
+    out: ParsedElement[],
+): void => {
+    for (const element of elements) {
+        if (element.type === MdTokenType.Image && element.src) {
+            out.push(element);
+        }
+        if (element.items && element.items.length > 0) {
+            collectImageElements(element.items, out);
+        }
+    }
+};
+
+/**
+ * Runs `task` over `items` with at most `limit` tasks in flight at once,
+ * returning results in input order.
+ */
+const runWithBoundedConcurrency = async <T>(
+    items: ParsedElement[],
+    limit: number,
+    task: (item: ParsedElement) => Promise<T>,
+): Promise<T[]> => {
+    const results: T[] = new Array(items.length);
+    let next = 0;
+    const worker = async (): Promise<void> => {
+        while (next < items.length) {
+            const index = next;
+            next += 1;
+            results[index] = await task(items[index]);
+        }
+    };
+    await Promise.all(
+        Array.from({ length: Math.min(limit, items.length) }, () => worker()),
+    );
+    return results;
+};
+
+/**
+ * Loads a single image element: security checks, fetch, and data-URL/SVG
+ * handling exactly as the old sequential loop did. Nothing is reported
+ * inline — violations and warnings are returned as reports so the caller can
+ * replay them in document order after every concurrent load has settled.
+ *
+ * `violationMode: 'throw'` semantics: a violation no longer aborts the other
+ * in-flight loads. Every load runs to completion, the reports are replayed in
+ * document order, and the FIRST violation in document order is thrown — not
+ * the first one whose load happened to fail first.
+ */
+const loadImageElement = async (
+    element: ParsedElement,
+    security: RenderSecurityOptions | undefined,
+): Promise<DeferredImageReport[]> => {
+    const reports: DeferredImageReport[] = [];
+    const reportViolation = (
+        violation: Omit<SecurityViolation, 'timestamp'>,
+    ): void => {
+        reports.push({ kind: 'violation', violation });
+    };
+    const reportWarning = (
+        warning: RenderWarning,
+        consoleMessage?: string,
+        consoleError?: unknown,
+    ): void => {
+        reports.push({
+            kind: 'warning',
+            warning,
+            consoleMessage,
+            consoleError,
+        });
+    };
+
+    // Per-image security view: every check still runs per image, but
+    // violations are recorded instead of reported inline, and the mode is
+    // forced to 'skip' so a violation drops just this image instead of
+    // throwing out of a worker. The real mode is honoured when the reports
+    // are replayed in document order.
+    const deferredSecurity: RenderSecurityOptions = {
+        ...security,
+        violationMode: 'skip',
+        onSecurityViolation: (violation) => {
+            reportViolation({
+                code: violation.code,
+                type: violation.type,
+                message: violation.message,
+                value: violation.value,
+                context: violation.context,
+            });
+        },
+    };
+    const sink: WarningSink = {
+        warn: (warning) => reportWarning(warning),
+    };
+    if (security) {
+        // Keeps `silent`/`onWarning` routing (and document-order replay) for
+        // the warnings the security helpers emit themselves.
+        attachRenderWarnings(deferredSecurity, sink);
+    }
+
+    try {
+        if (deferredSecurity.enabled) {
+            if (isDataUrl(element.src!)) {
+                const isSvg = isSvgDataUrl(element.src!);
+
+                if (isSvg && !deferredSecurity.allowSvgImages) {
+                    handleSecurityViolation(deferredSecurity, {
+                        code: 'SVG_BLOCKED',
+                        type: 'image',
+                        message: 'SVG images are blocked',
+                        value: element.src,
+                        context: 'image-src',
+                    });
+                    element.data = undefined;
+                    element.src = undefined;
+                    return reports;
+                }
+                if (!deferredSecurity.allowDataUrls) {
+                    handleSecurityViolation(deferredSecurity, {
+                        code: 'DATA_URL_BLOCKED',
+                        type: 'image',
+                        message: 'Data URLs are blocked for images',
+                        value: element.src,
+                        context: 'image-src',
+                    });
+                    element.data = undefined;
+                    element.src = undefined;
+                    return reports;
+                }
+            } else {
+                if (!deferredSecurity.allowRemoteImages) {
+                    handleSecurityViolation(deferredSecurity, {
+                        code: 'IMAGE_PROTOCOL_BLOCKED',
+                        type: 'image',
+                        message: 'Remote images are disabled',
+                        value: element.src,
+                        context: 'image-src',
+                    });
+                    element.data = undefined;
+                    element.src = undefined;
+                    return reports;
+                }
+
+                const allowed = await validateResourceUrl(
+                    element.src!,
+                    'image',
+                    deferredSecurity,
+                    'image-src',
+                );
+                if (!allowed) {
+                    element.data = undefined;
+                    element.src = undefined;
+                    return reports;
+                }
+            }
+        }
+
+        // If the src is already a data URI, we treat it as loaded (or just store it as data)
+        if (element.src!.startsWith('data:')) {
+            element.data = element.src;
+            const dataUrlBytes = getDataUrlPayloadByteSize(element.data!);
+            if (
+                deferredSecurity.enabled &&
+                deferredSecurity.maxImageSizeBytes &&
+                dataUrlBytes !== null &&
+                dataUrlBytes > deferredSecurity.maxImageSizeBytes
+            ) {
+                handleSecurityViolation(deferredSecurity, {
+                    code: 'IMAGE_SIZE_EXCEEDED',
+                    type: 'image',
+                    message: 'Data URL image exceeds maxImageSizeBytes',
+                    value: String(dataUrlBytes),
+                    context: 'data-url-size',
+                });
+                element.data = undefined;
+                element.src = undefined;
+                return reports;
+            }
+        } else {
+            // Try to fetch the image
+            const response = await secureImageFetch(
+                element.src!,
+                deferredSecurity,
+            );
+            if (!response.ok) {
+                await response.body?.cancel().catch(() => {});
+                throw new Error(
+                    `Failed to fetch image: ${response.statusText}`,
+                );
+            }
+
+            let blob: Blob;
+            try {
+                blob = await readImageBlob(
+                    response,
+                    deferredSecurity.enabled
+                        ? (deferredSecurity.maxImageSizeBytes ?? 0)
+                        : 0,
+                );
+            } catch (error) {
+                if (!(error instanceof ImageTooLargeError)) {
+                    throw error;
+                }
+                handleSecurityViolation(deferredSecurity, {
+                    code: 'IMAGE_SIZE_EXCEEDED',
+                    type: 'image',
+                    message:
+                        error.source === 'content-length'
+                            ? 'Declared image size exceeds maxImageSizeBytes'
+                            : 'Fetched image exceeds maxImageSizeBytes',
+                    value: String(error.bytes),
+                    context: error.source,
+                });
+                element.data = undefined;
+                element.src = undefined;
+                return reports;
+            }
+
+            element.data = await blobToDataUrl(blob);
+        }
+
+        // If in browser, asynchronously rasterize SVG to a transparent PNG for jsPDF's synchronous engine
+        if (element.data && element.data.startsWith('data:image/svg')) {
+            if (
+                typeof window !== 'undefined' &&
+                typeof document !== 'undefined'
+            ) {
+                element.data = await new Promise<string>((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const dims = extractSvgDimensions(element.data!, sink);
+                        const w = dims ? dims.width : img.width || 300;
+                        const h = dims ? dims.height : img.height || 150;
+
+                        // Save natural dimensions before we scale up for PDF render context
+                        element.naturalWidth = w;
+                        element.naturalHeight = h;
+
+                        const scale = 4; // High-res PDF scaling
+                        canvas.width = w * scale;
+                        canvas.height = h * scale;
+
+                        const ctx = canvas.getContext('2d');
+                        if (ctx) {
+                            ctx.scale(scale, scale);
+                            ctx.drawImage(img, 0, 0, w, h);
+                            resolve(canvas.toDataURL('image/png'));
+                        } else {
+                            resolve(element.data!);
+                        }
+                    };
+                    img.onerror = () => resolve(element.data!);
+                    img.src = element.data!;
+                });
+            }
+        }
+    } catch (error) {
+        if (error instanceof SecurityViolationError) {
+            // Unreachable through the deferred security view above; kept so a
+            // violation that somehow escapes still aborts the render instead
+            // of being downgraded to a warning.
+            throw error;
+        }
+        reportWarning(
+            {
+                code: 'IMAGE_LOAD_FAILED',
+                message: `Failed to load image: ${String(error)}`,
+                context: element.src,
+            },
+            `[jspdf-md-renderer] Warning: Failed to load image at ${element.src}. It will be skipped.`,
+            error,
+        );
+    }
+
+    return reports;
+};
+
+/**
  * Recursively traverses parsed elements and loads image data for Image tokens.
+ *
+ * Image nodes are collected first, in document order, then loaded with
+ * bounded concurrency (`MAX_CONCURRENT_IMAGE_LOADS` at a time). Every
+ * security check still runs per image — URL validation, redirect
+ * re-validation, `imageFetchTimeoutMs`, `maxImageSizeBytes` — and warnings
+ * plus violations are replayed in document order, so concurrent failures
+ * stay deterministic. With `violationMode: 'throw'`, the violation thrown is
+ * the first one in document order, after all loads have settled.
+ *
  * @param elements - The parsed elements to process.
  */
 export const prefetchImages = async (
@@ -345,192 +675,34 @@ export const prefetchImages = async (
     security?: RenderSecurityOptions,
     warnings?: RenderWarnings,
 ): Promise<void> => {
-    for (const element of elements) {
-        if (element.type === MdTokenType.Image && element.src) {
-            try {
-                if (security?.enabled) {
-                    if (isDataUrl(element.src)) {
-                        const isSvg = isSvgDataUrl(element.src);
+    const images: ParsedElement[] = [];
+    collectImageElements(elements, images);
 
-                        if (isSvg && !security.allowSvgImages) {
-                            handleSecurityViolation(security, {
-                                code: 'SVG_BLOCKED',
-                                type: 'image',
-                                message: 'SVG images are blocked',
-                                value: element.src,
-                                context: 'image-src',
-                            });
-                            element.data = undefined;
-                            element.src = undefined;
-                            continue;
-                        }
-                        if (!security.allowDataUrls) {
-                            handleSecurityViolation(security, {
-                                code: 'DATA_URL_BLOCKED',
-                                type: 'image',
-                                message: 'Data URLs are blocked for images',
-                                value: element.src,
-                                context: 'image-src',
-                            });
-                            element.data = undefined;
-                            element.src = undefined;
-                            continue;
-                        }
-                    } else {
-                        if (!security.allowRemoteImages) {
-                            handleSecurityViolation(security, {
-                                code: 'IMAGE_PROTOCOL_BLOCKED',
-                                type: 'image',
-                                message: 'Remote images are disabled',
-                                value: element.src,
-                                context: 'image-src',
-                            });
-                            element.data = undefined;
-                            element.src = undefined;
-                            continue;
-                        }
+    const outcomes = await runWithBoundedConcurrency(
+        images,
+        MAX_CONCURRENT_IMAGE_LOADS,
+        (element) => loadImageElement(element, security),
+    );
 
-                        const allowed = await validateResourceUrl(
-                            element.src,
-                            'image',
-                            security,
-                            'image-src',
-                        );
-                        if (!allowed) {
-                            element.data = undefined;
-                            element.src = undefined;
-                            continue;
-                        }
-                    }
-                }
-
-                // If the src is already a data URI, we treat it as loaded (or just store it as data)
-                if (element.src.startsWith('data:')) {
-                    element.data = element.src;
-                    const dataUrlBytes = getDataUrlPayloadByteSize(
-                        element.data,
-                    );
-                    if (
-                        security?.enabled &&
-                        security.maxImageSizeBytes &&
-                        dataUrlBytes !== null &&
-                        dataUrlBytes > security.maxImageSizeBytes
-                    ) {
-                        handleSecurityViolation(security, {
-                            code: 'IMAGE_SIZE_EXCEEDED',
-                            type: 'image',
-                            message: 'Data URL image exceeds maxImageSizeBytes',
-                            value: String(dataUrlBytes),
-                            context: 'data-url-size',
-                        });
-                        element.data = undefined;
-                        element.src = undefined;
-                        continue;
-                    }
-                } else {
-                    // Try to fetch the image
-                    const response = await secureImageFetch(
-                        element.src,
-                        security,
-                    );
-                    if (!response.ok) {
-                        await response.body?.cancel().catch(() => {});
-                        throw new Error(
-                            `Failed to fetch image: ${response.statusText}`,
-                        );
-                    }
-
-                    let blob: Blob;
-                    try {
-                        blob = await readImageBlob(
-                            response,
-                            security?.enabled
-                                ? (security.maxImageSizeBytes ?? 0)
-                                : 0,
-                        );
-                    } catch (error) {
-                        if (!(error instanceof ImageTooLargeError)) {
-                            throw error;
-                        }
-                        handleSecurityViolation(security!, {
-                            code: 'IMAGE_SIZE_EXCEEDED',
-                            type: 'image',
-                            message:
-                                error.source === 'content-length'
-                                    ? 'Declared image size exceeds maxImageSizeBytes'
-                                    : 'Fetched image exceeds maxImageSizeBytes',
-                            value: String(error.bytes),
-                            context: error.source,
-                        });
-                        element.data = undefined;
-                        element.src = undefined;
-                        continue;
-                    }
-
-                    element.data = await blobToDataUrl(blob);
-                }
-
-                // If in browser, asynchronously rasterize SVG to a transparent PNG for jsPDF's synchronous engine
-                if (element.data && element.data.startsWith('data:image/svg')) {
-                    if (
-                        typeof window !== 'undefined' &&
-                        typeof document !== 'undefined'
-                    ) {
-                        element.data = await new Promise<string>((resolve) => {
-                            const img = new Image();
-                            img.onload = () => {
-                                const canvas = document.createElement('canvas');
-                                const dims = extractSvgDimensions(
-                                    element.data!,
-                                    warnings,
-                                );
-                                const w = dims ? dims.width : img.width || 300;
-                                const h = dims
-                                    ? dims.height
-                                    : img.height || 150;
-
-                                // Save natural dimensions before we scale up for PDF render context
-                                element.naturalWidth = w;
-                                element.naturalHeight = h;
-
-                                const scale = 4; // High-res PDF scaling
-                                canvas.width = w * scale;
-                                canvas.height = h * scale;
-
-                                const ctx = canvas.getContext('2d');
-                                if (ctx) {
-                                    ctx.scale(scale, scale);
-                                    ctx.drawImage(img, 0, 0, w, h);
-                                    resolve(canvas.toDataURL('image/png'));
-                                } else {
-                                    resolve(element.data!);
-                                }
-                            };
-                            img.onerror = () => resolve(element.data!);
-                            img.src = element.data!;
-                        });
-                    }
-                }
-            } catch (error) {
-                if (error instanceof SecurityViolationError) {
-                    throw error;
-                }
-                warnings?.warn({
-                    code: 'IMAGE_LOAD_FAILED',
-                    message: `Failed to load image: ${String(error)}`,
-                    context: element.src,
-                });
-                if (!warnings) {
+    for (const reports of outcomes) {
+        for (const report of reports) {
+            if (report.kind === 'violation' && security) {
+                // In 'throw' mode this throws the first violation in document
+                // order; otherwise it fires onSecurityViolation in document
+                // order.
+                handleSecurityViolation(security, report.violation);
+            } else if (report.kind === 'warning') {
+                if (warnings) {
+                    warnings.warn(report.warning);
+                } else if (report.consoleMessage !== undefined) {
                     console.warn(
-                        `[jspdf-md-renderer] Warning: Failed to load image at ${element.src}. It will be skipped.`,
-                        error,
+                        report.consoleMessage,
+                        ...(report.consoleError === undefined
+                            ? []
+                            : [report.consoleError]),
                     );
                 }
             }
-        }
-
-        if (element.items && element.items.length > 0) {
-            await prefetchImages(element.items, security, warnings);
         }
     }
 };
