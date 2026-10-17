@@ -281,9 +281,13 @@ describe('guide/component-overrides', () => {
 
         // Exactly one callout swatch, and both quotes still rendered.
         expect(ops.filter((o) => o.op === 'rect')).toHaveLength(1);
-        expect(ops.filter((o) => o.op === 'text').map((o) => o.text)).toContain(
-            'plain',
-        );
+        // Same-style words share one text call (issue #88): the plain quote's
+        // words arrive in one op.
+        expect(
+            ops
+                .filter((o) => o.op === 'text')
+                .some((o) => String(o.text).includes('plain')),
+        ).toBe(true);
     });
 
     it('watermarks a table behind its content', async () => {
