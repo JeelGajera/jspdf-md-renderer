@@ -48,10 +48,34 @@ export const renderLine = (
 
     const textLineHeight =
         getCharHight(doc) * store.options.page.defaultLineHeightFactor;
+    // Justified lines stretch the inter-word spaces, so every word keeps its
+    // own text call there; the last line of a justified paragraph uses the
+    // normal space width and is safe to merge (issue #88).
+    const mergeable = alignment !== 'justify' || isLastLine;
     let currentX = startX;
 
-    for (let i = 0; i < words.length; i++) {
+    let i = 0;
+    while (i < words.length) {
         const word = words[i];
+        const runEnd = mergeable ? findMergeableRun(words, i) : i + 1;
+        if (
+            runEnd - i > 1 &&
+            renderWordRun(
+                doc,
+                words.slice(i, runEnd),
+                currentX,
+                y,
+                textLineHeight,
+                line.lineHeight,
+                wordSpacing,
+                store,
+            )
+        ) {
+            currentX += mergedRunAdvance(words, i, runEnd, wordSpacing);
+            i = runEnd;
+            continue;
+        }
+
         const elementHeight =
             word.isImage && word.imageHeight
                 ? word.imageHeight
@@ -63,7 +87,144 @@ export const renderLine = (
         if (i < words.length - 1 && word.hasTrailingSpace) {
             currentX += wordSpacing;
         }
+        i++;
     }
+};
+
+/**
+ * How far the cursor advances past a merged run: the drawn text plus the
+ * trailing space when the run does not end the line. Identical to the sum of
+ * the per-word advances the loop above would have applied (issue #88).
+ */
+const mergedRunAdvance = (
+    words: StyledWordInfo[],
+    start: number,
+    end: number,
+    wordSpacing: number,
+): number => {
+    let advance = 0;
+    for (let k = start; k < end; k++) {
+        advance += words[k].width;
+        // Like the per-word loop, the cursor steps over a trailing space only
+        // when another word follows on the line.
+        if (k < words.length - 1 && words[k].hasTrailingSpace) {
+            advance += wordSpacing;
+        }
+    }
+    return advance;
+};
+
+/**
+ * Words merge into one text call only when every drawing input matches: same
+ * style (font and colour), same link target and colour, same strikethrough.
+ * Images are drawn with `addImage` and always break a run. Decorations that
+ * are positioned per word (link annotations, codespan backgrounds,
+ * strikethrough rules) are still drawn per word at their exact coordinates;
+ * only the glyph run is shared.
+ */
+const mergeRunKey = (word: StyledWordInfo): string | null => {
+    if (word.isImage) {
+        return null;
+    }
+    return [
+        word.style,
+        word.isLink ? 1 : 0,
+        word.href ?? '',
+        word.isStrikethrough ? 1 : 0,
+        (word.linkColor ?? []).join(','),
+    ].join('|');
+};
+
+const findMergeableRun = (
+    words: StyledWordInfo[],
+    start: number,
+): number => {
+    const key = mergeRunKey(words[start]);
+    let end = start + 1;
+    while (
+        end < words.length &&
+        key !== null &&
+        mergeRunKey(words[end]) === key
+    ) {
+        end++;
+    }
+    return end;
+};
+
+/**
+ * Draws a run of same-style words with a single `doc.text` call.
+ *
+ * Returns false — drawing nothing — when the merged string would not occupy
+ * exactly the width the layout assumed for the run (kerning across the word
+ * boundary, a non-zero charSpace, a style whose space glyph differs from the
+ * measured one); the caller then falls back to one call per word. This guard
+ * is what guarantees no glyph moves: a merged call is only ever used when it
+ * advances the cursor by exactly the laid-out amount.
+ */
+const renderWordRun = (
+    doc: jsPDF,
+    run: StyledWordInfo[],
+    x: number,
+    y: number,
+    textLineHeight: number,
+    lineHeight: number,
+    wordSpacing: number,
+    store: RenderStore,
+): boolean => {
+    let merged = false;
+    withSavedDocState(doc, () => {
+        const first = run[0];
+        applyStyleToDoc(doc, first.style, store);
+        if (first.isLink && first.linkColor) {
+            doc.setTextColor(...(first.linkColor as [number, number, number]));
+        }
+
+        // The inter-word spaces are drawn as space glyphs, exactly as the
+        // layout assumed: one `wordSpacing` per trailing space.
+        let text = '';
+        let drawnWidth = 0;
+        for (let k = 0; k < run.length; k++) {
+            if (k > 0 && run[k - 1].hasTrailingSpace) {
+                text += ' ';
+                drawnWidth += wordSpacing;
+            }
+            text += run[k].text;
+            drawnWidth += run[k].width;
+        }
+        const charSpace = doc.getCharSpace?.() ?? 0;
+        const measured =
+            doc.getTextWidth(text) + text.length * charSpace;
+        if (Math.abs(measured - drawnWidth) > 0.0001) {
+            return;
+        }
+
+        const drawY = y + (lineHeight - textLineHeight);
+        // Per-word decorations keep their exact coordinates; only the glyphs
+        // share one call.
+        let wordX = x;
+        for (let k = 0; k < run.length; k++) {
+            const word = run[k];
+            if (word.style === 'codespan') {
+                renderCodespanBackground(doc, word, wordX, drawY, store);
+            }
+            if (word.isStrikethrough && word.text) {
+                renderStrikethrough(doc, word, wordX, drawY);
+            }
+            if (word.isLink && word.href) {
+                doc.link(wordX, drawY, word.width, doc.getTextDimensions('H').h, {
+                    url: word.href,
+                });
+            }
+            wordX += word.width;
+            if (k < run.length - 1 && word.hasTrailingSpace) {
+                wordX += wordSpacing;
+            }
+        }
+
+        doc.text(text, x, drawY, { baseline: 'top' });
+        merged = true;
+    });
+    return merged;
 };
 
 const renderSingleWord = (

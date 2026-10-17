@@ -8,10 +8,4 @@ p1 text        text="    if ok {" x=14 y=20.985 baseline=top font=courier/normal
 p1 text        text="        return" x=14 y=25.001 baseline=top font=courier/normal size=9.9 color=#000000
 p1 text        text="    }" x=14 y=29.018 baseline=top font=courier/normal size=9.9 color=#000000
 p1 text        text="}" x=14 y=33.034 baseline=top font=courier/normal size=9.9 color=#000000
-p1 text        text="Tab-indented" x=10 y=51.953 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="code" x=33.283 y=51.953 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="expands" x=42.713 y=51.953 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="tabs" x=58.352 y=51.953 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="to" x=66.734 y=51.953 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="tab" x=71.041 y=51.953 baseline=top font=helvetica/normal size=11 color=#000000
-p1 text        text="stops." x=77.483 y=51.953 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="Tab-indented code expands tabs to tab stops." x=10 y=51.953 baseline=top font=helvetica/normal size=11 color=#000000

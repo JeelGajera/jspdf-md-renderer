@@ -56,9 +56,10 @@ describe('blockquote paint order', () => {
         );
 
         const ops = pageStream(doc);
-        const introAt = ops.findIndex((op) => op.includes('(Intro)'));
+        // Same-style words share one Tj string (issue #88).
+        const introAt = ops.findIndex((op) => op.includes('(Intro paragraph.)'));
         const fillAt = firstIndex(ops, FILL_RECT);
-        const quotedAt = ops.findIndex((op) => op.includes('(Quoted)'));
+        const quotedAt = ops.findIndex((op) => op.includes('(Quoted text.)'));
 
         // The intro must still precede the blockquote background, which must
         // still precede the quoted text.

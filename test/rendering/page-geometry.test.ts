@@ -193,7 +193,8 @@ describe('relaxed option requirements (item 6)', () => {
         await MdTextRender(doc, 'Body text.', {
             font: { regular: { name: 'helvetica', style: 'normal' } },
         });
-        expect(textOps(ops).map((o) => o.text)).toEqual(['Body', 'text.']);
+        // Same-style words share one text call (issue #88).
+        expect(textOps(ops).map((o) => o.text)).toEqual(['Body text.']);
     });
 
     it('ignores font.light when it is supplied', async () => {

@@ -9,6 +9,11 @@ import type { ParsedElement } from '../../src/types/parsedElement';
 const drawnText = (ops: ReturnType<typeof recordDoc>['ops']): string[] =>
     ops.filter((o) => o.op === 'text').map((o) => String(o.text));
 
+// Same-style words on a line share one text call (issue #88), so split the
+// drawn runs back into words for word-level assertions.
+const drawnWords = (ops: ReturnType<typeof recordDoc>['ops']): string[] =>
+    drawnText(ops).flatMap((t) => t.split(' '));
+
 describe('markdown fidelity (D10, D11)', () => {
     it('renders escaped characters without the backslash', async () => {
         const { doc, ops } = recordDoc();
@@ -18,8 +23,10 @@ describe('markdown fidelity (D10, D11)', () => {
             goldenOptions(),
         );
         const text = drawnText(ops);
-        expect(text).toContain('*');
-        expect(text).toContain('_');
+        // Same-style words share one text call (issue #88): '*' is its own
+        // word, while the escaped underscores merge into '_underscore_.'.
+        expect(drawnWords(ops)).toContain('*');
+        expect(text.some((t) => t.includes('_'))).toBe(true);
         expect(text.some((t) => t.includes('\\'))).toBe(false);
     });
 
