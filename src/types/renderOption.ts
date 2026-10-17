@@ -90,6 +90,13 @@ export type RenderOption = {
         bottomSpacing?: number;
         /** Text color for all headings as hex. Default: '#000000' */
         color?: string;
+        /**
+         * When `true`, a heading that would otherwise land alone at the bottom
+         * of a page is moved to the next page with its paragraph. Reserves the
+         * heading's height plus one line of body text before breaking.
+         * Default: `false` (keeps existing documents rendering unchanged).
+         */
+        keepWithNext?: boolean;
         h1Color?: string;
         h2Color?: string;
         h3Color?: string;
