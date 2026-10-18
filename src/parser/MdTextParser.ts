@@ -351,6 +351,15 @@ const tokenHandlers: TokenHandlers = {
         type: MdTokenType.Text,
         content: token.text,
     }),
+    // A task list's `[ ]`/`[x]` marker arrives as its own `checkbox` token.
+    // The list-item renderer draws the checkbox itself from the item's
+    // `task`/`checked` flags, so this token must render nothing — falling
+    // through to the generic branch printed the marker as literal text next
+    // to the drawn box.
+    ['checkbox' as Tokens.Checkbox['type']]: () => ({
+        type: MdTokenType.Noop,
+        content: '',
+    }),
     // GFM strikethrough. Previously rendered as literal `~~text~~`.
     [MdTokenType.Del]: (token: Tokens.Del, warnings) => ({
         type: MdTokenType.Del,
