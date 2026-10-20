@@ -17,7 +17,11 @@ const renderParagraph = (
         hasRawBullet?: boolean,
     ) => void,
 ) => {
-    const indentLevel = indent / store.options.page.indent;
+    // `page.indent` may be 0 (allowed by validation); dividing by it would
+    // yield NaN and poison downstream geometry — with a zero indent the
+    // pixel indent is necessarily 0, so the level is 0 (issue #117).
+    const pageIndent = store.options.page.indent;
+    const indentLevel = pageIndent > 0 ? indent / pageIndent : 0;
     const savedColor = doc.getTextColor();
     doc.setFontSize(store.options.page.defaultFontSize);
     doc.setFont(
