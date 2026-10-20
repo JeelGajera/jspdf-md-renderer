@@ -194,7 +194,14 @@ export type RenderOption = {
     };
     header?: {
         /** Text to render in header area of each page */
-        text?: string | ((pageNumber: number, totalPages: number) => string);
+        text?:
+            | string
+            | ((
+                  /** 1-based page number within this render's own pages. */
+                  pageNumber: number,
+                  /** Number of pages this render produced. */
+                  totalPages: number,
+              ) => string);
         /** Y position of header text from top in doc units. Default: 5 */
         y?: number;
         /** Font size for header text. Default: 9 */
@@ -206,7 +213,14 @@ export type RenderOption = {
     };
     footer?: {
         /** Text to render in footer area of each page */
-        text?: string | ((pageNumber: number, totalPages: number) => string);
+        text?:
+            | string
+            | ((
+                  /** 1-based page number within this render's own pages. */
+                  pageNumber: number,
+                  /** Number of pages this render produced. */
+                  totalPages: number,
+              ) => string);
         /** Y position from top of page in doc units. Default: pageHeight - 5 */
         y?: number;
         /** Font size for footer text. Default: 9 */
@@ -215,7 +229,7 @@ export type RenderOption = {
         color?: string;
         /** Alignment of footer text. Default: 'right' */
         align?: 'right' | 'left' | 'center';
-        /** Shortcut: render page numbers with format "Page X of Y" */
+        /** Shortcut: render page numbers with format "Page X of Y", numbered relative to this render's own pages */
         showPageNumbers?: boolean;
     };
     /**

@@ -15,8 +15,14 @@ export const applyPageDecorations = (
 
     for (let pageNum = start; pageNum <= totalPages; pageNum++) {
         doc.setPage(pageNum);
-        applyHeader(doc, options, pageNum, totalPages);
-        applyFooter(doc, options, pageNum, totalPages);
+        // Number pages relative to the decorated range, not the whole
+        // document: a render appended after existing content numbers its own
+        // pages 1..N instead of continuing the document's count (issue #116).
+        // For a single render `start` is 1, so nothing changes there.
+        const relPage = pageNum - start + 1;
+        const relTotal = totalPages - start + 1;
+        applyHeader(doc, options, relPage, relTotal);
+        applyFooter(doc, options, relPage, relTotal);
     }
 };
 
