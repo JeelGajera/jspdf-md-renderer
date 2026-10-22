@@ -3,7 +3,7 @@ import jsPDF from 'jspdf';
 import { StyledWordInfo, StyledLine } from '../types/styledWordInfo';
 import { RenderStore } from '../store/renderStore';
 import { getCharHight } from '../utils/doc-helpers';
-import { measureStyledWidth } from './wordSplitter';
+import { applyStyleToDoc } from './wordSplitter';
 
 const splitOversizedWord = (
     doc: jsPDF,
@@ -15,44 +15,149 @@ const splitOversizedWord = (
         return [word];
     }
 
-    const chunks: StyledWordInfo[] = [];
-    let remaining = word.text;
+    // Set the word's font once for the whole split instead of once per
+    // measured prefix: every probe below is then a single getTextWidth
+    // instead of a font save/apply/restore cycle (#90).
+    const savedFont = doc.getFont();
+    const savedSize = doc.getFontSize();
+    applyStyleToDoc(doc, word.style, store);
+    const charSpace = doc.getCharSpace?.() ?? 0;
+    const styledWidth = (text: string): number =>
+        doc.getTextWidth(text) + text.length * charSpace;
 
-    while (remaining.length > 0) {
-        let chunk = '';
+    try {
+        // Work in code points so a split can never cut a surrogate pair,
+        // matching the old char-by-char walk.
+        const codePoints = Array.from(word.text);
+        const chunks: StyledWordInfo[] = [];
+        let start = 0;
 
-        for (const ch of remaining) {
-            const candidate = chunk + ch;
-            const candidateWidth = measureStyledWidth(
-                doc,
-                candidate,
-                word.style,
-                store,
-            );
-            if (candidateWidth > maxWidth && chunk.length > 0) break;
-            chunk = candidate;
-            if (candidateWidth >= maxWidth) break;
+        // Seed the per-chunk length estimate from a small sample so the
+        // first geometric probe starts near the fitting line length; every
+        // later chunk reuses the previous chunk's length. Probes then
+        // measure prefixes close to the final break point instead of
+        // re-measuring huge prefixes (#107).
+        const sampleLen = Math.min(64, codePoints.length);
+        const sampleWidth = styledWidth(
+            codePoints.slice(0, sampleLen).join(''),
+        );
+        let estLen =
+            sampleWidth > 0
+                ? Math.max(
+                      1,
+                      Math.floor((maxWidth / sampleWidth) * sampleLen),
+                  )
+                : 1;
+
+        const prefixWidth = (len: number): number =>
+            styledWidth(codePoints.slice(start, start + len).join(''));
+
+        while (start < codePoints.length) {
+            // Find the break point. The old char-by-char loop kept the
+            // first prefix reaching maxWidth, or the prefix just before
+            // the first one wider than maxWidth. Probing whole prefixes
+            // keeps kerning identical, so break points are unchanged.
+            const rest = codePoints.length - start;
+
+            let len: number;
+            if (!(maxWidth > 0)) {
+                // Degenerate line width: fall back to one char per chunk,
+                // exactly as the old walk did.
+                len = 1;
+            } else {
+                // Bound the search near the fitting line length with
+                // geometric probes starting from the estimate: find a
+                // tight [lo, hi] window with prefixWidth(lo) < maxWidth
+                // <= prefixWidth(hi). No probe ever measures the whole
+                // remainder except the single final-chunk check (#107).
+                let lo = 0;
+                let hi = -1;
+                const probe = Math.min(Math.max(estLen, 1), rest);
+                if (prefixWidth(probe) >= maxWidth) {
+                    hi = probe;
+                    let down = probe;
+                    while (down > 1) {
+                        const half = down >> 1;
+                        if (prefixWidth(half) >= maxWidth) {
+                            hi = half;
+                            down = half;
+                        } else {
+                            lo = half;
+                            break;
+                        }
+                    }
+                } else {
+                    lo = probe;
+                    for (;;) {
+                        const next = lo * 2;
+                        if (next >= rest) {
+                            // Reaching the remainder: it is the final
+                            // chunk iff it fits; this is the only probe
+                            // that ever measures the whole remainder.
+                            if (prefixWidth(rest) < maxWidth) {
+                                hi = -1;
+                            } else {
+                                hi = rest;
+                            }
+                            break;
+                        }
+                        if (prefixWidth(next) >= maxWidth) {
+                            hi = next;
+                            break;
+                        }
+                        lo = next;
+                    }
+                }
+
+                if (hi === -1) {
+                    // No prefix reaches maxWidth: keep the whole remainder,
+                    // exactly as the old walk did.
+                    len = rest;
+                } else {
+                    // Binary-search the first prefix reaching maxWidth
+                    // inside the tight window.
+                    let reach = hi;
+                    let a = lo + 1;
+                    let b = hi;
+                    while (a <= b) {
+                        const mid = (a + b) >> 1;
+                        if (prefixWidth(mid) >= maxWidth) {
+                            reach = mid;
+                            b = mid - 1;
+                        } else {
+                            a = mid + 1;
+                        }
+                    }
+                    // The old walk stopped right after a prefix that merely
+                    // reached maxWidth, but one char earlier once a prefix
+                    // went strictly over it.
+                    len =
+                        prefixWidth(reach) === maxWidth
+                            ? reach
+                            : Math.max(1, reach - 1);
+                }
+            }
+            estLen = len;
+
+            const chunk = codePoints.slice(start, start + len).join('');
+            chunks.push({
+                ...word,
+                text: chunk,
+                width: styledWidth(chunk),
+                hasTrailingSpace: false,
+            });
+            start += len;
         }
 
-        if (!chunk) {
-            chunk = remaining.charAt(0);
+        if (chunks.length > 0) {
+            chunks[chunks.length - 1].hasTrailingSpace = word.hasTrailingSpace;
         }
 
-        chunks.push({
-            ...word,
-            text: chunk,
-            width: measureStyledWidth(doc, chunk, word.style, store),
-            hasTrailingSpace: false,
-        });
-
-        remaining = remaining.slice(chunk.length);
+        return chunks;
+    } finally {
+        doc.setFont(savedFont.fontName, savedFont.fontStyle);
+        doc.setFontSize(savedSize);
     }
-
-    if (chunks.length > 0) {
-        chunks[chunks.length - 1].hasTrailingSpace = word.hasTrailingSpace;
-    }
-
-    return chunks;
 };
 
 export const breakIntoLines = (
