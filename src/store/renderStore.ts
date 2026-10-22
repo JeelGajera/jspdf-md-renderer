@@ -21,9 +21,6 @@ export class RenderStore {
     /**
      * Heading anchors drawn so far, keyed by their GitHub-style slug.
      * Lets `[text](#slug)` links jump to the heading's page and position.
-     * Every key in this map is occupied: collision checks consult it
-     * directly, so a generated suffix can never clobber a slug a heading
-     * produced naturally (e.g. `# A-1` → `a-1`).
      */
     private headingAnchors_: Map<string, HeadingAnchor> = new Map();
     /**
@@ -131,10 +128,11 @@ export class RenderStore {
 
     /**
      * Records a heading's draw position for `[text](#slug)` links. The slug
-     * is GitHub-style (`My Heading` → `my-heading`); collisions — including
-     * headings whose natural text already contains a numeric suffix
-     * (`A`, `A-1`, `A`) — are resolved by incrementing the `-n` suffix until
-     * the candidate slug is unused, so every registered slug is unique.
+     * is GitHub-style (`My Heading` → `my-heading`); repeated headings get
+     * `-1`, `-2` suffixes. The occupied set includes every already-assigned
+     * slug — including ones that came from natural heading names with
+     * numeric suffixes (`A-1` → `a-1`) — so the candidate is incremented
+     * until it is unused and no destination is ever overwritten.
      * Returns the slug that was registered.
      */
     public registerHeadingAnchor(
