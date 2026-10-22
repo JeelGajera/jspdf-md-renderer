@@ -97,9 +97,10 @@ const parseHtmlTag = (raw: string): HtmlTagInfo | null => {
  * without this folding the tags were discarded and their text rendered with
  * no styling at all (`<strong>bold</strong>` came out plain).
  *
- * Complexity: a single linear pass over the token list (open/close matching
- * with a top-of-stack check), so adversarial tag soup cannot turn pairing
- * quadratic.
+ * Single linear pass with top-of-stack matching, so adversarial tag soup
+ * cannot turn pairing quadratic. The pairing is computed once per token
+ * list and never recomputed for a nested range (see convertTokens), which
+ * is what keeps the full conversion linear.
  *
  * Returns open-token index → { close index, element type }.
  */
@@ -133,15 +134,15 @@ const pairInlineStyleTags = (
 /**
  * Convert the markdown tokens to ParsedElements.
  *
- * Complexity: the full conversion is linear in the token count. Pairing is
- * one linear pass (see {@link pairInlineStyleTags}); folding is iterative —
- * each paired `<tag>` pushes its new element's `items` list onto an output
- * stack and the paired `</tag>` pops it, so nested ranges are never
- * rescanned or re-sliced. Token handlers still recurse, but only over their
- * own disjoint child-token lists, which keeps the recursion linear overall
- * too. An earlier recursive folding re-ran pairing over a sliced copy of
- * every nested range, which was quadratic (4,000 nested `<b>` tags took
- * seconds to convert).
+ * Complexity: pairing the inline styling tags costs one linear pass over
+ * this token list (see pairInlineStyleTags), and the main loop below visits
+ * each token exactly once — nested styled ranges are folded iteratively via
+ * the open-range stack, never by slicing the list and re-pairing the inner
+ * copy (that recursive rescan made deeply nested tags quadratic: 4,000
+ * nested `<b>` tags took seconds instead of milliseconds). Handlers still
+ * recurse into child token arrays (a paragraph's inline tokens, a table
+ * cell's tokens, …), but each token belongs to exactly one such list, so
+ * the full conversion stays linear in the total token count.
  *
  * @param tokens - The list of markdown tokens.
  * @returns Parsed elements in a custom structure.
@@ -152,31 +153,44 @@ const convertTokens = (
 ): ParsedElement[] => {
     const parsedElements: ParsedElement[] = [];
     const stylePairs = pairInlineStyleTags(tokens);
-    const closeIndices = new Set<number>();
-    for (const { closeIndex } of stylePairs.values()) {
-        closeIndices.add(closeIndex);
-    }
-    const outputStack: ParsedElement[][] = [parsedElements];
+    // Open styled ranges, innermost last. Each frame owns the items array
+    // that the tokens inside its range are appended to.
+    const openRanges: Array<{ closeIndex: number; items: ParsedElement[] }> =
+        [];
+    let target = parsedElements;
     for (let i = 0; i < tokens.length; i++) {
-        const token = tokens[i];
-        // A paired `</tag>` produces no element of its own; it only closes
-        // the range opened by its `<tag>`.
-        if (closeIndices.has(i)) {
-            outputStack.pop();
-            continue;
+        // A range whose closing tag sits at this index ends here: pop back
+        // to the enclosing items array and skip the closing tag token.
+        let closed = false;
+        while (
+            openRanges.length > 0 &&
+            openRanges[openRanges.length - 1].closeIndex === i
+        ) {
+            openRanges.pop();
+            target =
+                openRanges.length > 0
+                    ? openRanges[openRanges.length - 1].items
+                    : parsedElements;
+            closed = true;
         }
+        if (closed) continue;
+        const token = tokens[i];
         try {
-            // A paired `<tag>…</tag>` run folds into a single styled element
-            // so inline HTML formatting survives tokenization.
+            // A paired `<tag>…</tag>` run opens a styled element; the tokens
+            // that follow fill its items until the range's closing tag —
+            // no slicing and no re-pairing of the nested range.
             const pair = stylePairs.get(i);
             if (pair) {
-                const items: ParsedElement[] = [];
-                outputStack[outputStack.length - 1].push({
+                const element: ParsedElement = {
                     type: pair.elementType,
                     content: '',
-                    items,
-                });
-                outputStack.push(items);
+                    items: [],
+                };
+                target.push(element);
+                // `items` was just created above, so it is always defined.
+                const items = element.items as ParsedElement[];
+                openRanges.push({ closeIndex: pair.closeIndex, items });
+                target = items;
                 continue;
             }
             const handler = tokenHandlers[token.type as MarkedToken['type']] as
@@ -184,7 +198,7 @@ const convertTokens = (
                 | undefined;
             if (handler) {
                 const element = handler(token, warnings);
-                outputStack[outputStack.length - 1].push(element);
+                target.push(element);
                 if (element.type === MdTokenType.Image) {
                     // `{width=… align=…}` arrives as the start of the text
                     // token after the image. A token left empty by removing
@@ -205,7 +219,7 @@ const convertTokens = (
                     }
                 }
             } else {
-                outputStack[outputStack.length - 1].push({
+                target.push({
                     type: MdTokenType.Raw,
                     content: token.raw,
                 });
