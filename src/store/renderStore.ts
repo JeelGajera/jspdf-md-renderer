@@ -21,10 +21,11 @@ export class RenderStore {
     /**
      * Heading anchors drawn so far, keyed by their GitHub-style slug.
      * Lets `[text](#slug)` links jump to the heading's page and position.
+     * Every key in this map is occupied: collision checks consult it
+     * directly, so a generated suffix can never clobber a slug a heading
+     * produced naturally (e.g. `# A-1` → `a-1`).
      */
     private headingAnchors_: Map<string, HeadingAnchor> = new Map();
-    /** How many times each slug base has been used, for `-1`, `-2` suffixes. */
-    private headingAnchorCounts_: Map<string, number> = new Map();
     /**
      * `#anchor` links collected during rendering. Resolved once rendering is
      * complete, because a link can point at a heading drawn after it.
@@ -130,8 +131,11 @@ export class RenderStore {
 
     /**
      * Records a heading's draw position for `[text](#slug)` links. The slug
-     * is GitHub-style (`My Heading` → `my-heading`); repeated headings get
-     * `-1`, `-2` suffixes. Returns the slug that was registered.
+     * is GitHub-style (`My Heading` → `my-heading`); collisions — including
+     * headings whose natural text already contains a numeric suffix
+     * (`A`, `A-1`, `A`) — are resolved by incrementing the `-n` suffix until
+     * the candidate slug is unused, so every registered slug is unique.
+     * Returns the slug that was registered.
      */
     public registerHeadingAnchor(
         plainText: string,
@@ -139,9 +143,12 @@ export class RenderStore {
         top: number,
     ): string {
         const base = slugifyHeading(plainText);
-        const seen = this.headingAnchorCounts_.get(base) ?? 0;
-        this.headingAnchorCounts_.set(base, seen + 1);
-        const slug = seen === 0 ? base : `${base}-${seen}`;
+        let slug = base;
+        let suffix = 0;
+        while (this.headingAnchors_.has(slug)) {
+            suffix += 1;
+            slug = `${base}-${suffix}`;
+        }
         this.headingAnchors_.set(slug, { slug, page, top });
         return slug;
     }

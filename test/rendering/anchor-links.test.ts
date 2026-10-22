@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { jsPDF } from 'jspdf';
 import { MdTextRender } from '../../src/index';
+import { RenderStore } from '../../src/store/renderStore';
+import { createRenderOptions } from '../helpers/renderOptions';
 import { slugifyHeading, headingPlainText } from '../../src/utils/headingAnchors';
 import { goldenOptions } from '../golden/recorder';
 import type { RenderOption } from '../../src/types/renderOption';
@@ -123,6 +125,64 @@ describe('anchor links to headings', () => {
         );
         expect(tops.length).toBe(2);
         expect(tops[0]).toBeLessThan(tops[1]!);
+    });
+
+    describe('slug collision handling', () => {
+        const register = (store: RenderStore, text: string) =>
+            store.registerHeadingAnchor(text, 1, store.Y);
+
+        it('assigns a, a-1, a-2 to headings A, A-1, A (reviewer repro)', () => {
+            const store = new RenderStore(createRenderOptions());
+            expect(register(store, 'A')).toBe('a');
+            // The natural numeric suffix is claimed by the A-1 heading, so
+            // the second A must skip over it instead of overwriting it.
+            expect(register(store, 'A-1')).toBe('a-1');
+            expect(register(store, 'A')).toBe('a-2');
+        });
+
+        it('increments past an occupied natural numeric suffix', () => {
+            const store = new RenderStore(createRenderOptions());
+            expect(register(store, 'A')).toBe('a');
+            expect(register(store, 'A')).toBe('a-1');
+            // `a-1` is taken, so the natural `a-1` increments its own base.
+            expect(register(store, 'A-1')).toBe('a-1-1');
+        });
+
+        it('never assigns the same slug twice, even with nested suffixes', () => {
+            const store = new RenderStore(createRenderOptions());
+            const texts = ['A', 'A-1', 'A', 'A-2', 'A', 'A-1'];
+            const slugs = texts.map((t) => register(store, t));
+            expect(slugs).toEqual([
+                'a',
+                'a-1',
+                'a-2',
+                'a-2-1',
+                'a-3',
+                'a-1-1',
+            ]);
+            expect(new Set(slugs).size).toBe(slugs.length);
+        });
+
+        it('routes each #a-n link to the right heading position', async () => {
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            await MdTextRender(
+                doc,
+                '# A\n\n[go-a](#a)\n\n# A-1\n\n[go-a-1](#a-1)\n\n# A\n\n[go-a-2](#a-2)',
+                silent(),
+            );
+
+            const links = linkAnnotations(doc, 1);
+            expect(links.length).toBeGreaterThan(0);
+            // Before the fix, a-1 was assigned twice: go-a-1 and go-a-2
+            // both jumped to the third heading. Now the three destinations
+            // are the three distinct headings, in order.
+            const tops = [...new Set(links.map((l) => l.options.top))].sort(
+                (a, b) => (a ?? 0) - (b ?? 0),
+            );
+            expect(tops.length).toBe(3);
+            expect(tops[0]).toBeLessThan(tops[1]!);
+            expect(tops[1]).toBeLessThan(tops[2]!);
+        });
     });
 
     it('keeps the URL behaviour for anchors matching no heading', async () => {
