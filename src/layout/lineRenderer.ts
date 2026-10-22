@@ -48,6 +48,11 @@ export const renderLine = (
 
     const textLineHeight =
         getCharHight(doc) * store.options.page.defaultLineHeightFactor;
+
+    // Record each word's draw position so same-link underline runs can be
+    // drawn as one continuous rule afterwards.
+    const wordXs: number[] = [];
+    const wordDrawYs: number[] = [];
     let currentX = startX;
 
     for (let i = 0; i < words.length; i++) {
@@ -58,12 +63,16 @@ export const renderLine = (
                 : textLineHeight;
         const drawY = word.isImage ? y : y + (line.lineHeight - elementHeight);
 
+        wordXs.push(currentX);
+        wordDrawYs.push(drawY);
         renderSingleWord(doc, word, currentX, drawY, store);
         currentX += word.width;
         if (i < words.length - 1 && word.hasTrailingSpace) {
             currentX += wordSpacing;
         }
     }
+
+    renderLinkUnderlines(doc, words, wordXs, wordDrawYs, store);
 };
 
 const renderSingleWord = (
@@ -90,6 +99,9 @@ const renderSingleWord = (
             if (word.isStrikethrough && word.text) {
                 renderStrikethrough(doc, word, x, y);
             }
+            // Link underlines are drawn per same-link run in
+            // renderLinkUnderlines, not per word, so a multi-word link gets
+            // one continuous rule instead of per-word rules with gaps.
         }
 
         if (word.isLink && word.href) {
@@ -139,6 +151,87 @@ const renderStrikethrough = (
     doc.line(x, lineY, x + word.width, lineY);
     doc.setDrawColor(savedDraw);
     doc.setLineWidth(savedWidth);
+};
+
+/**
+ * Draws one continuous underline rule per same-link run on the line.
+ *
+ * A run is a maximal sequence of adjacent underlined link words that share
+ * the same href. The rule spans the whole run — including the spaces between
+ * its words (which may be stretched under justification) — so a multi-word
+ * link reads as a single underlined link. Distinct links always produce
+ * separate, non-overlapping rules, preserving the boundary between them.
+ */
+const renderLinkUnderlines = (
+    doc: jsPDF,
+    words: StyledWordInfo[],
+    wordXs: number[],
+    wordDrawYs: number[],
+    store: RenderStore,
+): void => {
+    let runStart = -1;
+
+    const flushRun = (runEnd: number): void => {
+        if (runStart >= 0) {
+            drawUnderlineRun(
+                doc,
+                words,
+                wordXs,
+                wordDrawYs,
+                runStart,
+                runEnd,
+                store,
+            );
+        }
+    };
+
+    for (let i = 0; i <= words.length; i++) {
+        const word = i < words.length ? words[i] : undefined;
+        const underlined =
+            !!word && !!word.linkUnderline && !!word.text && !word.isImage;
+        const continuesRun =
+            underlined && runStart >= 0 && word?.href === words[runStart].href;
+        if (!continuesRun) {
+            flushRun(i);
+            runStart = underlined ? i : -1;
+        }
+    }
+};
+
+const drawUnderlineRun = (
+    doc: jsPDF,
+    words: StyledWordInfo[],
+    wordXs: number[],
+    wordDrawYs: number[],
+    runStart: number,
+    runEnd: number,
+    store: RenderStore,
+): void => {
+    const first = words[runStart];
+    const last = words[runEnd - 1];
+    withSavedDocState(doc, () => {
+        applyStyleToDoc(doc, first.style, store);
+        if (first.linkColor) {
+            doc.setTextColor(...(first.linkColor as [number, number, number]));
+        }
+        const h = doc.getTextDimensions('H').h;
+        // Text is drawn with baseline 'top', so the underline sits just below
+        // the text block with a small gap for descenders.
+        const lineY = wordDrawYs[runStart] + h * 1.08;
+        const savedDraw = doc.getDrawColor();
+        const savedWidth = doc.getLineWidth();
+        // Match the rule colour to the text so it reads as one decorated run.
+        doc.setDrawColor(doc.getTextColor());
+        doc.setLineWidth(Math.max(0.1, doc.getFontSize() / 120));
+        doc.line(
+            wordXs[runStart],
+            lineY,
+            wordXs[runEnd - 1] + last.width,
+            lineY,
+        );
+        doc.setDrawColor(savedDraw);
+        doc.setLineWidth(savedWidth);
+    });
 };
 
 const renderInlineImage = (
