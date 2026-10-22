@@ -48,13 +48,12 @@ export const renderLine = (
 
     const textLineHeight =
         getCharHight(doc) * store.options.page.defaultLineHeightFactor;
-    let currentX = startX;
 
-    // Link underline segments on this line. Consecutive segments that belong
-    // to the same link are merged into one continuous rule, so a multi-word
-    // link is underlined across its spaces while distinct links keep separate
-    // underlines.
-    const underlineRuns: UnderlineSegment[] = [];
+    // Record each word's draw position so same-link underline runs can be
+    // drawn as one continuous rule afterwards.
+    const wordXs: number[] = [];
+    const wordDrawYs: number[] = [];
+    let currentX = startX;
 
     for (let i = 0; i < words.length; i++) {
         const word = words[i];
@@ -64,44 +63,17 @@ export const renderLine = (
                 : textLineHeight;
         const drawY = word.isImage ? y : y + (line.lineHeight - elementHeight);
 
-        const segment = renderSingleWord(doc, word, currentX, drawY, store);
-        if (segment) {
-            const last = underlineRuns[underlineRuns.length - 1];
-            if (
-                last &&
-                last.href === segment.href &&
-                last.color === segment.color &&
-                Math.abs(last.lineY - segment.lineY) < 0.001 &&
-                Math.abs(last.lineWidth - segment.lineWidth) < 0.001
-            ) {
-                // Same link continues: extend the run so the rule stays
-                // continuous across the space between the words.
-                last.endX = segment.endX;
-            } else {
-                underlineRuns.push(segment);
-            }
-        }
+        wordXs.push(currentX);
+        wordDrawYs.push(drawY);
+        renderSingleWord(doc, word, currentX, drawY, store);
         currentX += word.width;
         if (i < words.length - 1 && word.hasTrailingSpace) {
             currentX += wordSpacing;
         }
     }
 
-    renderUnderlineRuns(doc, underlineRuns);
+    renderLinkUnderlines(doc, words, wordXs, wordDrawYs, store);
 };
-
-/**
- * One word's worth of link underline. Segments are merged in renderLine so
- * each same-link run on a line gets a single continuous rule.
- */
-interface UnderlineSegment {
-    href: string;
-    color: string;
-    lineY: number;
-    lineWidth: number;
-    startX: number;
-    endX: number;
-}
 
 const renderSingleWord = (
     doc: jsPDF,
@@ -109,8 +81,7 @@ const renderSingleWord = (
     x: number,
     y: number,
     store: RenderStore,
-): UnderlineSegment | undefined => {
-    let segment: UnderlineSegment | undefined;
+): void => {
     withSavedDocState(doc, () => {
         applyStyleToDoc(doc, word.style, store);
 
@@ -128,9 +99,9 @@ const renderSingleWord = (
             if (word.isStrikethrough && word.text) {
                 renderStrikethrough(doc, word, x, y);
             }
-            if (word.isLink && word.linkUnderline && word.text) {
-                segment = measureUnderlineSegment(doc, word, x, y);
-            }
+            // Link underlines are drawn per same-link run in
+            // renderLinkUnderlines, not per word, so a multi-word link gets
+            // one continuous rule instead of per-word rules with gaps.
         }
 
         if (word.isLink && word.href) {
@@ -141,7 +112,6 @@ const renderSingleWord = (
             doc.link(x, y, word.width, h, { url: word.href });
         }
     });
-    return segment;
 };
 
 const renderCodespanBackground = (
@@ -184,49 +154,84 @@ const renderStrikethrough = (
 };
 
 /**
- * Measures a link word's underline segment with the word's own font applied.
- * jsPDF has no text-decoration, so the rule is drawn manually below the text
- * block with a small gap for descenders.
+ * Draws one continuous underline rule per same-link run on the line.
+ *
+ * A run is a maximal sequence of adjacent underlined link words that share
+ * the same href. The rule spans the whole run — including the spaces between
+ * its words (which may be stretched under justification) — so a multi-word
+ * link reads as a single underlined link. Distinct links always produce
+ * separate, non-overlapping rules, preserving the boundary between them.
  */
-const measureUnderlineSegment = (
+const renderLinkUnderlines = (
     doc: jsPDF,
-    word: StyledWordInfo,
-    x: number,
-    y: number,
-): UnderlineSegment => {
-    const h = doc.getTextDimensions('H').h;
-    return {
-        href: word.href ?? '',
-        // Match the rule colour to the text so it reads as one decorated run.
-        color: doc.getTextColor(),
-        lineY: y + h * 1.08,
-        lineWidth: Math.max(0.1, doc.getFontSize() / 120),
-        startX: x,
-        endX: x + word.width,
+    words: StyledWordInfo[],
+    wordXs: number[],
+    wordDrawYs: number[],
+    store: RenderStore,
+): void => {
+    let runStart = -1;
+
+    const flushRun = (runEnd: number): void => {
+        if (runStart >= 0) {
+            drawUnderlineRun(
+                doc,
+                words,
+                wordXs,
+                wordDrawYs,
+                runStart,
+                runEnd,
+                store,
+            );
+        }
     };
+
+    for (let i = 0; i <= words.length; i++) {
+        const word = i < words.length ? words[i] : undefined;
+        const underlined =
+            !!word && !!word.linkUnderline && !!word.text && !word.isImage;
+        const continuesRun =
+            underlined && runStart >= 0 && word?.href === words[runStart].href;
+        if (!continuesRun) {
+            flushRun(i);
+            runStart = underlined ? i : -1;
+        }
+    }
 };
 
-/**
- * Draws one continuous rule per same-link run. Runs already stop at link
- * boundaries, so distinct links always get separate underlines.
- */
-const renderUnderlineRuns = (
+const drawUnderlineRun = (
     doc: jsPDF,
-    runs: UnderlineSegment[],
+    words: StyledWordInfo[],
+    wordXs: number[],
+    wordDrawYs: number[],
+    runStart: number,
+    runEnd: number,
+    store: RenderStore,
 ): void => {
-    if (runs.length === 0) return;
-    const savedDraw = doc.getDrawColor();
-    const savedWidth = doc.getLineWidth();
-    try {
-        for (const run of runs) {
-            doc.setDrawColor(run.color);
-            doc.setLineWidth(run.lineWidth);
-            doc.line(run.startX, run.lineY, run.endX, run.lineY);
+    const first = words[runStart];
+    const last = words[runEnd - 1];
+    withSavedDocState(doc, () => {
+        applyStyleToDoc(doc, first.style, store);
+        if (first.linkColor) {
+            doc.setTextColor(...(first.linkColor as [number, number, number]));
         }
-    } finally {
+        const h = doc.getTextDimensions('H').h;
+        // Text is drawn with baseline 'top', so the underline sits just below
+        // the text block with a small gap for descenders.
+        const lineY = wordDrawYs[runStart] + h * 1.08;
+        const savedDraw = doc.getDrawColor();
+        const savedWidth = doc.getLineWidth();
+        // Match the rule colour to the text so it reads as one decorated run.
+        doc.setDrawColor(doc.getTextColor());
+        doc.setLineWidth(Math.max(0.1, doc.getFontSize() / 120));
+        doc.line(
+            wordXs[runStart],
+            lineY,
+            wordXs[runEnd - 1] + last.width,
+            lineY,
+        );
         doc.setDrawColor(savedDraw);
         doc.setLineWidth(savedWidth);
-    }
+    });
 };
 
 const renderInlineImage = (

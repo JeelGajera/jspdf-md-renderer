@@ -259,13 +259,6 @@ const options = {
     bottomSpacing: 3,
     color: '#111827',
   },
-  link: {
-    // linkColor: [0, 0, 255],
-    // Underline link text (default false). When true, each link gets one
-    // continuous underline per line — useful for greyscale printing where
-    // color alone does not read as a link.
-    underline: false,
-  },
   blockquote: {
     barColor: '#4A90D9',
     barWidth: 2,
@@ -308,12 +301,17 @@ const options = {
     showPageNumbers: true,
     align: 'right',
   },
+  link: {
+    linkColor: [0, 0, 255], // RGB tuple for link text color
+    underline: false, // underline link text (useful for greyscale printing)
+  },
 }
 ```
 
 Behavior notes:
 - Heading size fallback: `heading.hN` -> `page.defaultTitleFontSize`
 - `heading.bold` defaults to `true`
+- `link.underline` draws one continuous rule per same-link run on each line (multi-word links included); distinct links keep separate rules
 - List spacing precedence: `spacing.betweenListItems` > `list.itemSpacing`
 - Table width follows `page.maxContentWidth` for consistent block layout
 
