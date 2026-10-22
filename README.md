@@ -301,10 +301,9 @@ const options = {
     showPageNumbers: true,
     align: 'right',
   },
-  // false (default): header/footer page numbers are document-absolute.
-  // true: number them relative to each render's own pages (handy when
-  // appending sections to one document, see issue #116).
-  relativePageNumbers: false,
+  // 'document' (default): header/footer page numbers count the whole document.
+  // 'render-relative': each render numbers its own pages 1..N.
+  pageNumbers: 'document',
 }
 ```
 
@@ -313,10 +312,6 @@ Behavior notes:
 - `heading.bold` defaults to `true`
 - List spacing precedence: `spacing.betweenListItems` > `list.itemSpacing`
 - Table width follows `page.maxContentWidth` for consistent block layout
-- Page numbering: header/footer text callbacks and `footer.showPageNumbers`
-  receive absolute document page numbers by default; set
-  `relativePageNumbers: true` to number them relative to each render's own
-  pages instead (useful when appending sections to one document)
 
 ## Layout Compatibility Options
 

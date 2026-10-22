@@ -4,156 +4,189 @@ import { MdTextRender } from '../../src/renderer/MdTextRender';
 import { RenderOption } from '../../src/types/renderOption';
 import { createRenderOptions } from '../helpers/renderOptions';
 
-const LONG_TEXT = Array(60)
-    .fill('Lorem ipsum dolor sit amet consectetur adipiscing elit.')
-    .join('\n\n');
+const LOREM = 'Lorem ipsum dolor sit amet consectetur adipiscing elit.';
+const multiPage = (paragraphs: number): string =>
+    Array(paragraphs).fill(LOREM).join('\n\n');
 
-/** Renders a one-page section, then a multi-page section, on one document. */
-const renderAppended = async (
-    overrides: Partial<RenderOption>,
-): Promise<{ doc: jsPDF; result: { pageCount: number } }> => {
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    const options = createRenderOptions(overrides);
-    await MdTextRender(doc, '# First\n\nSome text.', options);
-    // Start the appended section on a fresh page, like a caller appending
-    // a new section to one document would.
-    doc.addPage();
-    const result = await MdTextRender(doc, LONG_TEXT, options);
-    expect(result.pageCount).toBeGreaterThan(1);
-    return { doc, result };
-};
-
-/** Collects every drawn "(...)" literal matching the pattern from the PDF. */
-const drawnTexts = (doc: jsPDF, pattern: RegExp): string[] => {
+/** Extracts every "Page X of Y" footer string from a jsPDF document. */
+const footerTexts = (doc: jsPDF): string[] => {
     const out = doc.output();
-    return [...out.matchAll(pattern)].map((m) => m[1]);
+    return [...out.matchAll(/\((Page \d+ of \d+)\)/g)].map((m) => m[1]);
 };
 
-describe('page numbering of header/footer decorations', () => {
-    it('footer showPageNumbers uses document numbering by default (backwards compatible)', async () => {
-        const { doc, result } = await renderAppended({
-            footer: { showPageNumbers: true },
-        });
+const currentPageOf = (doc: jsPDF): number =>
+    (
+        doc as unknown as {
+            internal: { getCurrentPageInfo: () => { pageNumber: number } };
+        }
+    ).internal?.getCurrentPageInfo?.()?.pageNumber ?? 1;
 
-        const total = 1 + result.pageCount;
-        const texts = drawnTexts(doc, /\((Page \d+ of \d+)\)/g);
-        expect(texts).toHaveLength(total);
-        // The appended section continues the document's numbering.
-        expect(texts[0]).toBe('Page 1 of 1');
-        texts.slice(1).forEach((t, i) => expect(t).toBe(`Page ${i + 2} of ${total}`));
+const newDoc = (): jsPDF => new jsPDF({ unit: 'mm', format: 'a4' });
+
+/**
+ * Renders a filler part that fills more than one page, then appends a long
+ * second render, collecting the header/footer callback arguments of the
+ * second render only. The second render starts mid-document, which is the
+ * case that distinguishes document numbering from render-relative numbering.
+ */
+const renderAppended = async (overrides: Partial<RenderOption>) => {
+    const doc = newDoc();
+    const seenHeader: Array<[number, number]> = [];
+    const seenFooter: Array<[number, number]> = [];
+    const options = createRenderOptions({
+        header: {
+            text: (pageNumber, totalPages) => {
+                seenHeader.push([pageNumber, totalPages]);
+                return `H${pageNumber}/${totalPages}`;
+            },
+        },
+        footer: {
+            text: (pageNumber, totalPages) => {
+                seenFooter.push([pageNumber, totalPages]);
+                return `F${pageNumber}/${totalPages}`;
+            },
+        },
+        ...overrides,
     });
 
-    it('footer showPageNumbers is render-relative when relativePageNumbers is true', async () => {
-        const { doc, result } = await renderAppended({
-            relativePageNumbers: true,
+    await MdTextRender(doc, multiPage(40), options);
+    const startPage = currentPageOf(doc);
+    // Premise guards: the appended render really does start mid-document.
+    expect(startPage).toBe(doc.getNumberOfPages());
+    expect(startPage).toBeGreaterThan(1);
+    seenHeader.length = 0;
+    seenFooter.length = 0;
+
+    const result = await MdTextRender(doc, multiPage(60), options);
+    const total = doc.getNumberOfPages();
+    expect(total).toBeGreaterThan(startPage);
+
+    return { seenHeader, seenFooter, startPage, total, produced: result.pageCount };
+};
+
+describe('footer page numbering (issue #116)', () => {
+    it('numbers pages absolutely for a single render (unchanged behaviour)', async () => {
+        const doc = newDoc();
+        const options = createRenderOptions({
             footer: { showPageNumbers: true },
         });
+        const result = await MdTextRender(doc, multiPage(60), options);
 
-        const texts = drawnTexts(doc, /\((Page \d+ of \d+)\)/g);
-        // First render's own single page, then the appended render's own pages.
-        expect(texts).toHaveLength(1 + result.pageCount);
-        expect(texts[0]).toBe('Page 1 of 1');
-        texts.slice(1).forEach((t, i) =>
+        expect(result.pageCount).toBeGreaterThan(1);
+        const texts = footerTexts(doc);
+        expect(texts).toHaveLength(result.pageCount);
+        texts.forEach((t, i) =>
             expect(t).toBe(`Page ${i + 1} of ${result.pageCount}`),
         );
     });
 
-    it('footer text callback receives document numbers by default', async () => {
+    it('keeps document numbering for appended renders by default', async () => {
+        const doc = newDoc();
+        const options = createRenderOptions({
+            footer: { showPageNumbers: true },
+        });
+
+        await MdTextRender(doc, '# First\n\nSome text.', options);
+
+        const result = await MdTextRender(doc, multiPage(60), options);
+        expect(result.pageCount).toBeGreaterThan(1);
+        const total = doc.getNumberOfPages();
+
+        const texts = footerTexts(doc);
+        expect(texts).toHaveLength(1 + total);
+        // The first render's footer is untouched...
+        expect(texts[0]).toBe('Page 1 of 1');
+        // ...and the appended render continues the document's numbering.
+        texts.slice(1).forEach((t, i) => expect(t).toBe(`Page ${i + 1} of ${total}`));
+    });
+
+    it('passes document page numbers to a custom footer text function by default', async () => {
+        const doc = newDoc();
         const seen: Array<[number, number]> = [];
-        const { result } = await renderAppended({
+        const options = createRenderOptions({
             footer: {
                 text: (pageNumber, totalPages) => {
                     seen.push([pageNumber, totalPages]);
-                    return `f${pageNumber}/${totalPages}`;
+                    return `p${pageNumber}/${totalPages}`;
                 },
             },
         });
 
-        const total = 1 + result.pageCount;
-        // First render decorated page 1; the appended section decorated
-        // 2..N with absolute document numbers (historical behaviour).
+        await MdTextRender(doc, '# First\n\nSome text.', options);
+        seen.length = 0;
+
+        const result = await MdTextRender(doc, multiPage(60), options);
+        expect(result.pageCount).toBeGreaterThan(1);
+        const total = doc.getNumberOfPages();
+
         expect(seen).toHaveLength(total);
-        expect(seen[0]).toEqual([1, 1]);
-        seen.slice(1).forEach(([pageNumber, totalPages], i) => {
-            expect(pageNumber).toBe(i + 2);
+        seen.forEach(([pageNumber, totalPages], i) => {
+            expect(pageNumber).toBe(i + 1);
+            expect(totalPages).toBe(total);
+        });
+    });
+});
+
+describe('header/footer page-numbering modes', () => {
+    it('uses document numbering for header and footer callbacks by default', async () => {
+        const { seenHeader, seenFooter, startPage, total } =
+            await renderAppended({});
+
+        expect(seenHeader).toHaveLength(total - startPage + 1);
+        expect(seenFooter).toHaveLength(total - startPage + 1);
+
+        // Existing callback arguments are unchanged: absolute document
+        // page numbers and the document's total page count.
+        seenHeader.forEach(([pageNumber, totalPages], i) => {
+            expect(pageNumber).toBe(startPage + i);
+            expect(totalPages).toBe(total);
+        });
+        seenFooter.forEach(([pageNumber, totalPages], i) => {
+            expect(pageNumber).toBe(startPage + i);
             expect(totalPages).toBe(total);
         });
     });
 
-    it('footer text callback receives render-relative numbers when relativePageNumbers is true', async () => {
-        const seen: Array<[number, number]> = [];
-        const { result } = await renderAppended({
-            relativePageNumbers: true,
-            footer: {
-                text: (pageNumber, totalPages) => {
-                    seen.push([pageNumber, totalPages]);
-                    return `f${pageNumber}/${totalPages}`;
-                },
-            },
-        });
+    it("numbers the appended render's own pages with pageNumbers: 'render-relative'", async () => {
+        const { seenHeader, seenFooter, startPage, total, produced } =
+            await renderAppended({ pageNumbers: 'render-relative' });
+        const own = total - startPage + 1;
+        expect(produced).toBe(own);
 
-        expect(seen).toHaveLength(1 + result.pageCount);
-        expect(seen[0]).toEqual([1, 1]);
-        seen.slice(1).forEach(([pageNumber, totalPages], i) => {
+        // Both the header and the footer callback see the render's own
+        // pages 1..N and the render's own total.
+        expect(seenHeader).toHaveLength(own);
+        expect(seenFooter).toHaveLength(own);
+        seenHeader.forEach(([pageNumber, totalPages], i) => {
             expect(pageNumber).toBe(i + 1);
-            expect(totalPages).toBe(result.pageCount);
+            expect(totalPages).toBe(own);
         });
-    });
-
-    it('header text callback receives document numbers by default', async () => {
-        const seen: Array<[number, number]> = [];
-        const { result } = await renderAppended({
-            header: {
-                text: (pageNumber, totalPages) => {
-                    seen.push([pageNumber, totalPages]);
-                    return `hdr-${pageNumber}/${totalPages}`;
-                },
-            },
-        });
-
-        const total = 1 + result.pageCount;
-        expect(seen).toHaveLength(total);
-        expect(seen[0]).toEqual([1, 1]);
-        seen.slice(1).forEach(([pageNumber, totalPages], i) => {
-            expect(pageNumber).toBe(i + 2);
-            expect(totalPages).toBe(total);
-        });
-    });
-
-    it('header text callback receives render-relative numbers when relativePageNumbers is true', async () => {
-        const seen: Array<[number, number]> = [];
-        const { result } = await renderAppended({
-            relativePageNumbers: true,
-            header: {
-                text: (pageNumber, totalPages) => {
-                    seen.push([pageNumber, totalPages]);
-                    return `hdr-${pageNumber}/${totalPages}`;
-                },
-            },
-        });
-
-        expect(seen).toHaveLength(1 + result.pageCount);
-        expect(seen[0]).toEqual([1, 1]);
-        seen.slice(1).forEach(([pageNumber, totalPages], i) => {
+        seenFooter.forEach(([pageNumber, totalPages], i) => {
             expect(pageNumber).toBe(i + 1);
-            expect(totalPages).toBe(result.pageCount);
+            expect(totalPages).toBe(own);
         });
     });
 
-    it('single render behaves the same in both modes (start = 1)', async () => {
-        for (const relativePageNumbers of [false, true] as const) {
-            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-            const options = createRenderOptions({
-                relativePageNumbers,
-                footer: { showPageNumbers: true },
-            });
-            const result = await MdTextRender(doc, LONG_TEXT, options);
-            expect(result.pageCount).toBeGreaterThan(1);
-            const texts = drawnTexts(doc, /\((Page \d+ of \d+)\)/g);
-            expect(texts).toHaveLength(result.pageCount);
-            texts.forEach((t, i) =>
-                expect(t).toBe(`Page ${i + 1} of ${result.pageCount}`),
-            );
-        }
+    it("applies pageNumbers: 'render-relative' to the showPageNumbers shortcut", async () => {
+        const doc = newDoc();
+        const options = createRenderOptions({
+            pageNumbers: 'render-relative',
+            footer: { showPageNumbers: true },
+        });
+
+        await MdTextRender(doc, multiPage(40), options);
+        const startPage = currentPageOf(doc);
+        expect(startPage).toBeGreaterThan(1);
+
+        const result = await MdTextRender(doc, multiPage(60), options);
+        const texts = footerTexts(doc);
+
+        // Part 1 started on page 1, so its own numbering is untouched; the
+        // appended render's footers number its own pages 1..N.
+        const appended = texts.slice(startPage);
+        expect(appended).toHaveLength(result.pageCount);
+        appended.forEach((t, i) =>
+            expect(t).toBe(`Page ${i + 1} of ${result.pageCount}`),
+        );
     });
 });

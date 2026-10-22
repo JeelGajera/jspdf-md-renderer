@@ -194,22 +194,7 @@ export type RenderOption = {
     };
     header?: {
         /** Text to render in header area of each page */
-        text?:
-            | string
-            | ((
-                  /**
-                   * 1-based page number. Document-absolute by default; when
-                   * `relativePageNumbers` is true, relative to this render's
-                   * own pages instead.
-                   */
-                  pageNumber: number,
-                  /**
-                   * Number of pages. Document total by default; when
-                   * `relativePageNumbers` is true, the number of pages this
-                   * render produced instead.
-                   */
-                  totalPages: number,
-              ) => string);
+        text?: string | ((pageNumber: number, totalPages: number) => string);
         /** Y position of header text from top in doc units. Default: 5 */
         y?: number;
         /** Font size for header text. Default: 9 */
@@ -221,22 +206,7 @@ export type RenderOption = {
     };
     footer?: {
         /** Text to render in footer area of each page */
-        text?:
-            | string
-            | ((
-                  /**
-                   * 1-based page number. Document-absolute by default; when
-                   * `relativePageNumbers` is true, relative to this render's
-                   * own pages instead.
-                   */
-                  pageNumber: number,
-                  /**
-                   * Number of pages. Document total by default; when
-                   * `relativePageNumbers` is true, the number of pages this
-                   * render produced instead.
-                   */
-                  totalPages: number,
-              ) => string);
+        text?: string | ((pageNumber: number, totalPages: number) => string);
         /** Y position from top of page in doc units. Default: pageHeight - 5 */
         y?: number;
         /** Font size for footer text. Default: 9 */
@@ -249,17 +219,18 @@ export type RenderOption = {
         showPageNumbers?: boolean;
     };
     /**
-     * Number header/footer pages relative to this render's own pages.
+     * Which pages the header/footer page numbers refer to.
      *
-     * - `false` (default): header/footer text callbacks and the footer
-     *   `showPageNumbers` shortcut receive absolute document page numbers,
-     *   so renders appended to one document keep a single continuous
-     *   numbering. This is the historical behaviour.
-     * - `true`: they receive numbers relative to this render instead — an
-     *   appended render numbers its own pages 1..N rather than continuing
-     *   the document's count (issue #116).
+     * - `'document'` (default): `pageNumber`/`totalPages` passed to the
+     *   header/footer callbacks (and rendered by `footer.showPageNumbers`)
+     *   are absolute within the whole document. This is the historical
+     *   behaviour and keeps existing documents rendering identically when
+     *   sections are appended to one globally numbered document.
+     * - `'render-relative'`: pages are numbered 1..N and the total is the
+     *   number of pages the current render produced, so a render appended
+     *   after existing content numbers its own pages from 1 (issue #116).
      */
-    relativePageNumbers?: boolean;
+    pageNumbers?: 'document' | 'render-relative';
     /**
      * How a single newline inside a paragraph is treated.
      *
@@ -325,8 +296,9 @@ type FontItem = {
  */
 export type ResolvedRenderOption = Omit<
     RenderOption,
-    'cursor' | 'page' | 'font' | 'endCursorYHandler'
+    'cursor' | 'page' | 'font' | 'endCursorYHandler' | 'pageNumbers'
 > & {
+    pageNumbers: 'document' | 'render-relative';
     cursor: Cursor;
     page: {
         format?: string | number[];

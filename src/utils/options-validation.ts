@@ -248,6 +248,13 @@ export const validateOptions = (
     // it is a space; opt in with `breaks: false`.
     const breaks = options.breaks ?? true;
 
+    // Historical behaviour: header/footer numbering is document-wide. Opt in
+    // to render-relative numbering with `pageNumbers: 'render-relative'`.
+    const pageNumbers: 'document' | 'render-relative' =
+        options.pageNumbers === 'render-relative'
+            ? 'render-relative'
+            : 'document';
+
     // Superseded by the object MdTextRender returns, but still honoured.
     const endCursorYHandler = options.endCursorYHandler ?? (() => {});
 
@@ -268,6 +275,7 @@ export const validateOptions = (
         codeBlock,
         spacing,
         breaks,
+        pageNumbers,
         image,
         security: normalizeSecurityOptions(options.security),
         endCursorYHandler,
