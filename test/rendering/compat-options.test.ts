@@ -102,11 +102,15 @@ describe('breaks (D15)', () => {
         const ys = new Set(drawn.map((o) => Number(o.y)));
         expect(ys.size).toBe(1);
 
-        // Words are separated rather than run together. Same-style words
-        // share one text call (issue #88), so the whole line is one op with
-        // real spaces between the words.
-        expect(drawn).toHaveLength(1);
-        expect(drawn[0].text).toBe('first line second line');
+        // Words are separated rather than run together. Helvetica falls back
+        // to per-word calls (issue #111); all words share one baseline in
+        // reading order.
+        expect(drawn.map((o) => o.text)).toEqual([
+            'first',
+            'line',
+            'second',
+            'line',
+        ]);
     });
 
     it('still honours an explicit hard break when breaks is false', async () => {

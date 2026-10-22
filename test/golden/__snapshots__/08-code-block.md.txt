@@ -7,4 +7,8 @@ p1 text        text="const value = 1;" x=14 y=16.969 baseline=top font=courier/n
 p1 text        text="function example(input) {" x=14 y=20.985 baseline=top font=courier/normal size=9.9 color=#000000
 p1 text        text="  return input * 2;" x=14 y=25.001 baseline=top font=courier/normal size=9.9 color=#000000
 p1 text        text="}" x=14 y=29.018 baseline=top font=courier/normal size=9.9 color=#000000
-p1 text        text="Text after the code block." x=10 y=47.936 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="Text" x=10 y=47.936 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="after" x=18.149 y=47.936 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="the" x=26.958 y=47.936 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="code" x=33.4 y=47.936 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="block." x=42.83 y=47.936 baseline=top font=helvetica/normal size=11 color=#000000

@@ -15,6 +15,13 @@ const MINIMAL = {
     silent: true,
 };
 
+// Courier's jsPDF widths match the viewer AFM widths exactly (and it has no
+// kerning pairs), so the issue #111 per-word guard lets courier runs merge.
+const COURIER_MINIMAL = {
+    ...MINIMAL,
+    font: { regular: { name: 'courier', style: 'normal' } },
+};
+
 const texts = (ops: ReturnType<typeof recordDoc>['ops']) =>
     ops.filter((o) => o.op === 'text');
 
@@ -31,9 +38,9 @@ const byLine = (ops: ReturnType<typeof recordDoc>['ops']) => {
 };
 
 describe('renderLine word-run merging (issue #88)', () => {
-    it('draws a same-style line with one text call', async () => {
+    it('draws a same-style courier line with one text call', async () => {
         const { doc, ops } = recordDoc();
-        const result = await MdTextRender(doc, 'hello world foo', MINIMAL);
+        const result = await MdTextRender(doc, 'hello world foo', COURIER_MINIMAL);
 
         expect(result.warnings).toEqual([]);
         const t = texts(ops);
@@ -41,6 +48,21 @@ describe('renderLine word-run merging (issue #88)', () => {
         expect(t[0].text).toBe('hello world foo');
         // Starts where the first word did: the left content edge.
         expect(t[0].x).toBeCloseTo(20, 3);
+    });
+
+    it('falls back to per-word calls when merging would move glyphs (issue #111)', async () => {
+        const { doc, ops } = recordDoc();
+        await MdTextRender(doc, 'hello world foo', MINIMAL);
+
+        const t = texts(ops);
+        // Helvetica's jsPDF widths differ from the AFM widths a viewer
+        // shapes with, so the per-word guard refuses to merge: every word
+        // keeps exactly the x the pre-PR loop gave it.
+        expect(t.map((o) => o.text)).toEqual(['hello', 'world', 'foo']);
+        const xs = t.map((o) => o.x as number);
+        expect(xs[0]).toBeCloseTo(20, 3);
+        expect(xs[1]).toBeGreaterThan(xs[0]);
+        expect(xs[2]).toBeGreaterThan(xs[1]);
     });
 
     it('breaks the run when the style changes', async () => {
@@ -86,7 +108,7 @@ describe('renderLine word-run merging (issue #88)', () => {
             doc,
             'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore.',
             {
-                ...MINIMAL,
+                ...COURIER_MINIMAL,
                 content: { textAlignment: 'justify' as const },
             },
         );
@@ -109,11 +131,13 @@ describe('renderLine word-run merging (issue #88)', () => {
         });
 
         const t = texts(ops);
-        expect(t.map((o) => o.text)).toEqual(['click here', 'now']);
+        // Helvetica falls back to per-word calls (issue #111); each link
+        // annotation still tiles its own word exactly.
+        expect(t.map((o) => o.text)).toEqual(['click', 'here', 'now']);
         const links = ops.filter((o) => o.op === 'link');
-        // One annotation per word, tiling the merged run exactly.
         expect(links).toHaveLength(2);
         expect(links[0].x).toBe(t[0].x);
+        expect(links[1].x).toBe(t[1].x);
         expect((links[1].x as number)).toBeGreaterThan(links[0].x as number);
         expect(links[1].y).toBe(t[0].y);
     });
@@ -143,11 +167,13 @@ describe('renderLine word-run merging (issue #88)', () => {
         await MdTextRender(doc, '~~old text~~ new', MINIMAL);
 
         const t = texts(ops);
-        expect(t.map((o) => o.text)).toEqual(['old text', 'new']);
+        // Helvetica falls back to per-word calls (issue #111).
+        expect(t.map((o) => o.text)).toEqual(['old', 'text', 'new']);
         const rules = ops.filter((o) => o.op === 'line');
         expect(rules).toHaveLength(2);
         // Each rule starts at its word's x and spans that word only.
         expect(rules[0].x1).toBe(t[0].x);
+        expect(rules[1].x1).toBe(t[1].x);
         expect(rules[1].x1 as number).toBeGreaterThan(rules[0].x1 as number);
         expect(rules[1].x2 as number).toBeGreaterThan(rules[1].x1 as number);
     });
@@ -168,7 +194,7 @@ describe('renderLine word-run merging (issue #88)', () => {
         for (const align of ['right', 'center'] as const) {
             const { doc, ops } = recordDoc();
             await MdTextRender(doc, 'one two three', {
-                ...MINIMAL,
+                ...COURIER_MINIMAL,
                 content: { textAlignment: align },
             });
             const t = texts(ops);
