@@ -59,7 +59,90 @@ const isMarkedTextToken = (token: Token | undefined): token is Tokens.Text =>
     typeof token.text === 'string';
 
 /**
+ * Inline HTML styling tags that map to markdown formatting.
+ */
+const INLINE_STYLE_TAGS: Record<string, string> = {
+    strong: MdTokenType.Strong,
+    b: MdTokenType.Strong,
+    em: MdTokenType.Em,
+    i: MdTokenType.Em,
+    s: MdTokenType.Del,
+    del: MdTokenType.Del,
+};
+
+interface HtmlTagInfo {
+    name: string;
+    closing: boolean;
+    selfClosing: boolean;
+}
+
+/**
+ * Reads `<tag …>`, `</tag>` or `<tag/>` from an html/tag token's raw text.
+ * Returns null for comments, doctypes and anything that is not a lone tag.
+ */
+const parseHtmlTag = (raw: string): HtmlTagInfo | null => {
+    const match = /^<(\/?)([A-Za-z][\w-]*)\b[^<>]*(\/?)>$/.exec(raw.trim());
+    if (!match) return null;
+    return {
+        name: match[2].toLowerCase(),
+        closing: match[1] === '/',
+        selfClosing: match[3] === '/',
+    };
+};
+
+/**
+ * Pairs `<tag>`…`</tag>` runs for the inline styling tags. Marked splits an
+ * inline `<tag>…</tag>` run into separate open/close tokens, so the
+ * single-token wrapper matcher in the HTML handler never fires for them —
+ * without this folding the tags were discarded and their text rendered with
+ * no styling at all (`<strong>bold</strong>` came out plain).
+ *
+ * Single linear pass with top-of-stack matching, so adversarial tag soup
+ * cannot turn pairing quadratic. The pairing is computed once per token
+ * list and never recomputed for a nested range (see convertTokens), which
+ * is what keeps the full conversion linear.
+ *
+ * Returns open-token index → { close index, element type }.
+ */
+const pairInlineStyleTags = (
+    tokens: Token[],
+): Map<number, { closeIndex: number; elementType: string }> => {
+    const pairs = new Map<
+        number,
+        { closeIndex: number; elementType: string }
+    >();
+    const openStack: Array<{ tag: string; index: number }> = [];
+    tokens.forEach((token, index) => {
+        if (token.type !== 'html' && token.type !== 'tag') return;
+        const info = parseHtmlTag(String(token.raw ?? token.text ?? ''));
+        if (!info || info.selfClosing) return;
+        const elementType = INLINE_STYLE_TAGS[info.name];
+        if (typeof elementType !== 'string') return;
+        if (info.closing) {
+            const open = openStack[openStack.length - 1];
+            if (open && open.tag === info.name) {
+                openStack.pop();
+                pairs.set(open.index, { closeIndex: index, elementType });
+            }
+            return;
+        }
+        openStack.push({ tag: info.name, index });
+    });
+    return pairs;
+};
+
+/**
  * Convert the markdown tokens to ParsedElements.
+ *
+ * Complexity: pairing the inline styling tags costs one linear pass over
+ * this token list (see pairInlineStyleTags), and the main loop below visits
+ * each token exactly once — nested styled ranges are folded iteratively via
+ * the open-range stack, never by slicing the list and re-pairing the inner
+ * copy (that recursive rescan made deeply nested tags quadratic: 4,000
+ * nested `<b>` tags took seconds instead of milliseconds). Handlers still
+ * recurse into child token arrays (a paragraph's inline tokens, a table
+ * cell's tokens, …), but each token belongs to exactly one such list, so
+ * the full conversion stays linear in the total token count.
  *
  * @param tokens - The list of markdown tokens.
  * @returns Parsed elements in a custom structure.
@@ -69,15 +152,53 @@ const convertTokens = (
     warnings?: RenderWarnings,
 ): ParsedElement[] => {
     const parsedElements: ParsedElement[] = [];
+    const stylePairs = pairInlineStyleTags(tokens);
+    // Open styled ranges, innermost last. Each frame owns the items array
+    // that the tokens inside its range are appended to.
+    const openRanges: Array<{ closeIndex: number; items: ParsedElement[] }> =
+        [];
+    let target = parsedElements;
     for (let i = 0; i < tokens.length; i++) {
+        // A range whose closing tag sits at this index ends here: pop back
+        // to the enclosing items array and skip the closing tag token.
+        let closed = false;
+        while (
+            openRanges.length > 0 &&
+            openRanges[openRanges.length - 1].closeIndex === i
+        ) {
+            openRanges.pop();
+            target =
+                openRanges.length > 0
+                    ? openRanges[openRanges.length - 1].items
+                    : parsedElements;
+            closed = true;
+        }
+        if (closed) continue;
         const token = tokens[i];
         try {
+            // A paired `<tag>…</tag>` run opens a styled element; the tokens
+            // that follow fill its items until the range's closing tag —
+            // no slicing and no re-pairing of the nested range.
+            const pair = stylePairs.get(i);
+            if (pair) {
+                const element: ParsedElement = {
+                    type: pair.elementType,
+                    content: '',
+                    items: [],
+                };
+                target.push(element);
+                // `items` was just created above, so it is always defined.
+                const items = element.items as ParsedElement[];
+                openRanges.push({ closeIndex: pair.closeIndex, items });
+                target = items;
+                continue;
+            }
             const handler = tokenHandlers[token.type as MarkedToken['type']] as
                 | ((token: Token, warnings?: RenderWarnings) => ParsedElement)
                 | undefined;
             if (handler) {
                 const element = handler(token, warnings);
-                parsedElements.push(element);
+                target.push(element);
                 if (element.type === MdTokenType.Image) {
                     // `{width=… align=…}` arrives as the start of the text
                     // token after the image. A token left empty by removing
@@ -98,7 +219,7 @@ const convertTokens = (
                     }
                 }
             } else {
-                parsedElements.push({
+                target.push({
                     type: MdTokenType.Raw,
                     content: token.raw,
                 });
@@ -302,12 +423,16 @@ const tokenHandlers: TokenHandlers = {
             return { type: MdTokenType.Br, content: '\n' };
         }
 
-        // Support common inline HTML tags by mapping them to known types
+        // Support common inline HTML tags by mapping them to known types.
+        // `<s>`/`<del>` map to strikethrough exactly like `~~…~~`, so the
+        // text keeps its struck styling instead of rendering as plain text.
         const inlineTagMap: Record<string, string> = {
             strong: MdTokenType.Strong,
             b: MdTokenType.Strong,
             em: MdTokenType.Em,
             i: MdTokenType.Em,
+            s: MdTokenType.Del,
+            del: MdTokenType.Del,
         };
 
         const inlineMatch = matchWrappingTag(raw);
@@ -316,11 +441,6 @@ const tokenHandlers: TokenHandlers = {
             if (mappedType) {
                 return { type: mappedType, content: inlineMatch.inner };
             }
-        }
-
-        if (/^<(s|del)[^>]*>(.*?)<\/(s|del)>$/is.test(raw)) {
-            const textMatch = raw.match(/>([^<]+)</);
-            return { type: MdTokenType.Raw, content: textMatch?.[1] ?? raw };
         }
 
         // Unknown HTML: render as raw text, strip tags.
