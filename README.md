@@ -259,6 +259,13 @@ const options = {
     bottomSpacing: 3,
     color: '#111827',
   },
+  link: {
+    // linkColor: [0, 0, 255],
+    // Underline link text (default false). When true, each link gets one
+    // continuous underline per line — useful for greyscale printing where
+    // color alone does not read as a link.
+    underline: false,
+  },
   blockquote: {
     barColor: '#4A90D9',
     barWidth: 2,

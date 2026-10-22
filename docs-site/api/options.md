@@ -96,6 +96,20 @@ Behavior notes:
 - `heading.bold` defaults to `true`.
 - Size fallback chain is: `heading.hN` -> `page.defaultTitleFontSize`.
 
+### Links
+
+```ts
+link: {
+  linkColor: [0, 0, 255],
+  underline: false, // underline link text
+}
+```
+
+Behavior notes:
+- `link.underline` defaults to `false`, so existing documents render exactly as before.
+- When `true`, each link gets one continuous underline per line, spanning the spaces between its words; distinct links keep separate underlines.
+- Useful when color alone does not read as a link, for example greyscale printing.
+
 ### Lists and Spacing
 
 ```ts
