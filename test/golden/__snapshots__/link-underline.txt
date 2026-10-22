@@ -1,0 +1,9 @@
+p1 text        text="See" x=10 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="the" x=17.916 y=10 baseline=top font=helvetica/normal size=11 color=#0000ff
+p1 line        x1=17.916 y1=13.881 x2=23.271 y2=13.881 draw=#0000ff width=0.11
+p1 link        x=17.916 y=10 w=5.355 h=3.881 url=https://example.com
+p1 text        text="documentation" x=24.358 y=10 baseline=top font=helvetica/normal size=11 color=#0000ff
+p1 line        x1=24.358 y1=13.881 x2=49.62 y2=13.881 draw=#0000ff width=0.11
+p1 link        x=24.358 y=10 w=25.262 h=3.881 url=https://example.com
+p1 text        text="for" x=50.707 y=10 baseline=top font=helvetica/normal size=11 color=#000000
+p1 text        text="details." x=56.295 y=10 baseline=top font=helvetica/normal size=11 color=#000000

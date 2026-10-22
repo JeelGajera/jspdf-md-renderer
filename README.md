@@ -274,6 +274,10 @@ const options = {
     textColor: '#111827',
     tabSize: 4, // spaces per tab stop in code blocks
   },
+  link: {
+    linkColor: [0, 0, 255],
+    underline: false,
+  },
   spacing: {
     afterHeading: 2,
     afterParagraph: 4,
