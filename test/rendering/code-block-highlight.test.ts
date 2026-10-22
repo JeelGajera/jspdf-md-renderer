@@ -218,4 +218,130 @@ describe('codeBlock.highlight', () => {
         expect(seen[0].code).toBe('    indented');
         expect(seen[0].lang).toBe('ts');
     });
+
+    /**
+     * Regression tests for the CHANGES_REQUESTED review on the highlight
+     * hook: `splitTextToSize` drops the separator at each wrap point, so
+     * attributing wrapped fragments back to highlight runs must track true
+     * source offsets — otherwise text is duplicated and then lost (the
+     * reviewer's identity highlighter ended with "ota k" instead of
+     * "kappa").
+     *
+     * maxContentWidth 48 with the default code padding (4 on each side)
+     * gives a code maxWidth of exactly 40, the reviewer's case.
+     */
+    const WRAP_40 = {
+        ...MINIMAL,
+        page: { ...MINIMAL.page, maxContentWidth: 48 },
+    };
+    const identityHighlight = (code: string) =>
+        code.split('\n').map((line) => [{ text: line }]);
+    const displayTexts = (ops: ReturnType<typeof recordDoc>['ops']) =>
+        codeTexts(ops).map((t) => t.text as string);
+
+    it('keeps every character when wrapping drops separators', async () => {
+        const line = 'alpha beta gamma delta epsilon zeta eta theta iota kappa';
+        const highlighted = recordDoc();
+        const hResult = await MdTextRender(
+            highlighted.doc,
+            '```\n' + line + '\n```',
+            { ...WRAP_40, codeBlock: { highlight: identityHighlight } },
+        );
+        const plain = recordDoc();
+        await MdTextRender(plain.doc, '```\n' + line + '\n```', WRAP_40);
+
+        const highlightedLines = displayTexts(highlighted.ops);
+        const plainLines = displayTexts(plain.ops);
+        expect(hResult.warnings).toEqual([]);
+        // The line actually wrapped...
+        expect(plainLines.length).toBeGreaterThan(1);
+        // ...and the identity highlight wraps EXACTLY like the no-highlight
+        // path: no line gained, lost, or re-wrapped.
+        expect(highlightedLines).toEqual(plainLines);
+        // The reviewer's symptom was a final line of "ota k" instead of
+        // "kappa": every source character must survive.
+        expect(
+            highlightedLines[highlightedLines.length - 1].endsWith('kappa'),
+        ).toBe(true);
+    });
+
+    it.each([
+        ['multiple consecutive spaces', 'a  b   c d    e f g h i j k'],
+        ['leading spaces', '    indented line that wraps around'],
+        ['trailing spaces', 'padded line   \nnext line here'],
+        [
+            'punctuation at wrap points',
+            'foo, bar; baz: qux! zzz qqq www eee rrr',
+        ],
+        ['a word longer than the line', 'a'.repeat(60)],
+        ['tabs (expanded before the hook)', '\tindented\tcode that wraps'],
+    ])(
+        'wraps %s identically with and without a highlight hook',
+        async (_label: string, code: string) => {
+            const highlighted = recordDoc();
+            const hResult = await MdTextRender(
+                highlighted.doc,
+                '```\n' + code + '\n```',
+                { ...WRAP_40, codeBlock: { highlight: identityHighlight } },
+            );
+            const plain = recordDoc();
+            await MdTextRender(plain.doc, '```\n' + code + '\n```', WRAP_40);
+
+            expect(hResult.warnings).toEqual([]);
+            // Highlighting must never change wrapping or drop text, whatever
+            // the token boundaries look like.
+            expect(displayTexts(highlighted.ops)).toEqual(
+                displayTexts(plain.ops),
+            );
+        },
+    );
+
+    it('attributes each wrapped fragment to the run it came from', async () => {
+        const line = 'alpha beta gamma delta epsilon zeta eta theta iota kappa';
+        const red = recordedColor('#FF0000');
+        const blue = recordedColor('#0000FF');
+        const { doc, ops } = recordDoc();
+        const result = await MdTextRender(doc, '```\n' + line + '\n```', {
+            ...WRAP_40,
+            codeBlock: {
+                // Alternate red/blue per word; spaces keep the default colour.
+                highlight: (code: string) =>
+                    code.split('\n').map((l) => {
+                        const runs: { text: string; color?: string }[] = [];
+                        l.split(' ').forEach((w, i, arr) => {
+                            runs.push({
+                                text: w,
+                                color: i % 2 === 0 ? '#FF0000' : '#0000FF',
+                            });
+                            if (i < arr.length - 1) runs.push({ text: ' ' });
+                        });
+                        return runs;
+                    }),
+            },
+        });
+
+        expect(result.warnings).toEqual([]);
+        const texts = codeTexts(ops);
+        // No text was lost or duplicated by the wrapping...
+        const plain = recordDoc();
+        await MdTextRender(plain.doc, '```\n' + line + '\n```', WRAP_40);
+        expect(texts.map((t) => t.text as string).join('')).toBe(
+            displayTexts(plain.ops).join(''),
+        );
+        // ...and every fragment kept the colour of its source word, even
+        // across wrap points: joining the same-colour pieces must recover
+        // the words verbatim.
+        const words = line.split(' ');
+        const coloured = (color: string) =>
+            texts
+                .filter((t) => t.color === color)
+                .map((t) => t.text as string)
+                .join('');
+        expect(coloured(red)).toBe(
+            words.filter((_, i) => i % 2 === 0).join(''),
+        );
+        expect(coloured(blue)).toBe(
+            words.filter((_, i) => i % 2 === 1).join(''),
+        );
+    });
 });

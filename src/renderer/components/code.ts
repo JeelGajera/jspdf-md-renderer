@@ -47,14 +47,14 @@ const expandTabsToStops = (text: string, tabSize: number): string => {
  * long source line may wrap, and each wrapped fragment keeps the colour of
  * the run it came from. Runs are consumed by character count, not measured
  * width — the code font is monospace and `splitTextToSize` splits
- * deterministically. Note the wrapped fragments do NOT tile the source
- * line: the splitter drops exactly the single space it wraps on (and drops
- * nothing when it chops a long word mid-word), so each fragment is located
- * at its true source offset before its runs are attributed. A hook result
- * that throws, has the wrong shape, or whose runs do not tile a source
- * line is ignored for the affected lines (with a `CODE_HIGHLIGHT_FAILED`
- * warning) and those lines render in the default text colour: a bad hook
- * never drops or duplicates text.
+ * deterministically. Wrapping drops the separator at each wrap point, so
+ * `distributeRuns` tracks true source offsets while attributing fragments
+ * to runs; the highlighted display lines are therefore always exactly the
+ * fragments `splitTextToSize` produced, identical to the no-highlight path.
+ * A hook result that throws, has the wrong shape, or whose runs do not tile
+ * a source line is ignored for the affected lines (with a
+ * `CODE_HIGHLIGHT_FAILED` warning) and those lines render in the default
+ * text colour: a bad hook never drops or duplicates text.
  */
 const resolveHighlightRuns = (
     doc: jsPDF,
@@ -168,72 +168,71 @@ const distributeRuns = (
     }
 
     const wrapped = doc.splitTextToSize(line, maxWidth);
+
+    // Absolute source offset where each run starts. The runs tile `line`
+    // (verified above), so every source character belongs to exactly one run.
+    const runStarts: number[] = [];
+    let runCursor = 0;
+    for (const run of validRuns) {
+        runStarts.push(runCursor);
+        runCursor += run.text.length;
+    }
+
+    // Walk the fragments against the source line, tracking the true source
+    // offset (`srcPos`). splitTextToSize drops the separator at each wrap
+    // point, so a fragment's characters do NOT start at
+    // `previousSrcPos + previousFragment.length` — the walk below skips
+    // exactly the dropped separators, keeping run attribution honest.
+    // Consuming `fragment.length` characters per fragment instead lets the
+    // attribution lag one separator behind after the first wrap, duplicating
+    // and then losing text ("ota k" instead of "kappa").
     const displayLines: CodeBlockHighlightRun[][] = [];
-    // Source offsets, not fragment lengths, drive run attribution (issue
-    // #86 review). splitTextToSize drops exactly the single space it wraps
-    // on and drops nothing when it chops a long word mid-word, so consuming
-    // fragment.length from the runs lets the source offset fall behind by
-    // one character per wrap: every later fragment then draws the wrong
-    // slice of run text. A fragment therefore starts one character past the
-    // previous fragment's end iff the source character there is the dropped
-    // wrap space.
+    let srcPos = 0;
     let runIndex = 0;
-    let runOffset = 0;
-    let consumed = 0; // source characters the run cursors have passed
-    let sourceOffset = 0; // source offset of the current fragment
-
-    const advanceRunsTo = (target: number): boolean => {
-        let skip = target - consumed;
-        while (skip > 0 && runIndex < validRuns.length) {
-            const run = validRuns[runIndex];
-            const step = Math.min(run.text.length - runOffset, skip);
-            runOffset += step;
-            consumed += step;
-            skip -= step;
-            if (runOffset >= run.text.length) {
-                runIndex += 1;
-                runOffset = 0;
-            }
-        }
-        return skip === 0;
-    };
-
     for (const fragment of wrapped) {
-        const start = sourceOffset;
-        const end = start + fragment.length;
-        // Defensive: a fragment that does not sit at its computed source
-        // offset means the splitter behaved unexpectedly; fall back to the
-        // plain rendering rather than shift text out of place.
-        if (line.slice(start, end) !== fragment || !advanceRunsTo(start)) {
-            badLines.push(lineNumber);
-            return plain();
-        }
         const display: CodeBlockHighlightRun[] = [];
-        while (consumed < end && runIndex < validRuns.length) {
-            const run = validRuns[runIndex];
-            const take = Math.min(run.text.length - runOffset, end - consumed);
-            if (take > 0) {
-                display.push({
-                    text: run.text.slice(runOffset, runOffset + take),
-                    color: run.color,
-                });
+        let fragPos = 0;
+        let current: { text: string; color: string; run: number } | null = null;
+        while (fragPos < fragment.length && srcPos < line.length) {
+            if (line[srcPos] !== fragment[fragPos]) {
+                // Separator removed by splitTextToSize at a wrap point: it is
+                // rendered on no display line, so skip it without emitting.
+                srcPos += 1;
+                continue;
             }
-            runOffset += take;
-            consumed += take;
-            if (runOffset >= run.text.length) {
+            while (
+                runIndex + 1 < validRuns.length &&
+                srcPos >= runStarts[runIndex + 1]
+            ) {
                 runIndex += 1;
-                runOffset = 0;
             }
+            const run = validRuns[runIndex];
+            if (current === null || current.run !== runIndex) {
+                if (current !== null && current.text.length > 0) {
+                    display.push({ text: current.text, color: current.color });
+                }
+                current = {
+                    text: '',
+                    color: run.color ?? defaultColor,
+                    run: runIndex,
+                };
+            }
+            current.text += line[srcPos];
+            fragPos += 1;
+            srcPos += 1;
         }
-        if (consumed < end) {
-            // Unreachable when the runs tile the line, but never drop text.
+        if (current !== null && current.text.length > 0) {
+            display.push({ text: current.text, color: current.color });
+        }
+        if (fragPos < fragment.length) {
+            // Unreachable for splitTextToSize output (its fragments always
+            // tile the line), but never drop text.
             display.push({
-                text: line.slice(consumed, end),
+                text: fragment.slice(fragPos),
                 color: defaultColor,
             });
         }
         displayLines.push(display);
-        sourceOffset = end + (line[end] === ' ' ? 1 : 0);
     }
     return displayLines;
 };
