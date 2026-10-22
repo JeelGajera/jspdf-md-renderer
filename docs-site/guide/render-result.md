@@ -75,6 +75,7 @@ described. An empty `warnings` array means the document is complete.
 | `TABLE_CALLBACK_FAILED` | A `table` option callback threw |
 | `TABLE_POSITION_UNKNOWN` | `autoTable` reported no `finalY`, so content after the table may be misplaced |
 | `CODE_BLOCK_OVERFLOW` | A code block's line height exceeds the usable page height, so it renders one line per page |
+| `CODE_HIGHLIGHT_FAILED` | A `codeBlock.highlight` hook threw or returned a malformed result, so the affected lines render in the default text colour |
 | `CONTENT_DROPPED` | A subtree was discarded for nesting deeper than `security.maxNestedDepth` |
 | `COMPONENT_OVERRIDE_FAILED` | A [component override](/guide/component-overrides) threw or was async |
 | `SECURITY_CALLBACK_FAILED` | An `onSecurityViolation` callback threw; the violation was still handled |

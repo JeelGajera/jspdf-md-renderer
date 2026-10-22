@@ -1,5 +1,9 @@
 import jsPDF from 'jspdf';
-import { ParsedElement } from '../../types';
+import {
+    CodeBlockHighlightFn,
+    CodeBlockHighlightRun,
+    ParsedElement,
+} from '../../types';
 import { HandlePageBreaks } from '../../utils/handlePageBreak';
 import { RenderStore } from '../../store/renderStore';
 
@@ -33,6 +37,204 @@ const expandTabsToStops = (text: string, tabSize: number): string => {
             return expanded;
         })
         .join('\n');
+};
+
+/**
+ * Call the `codeBlock.highlight` hook and turn its per-source-line runs into
+ * one run array per display line (issue #86).
+ *
+ * The hook works on source lines, but the renderer draws display lines: a
+ * long source line may wrap, and each wrapped fragment keeps the colour of
+ * the run it came from. Runs are consumed by character count, not measured
+ * width — the code font is monospace and `splitTextToSize` splits
+ * deterministically. Wrapping drops the separator at each wrap point, so
+ * `distributeRuns` tracks true source offsets while attributing fragments
+ * to runs; the highlighted display lines are therefore always exactly the
+ * fragments `splitTextToSize` produced, identical to the no-highlight path.
+ * A hook result that throws, has the wrong shape, or whose runs do not tile
+ * a source line is ignored for the affected lines (with a
+ * `CODE_HIGHLIGHT_FAILED` warning) and those lines render in the default
+ * text colour: a bad hook never drops or duplicates text.
+ */
+const resolveHighlightRuns = (
+    doc: jsPDF,
+    store: RenderStore,
+    content: string,
+    maxWidth: number,
+    highlight: CodeBlockHighlightFn,
+    lang: string | undefined,
+    defaultColor: string,
+): CodeBlockHighlightRun[][] => {
+    const sourceLines = content.split('\n');
+    const plainLine = (line: string): CodeBlockHighlightRun[][] =>
+        doc
+            .splitTextToSize(line, maxWidth)
+            .map((text: string) => [{ text, color: defaultColor }]);
+
+    const fail = (message: string): CodeBlockHighlightRun[][] => {
+        store.warn({
+            code: 'CODE_HIGHLIGHT_FAILED',
+            message,
+            context: lang,
+        });
+        return sourceLines.flatMap(plainLine);
+    };
+
+    let hookResult: unknown;
+    try {
+        hookResult = highlight(content, lang);
+    } catch (error) {
+        return fail(
+            `codeBlock.highlight threw and was ignored: ${
+                error instanceof Error ? error.message : String(error)
+            }`,
+        );
+    }
+    if (!Array.isArray(hookResult)) {
+        return fail(
+            'codeBlock.highlight must return one array of runs per source line; ignoring it.',
+        );
+    }
+    if (hookResult.length !== sourceLines.length) {
+        return fail(
+            `codeBlock.highlight returned ${hookResult.length} line(s) for ` +
+                `${sourceLines.length} source line(s); ignoring it.`,
+        );
+    }
+
+    const badLines: number[] = [];
+    const resolved = sourceLines.flatMap((line, index) =>
+        distributeRuns(
+            doc,
+            line,
+            maxWidth,
+            hookResult[index],
+            defaultColor,
+            index + 1,
+            badLines,
+        ),
+    );
+    if (badLines.length > 0) {
+        store.warn({
+            code: 'CODE_HIGHLIGHT_FAILED',
+            message:
+                'codeBlock.highlight runs did not match the source text on ' +
+                `line(s) ${badLines.join(', ')}; those lines render in the ` +
+                'default text colour.',
+            context: lang,
+        });
+    }
+    return resolved;
+};
+
+/**
+ * Split one source line into display lines and attribute each wrapped
+ * fragment to the run it came from. Returns the fallback (a single
+ * default-coloured run per display line) and records the line in `badLines`
+ * when the runs are malformed or do not tile the source line.
+ */
+const distributeRuns = (
+    doc: jsPDF,
+    line: string,
+    maxWidth: number,
+    runs: unknown,
+    defaultColor: string,
+    lineNumber: number,
+    badLines: number[],
+): CodeBlockHighlightRun[][] => {
+    const plain = (): CodeBlockHighlightRun[][] =>
+        doc
+            .splitTextToSize(line, maxWidth)
+            .map((text: string) => [{ text, color: defaultColor }]);
+
+    if (!Array.isArray(runs)) {
+        badLines.push(lineNumber);
+        return plain();
+    }
+    const validRuns: CodeBlockHighlightRun[] = [];
+    for (const run of runs) {
+        if (
+            typeof run?.text !== 'string' ||
+            (run.color !== undefined && typeof run.color !== 'string')
+        ) {
+            badLines.push(lineNumber);
+            return plain();
+        }
+        validRuns.push({ text: run.text, color: run.color ?? defaultColor });
+    }
+    if (validRuns.map((run) => run.text).join('') !== line) {
+        badLines.push(lineNumber);
+        return plain();
+    }
+
+    const wrapped = doc.splitTextToSize(line, maxWidth);
+
+    // Absolute source offset where each run starts. The runs tile `line`
+    // (verified above), so every source character belongs to exactly one run.
+    const runStarts: number[] = [];
+    let runCursor = 0;
+    for (const run of validRuns) {
+        runStarts.push(runCursor);
+        runCursor += run.text.length;
+    }
+
+    // Walk the fragments against the source line, tracking the true source
+    // offset (`srcPos`). splitTextToSize drops the separator at each wrap
+    // point, so a fragment's characters do NOT start at
+    // `previousSrcPos + previousFragment.length` — the walk below skips
+    // exactly the dropped separators, keeping run attribution honest.
+    // Consuming `fragment.length` characters per fragment instead lets the
+    // attribution lag one separator behind after the first wrap, duplicating
+    // and then losing text ("ota k" instead of "kappa").
+    const displayLines: CodeBlockHighlightRun[][] = [];
+    let srcPos = 0;
+    let runIndex = 0;
+    for (const fragment of wrapped) {
+        const display: CodeBlockHighlightRun[] = [];
+        let fragPos = 0;
+        let current: { text: string; color: string; run: number } | null = null;
+        while (fragPos < fragment.length && srcPos < line.length) {
+            if (line[srcPos] !== fragment[fragPos]) {
+                // Separator removed by splitTextToSize at a wrap point: it is
+                // rendered on no display line, so skip it without emitting.
+                srcPos += 1;
+                continue;
+            }
+            while (
+                runIndex + 1 < validRuns.length &&
+                srcPos >= runStarts[runIndex + 1]
+            ) {
+                runIndex += 1;
+            }
+            const run = validRuns[runIndex];
+            if (current === null || current.run !== runIndex) {
+                if (current !== null && current.text.length > 0) {
+                    display.push({ text: current.text, color: current.color });
+                }
+                current = {
+                    text: '',
+                    color: run.color ?? defaultColor,
+                    run: runIndex,
+                };
+            }
+            current.text += line[srcPos];
+            fragPos += 1;
+            srcPos += 1;
+        }
+        if (current !== null && current.text.length > 0) {
+            display.push({ text: current.text, color: current.color });
+        }
+        if (fragPos < fragment.length) {
+            // Unreachable for splitTextToSize output (its fragments always
+            // tile the line), but never drop text.
+            display.push({
+                text: fragment.slice(fragPos),
+                color: defaultColor,
+            });
+        }
+        displayLines.push(display);
+    }
+    return displayLines;
 };
 
 const renderCodeBlock = (
@@ -85,12 +287,36 @@ const renderCodeBlock = (
         return;
     }
 
-    // Split into lines
-    const lines: string[] = doc.splitTextToSize(content, maxWidth);
+    const defaultTextColor = codeOpts.textColor ?? '#000000';
+
+    // Split into lines. With a highlight hook the hook's per-source-line runs
+    // are resolved to one run array per display line, so wrapped fragments
+    // keep their colour; without a hook this stays null and the plain path
+    // below — the one the golden snapshots pin — runs untouched (issue #86).
+    const highlight = codeOpts.highlight;
+    let lines: string[];
+    let lineRuns: CodeBlockHighlightRun[][] | null = null;
+    if (typeof highlight === 'function') {
+        lineRuns = resolveHighlightRuns(
+            doc,
+            store,
+            content,
+            maxWidth,
+            highlight,
+            element.lang,
+            defaultTextColor,
+        );
+        lines = lineRuns.map((runs) =>
+            runs.map((run) => run.text).join(''),
+        );
+    } else {
+        lines = doc.splitTextToSize(content, maxWidth);
+    }
 
     // Remove trailing empty lines
     while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
         lines.pop();
+        lineRuns?.pop();
     }
 
     if (lines.length === 0) {
@@ -162,6 +388,12 @@ const renderCodeBlock = (
             currentLineIndex,
             currentLineIndex + linesToRenderCount,
         );
+        const runsToRender = lineRuns
+            ? lineRuns.slice(
+                  currentLineIndex,
+                  currentLineIndex + linesToRenderCount,
+              )
+            : null;
         const isFirstChunk = currentLineIndex === 0;
         const isLastChunk =
             currentLineIndex + linesToRenderCount >= lines.length;
@@ -228,10 +460,34 @@ const renderCodeBlock = (
 
         // Render code text line by line
         let yPos = store.Y;
-        doc.setTextColor(codeOpts.textColor ?? '#000000');
-        for (const line of linesToRender) {
-            doc.text(line, boxX + padding, yPos, { baseline: 'top' });
-            yPos += lineHeight;
+        doc.setTextColor(defaultTextColor);
+        if (runsToRender !== null) {
+            // Highlighted: draw each run in its own colour, advancing the
+            // cursor by the fragment's measured width. The code font is
+            // monospace, so the fragments tile the line exactly.
+            for (const runs of runsToRender) {
+                let xPos = boxX + padding;
+                for (const run of runs) {
+                    if (run.text === '') {
+                        continue;
+                    }
+                    const color = run.color ?? defaultTextColor;
+                    if (color !== defaultTextColor) {
+                        doc.setTextColor(color);
+                    }
+                    doc.text(run.text, xPos, yPos, { baseline: 'top' });
+                    xPos += doc.getTextWidth(run.text);
+                    if (color !== defaultTextColor) {
+                        doc.setTextColor(defaultTextColor);
+                    }
+                }
+                yPos += lineHeight;
+            }
+        } else {
+            for (const line of linesToRender) {
+                doc.text(line, boxX + padding, yPos, { baseline: 'top' });
+                yPos += lineHeight;
+            }
         }
         doc.setTextColor(savedTextColor);
 
