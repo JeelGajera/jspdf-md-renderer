@@ -56,9 +56,10 @@ describe('blockquote paint order', () => {
         );
 
         const ops = pageStream(doc);
-        const introAt = ops.findIndex((op) => op.includes('(Intro)'));
+        // Per-word calls after the issue #111 guard (helvetica never merges).
+        const introAt = ops.findIndex((op) => op.includes('(Intro'));
         const fillAt = firstIndex(ops, FILL_RECT);
-        const quotedAt = ops.findIndex((op) => op.includes('(Quoted)'));
+        const quotedAt = ops.findIndex((op) => op.includes('(Quoted'));
 
         // The intro must still precede the blockquote background, which must
         // still precede the quoted text.
