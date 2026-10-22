@@ -97,8 +97,9 @@ const parseHtmlTag = (raw: string): HtmlTagInfo | null => {
  * without this folding the tags were discarded and their text rendered with
  * no styling at all (`<strong>bold</strong>` came out plain).
  *
- * Single linear pass with top-of-stack matching, so adversarial tag soup
- * cannot turn pairing quadratic.
+ * Complexity: a single linear pass over the token list (open/close matching
+ * with a top-of-stack check), so adversarial tag soup cannot turn pairing
+ * quadratic.
  *
  * Returns open-token index → { close index, element type }.
  */
@@ -132,6 +133,16 @@ const pairInlineStyleTags = (
 /**
  * Convert the markdown tokens to ParsedElements.
  *
+ * Complexity: the full conversion is linear in the token count. Pairing is
+ * one linear pass (see {@link pairInlineStyleTags}); folding is iterative —
+ * each paired `<tag>` pushes its new element's `items` list onto an output
+ * stack and the paired `</tag>` pops it, so nested ranges are never
+ * rescanned or re-sliced. Token handlers still recurse, but only over their
+ * own disjoint child-token lists, which keeps the recursion linear overall
+ * too. An earlier recursive folding re-ran pairing over a sliced copy of
+ * every nested range, which was quadratic (4,000 nested `<b>` tags took
+ * seconds to convert).
+ *
  * @param tokens - The list of markdown tokens.
  * @returns Parsed elements in a custom structure.
  */
@@ -141,22 +152,31 @@ const convertTokens = (
 ): ParsedElement[] => {
     const parsedElements: ParsedElement[] = [];
     const stylePairs = pairInlineStyleTags(tokens);
+    const closeIndices = new Set<number>();
+    for (const { closeIndex } of stylePairs.values()) {
+        closeIndices.add(closeIndex);
+    }
+    const outputStack: ParsedElement[][] = [parsedElements];
     for (let i = 0; i < tokens.length; i++) {
         const token = tokens[i];
+        // A paired `</tag>` produces no element of its own; it only closes
+        // the range opened by its `<tag>`.
+        if (closeIndices.has(i)) {
+            outputStack.pop();
+            continue;
+        }
         try {
             // A paired `<tag>…</tag>` run folds into a single styled element
             // so inline HTML formatting survives tokenization.
             const pair = stylePairs.get(i);
             if (pair) {
-                parsedElements.push({
+                const items: ParsedElement[] = [];
+                outputStack[outputStack.length - 1].push({
                     type: pair.elementType,
                     content: '',
-                    items: convertTokens(
-                        tokens.slice(i + 1, pair.closeIndex),
-                        warnings,
-                    ),
+                    items,
                 });
-                i = pair.closeIndex;
+                outputStack.push(items);
                 continue;
             }
             const handler = tokenHandlers[token.type as MarkedToken['type']] as
@@ -164,7 +184,7 @@ const convertTokens = (
                 | undefined;
             if (handler) {
                 const element = handler(token, warnings);
-                parsedElements.push(element);
+                outputStack[outputStack.length - 1].push(element);
                 if (element.type === MdTokenType.Image) {
                     // `{width=… align=…}` arrives as the start of the text
                     // token after the image. A token left empty by removing
@@ -185,7 +205,7 @@ const convertTokens = (
                     }
                 }
             } else {
-                parsedElements.push({
+                outputStack[outputStack.length - 1].push({
                     type: MdTokenType.Raw,
                     content: token.raw,
                 });
