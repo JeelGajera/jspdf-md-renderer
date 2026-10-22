@@ -168,12 +168,21 @@ export type RenderOption = {
          * - `Uint8Array` bytes or a `Blob` are converted to a `data:` URL the
          *   same way fetched images are.
          *
-         * Security interplay (unchanged by this hook): with
-         * `security.enabled`, the URL checks run *before* the loader is
-         * called, so a blocked URL never reaches it, and
+         * Security interplay: with `security.enabled`, the URL checks run
+         * *before* the loader is called, so a blocked URL never reaches it,
          * `security.maxImageSizeBytes` applies to whatever the loader
-         * returns. The loader itself is not responsible for validating URLs
-         * or enforcing size limits — the renderer does that around it.
+         * returns, and the returned content itself is validated: an SVG
+         * returned while `security.allowSvgImages` is false is rejected with
+         * `SVG_BLOCKED`, a `data:` URL returned while
+         * `security.allowDataUrls` is false is rejected with
+         * `DATA_URL_BLOCKED`, and a non-image content type is rejected with
+         * `IMAGE_TYPE_BLOCKED`. The loader itself is not responsible for
+         * validating URLs or enforcing size limits — the renderer does that
+         * around it. If the loader performs its own HTTP fetch instead of
+         * returning `undefined`, it is responsible for its own redirect and
+         * timeout enforcement inside the callback: the built-in fetch's
+         * redirect re-validation and `security.imageFetchTimeoutMs` do not
+         * apply to the loader's own requests.
          */
         load?: ImageLoader;
     };

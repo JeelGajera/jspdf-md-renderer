@@ -66,7 +66,7 @@ await MdTextRender(doc, markdown, {
 - A returned `string` is used as the image's `data:` URL as-is; `Uint8Array` bytes or a `Blob` are converted to a `data:` URL the same way fetched images are.
 - A throwing loader is treated like a failed fetch: the image is skipped with an `IMAGE_LOAD_FAILED` warning.
 
-**What the loader is and isn't responsible for:** with `security.enabled`, the URL checks run *before* the loader is called, so a blocked URL never reaches it, and `security.maxImageSizeBytes` applies to whatever the loader returns. The loader itself doesn't need to validate URLs or enforce size limits — the renderer does that around it.
+**What the loader is and isn't responsible for:** with `security.enabled`, the URL checks run *before* the loader is called, so a blocked URL never reaches it. `security.maxImageSizeBytes` applies to whatever the loader returns, and the returned content itself is validated against the SVG (`allowSvgImages`) and data-URL (`allowDataUrls`) policies — an SVG returned while SVGs are disallowed is rejected with `SVG_BLOCKED`, and a non-image content type with `IMAGE_TYPE_BLOCKED`. The loader itself doesn't need to validate URLs or enforce size limits — the renderer does that around it. One exception: if the loader performs its own HTTP fetch instead of returning `undefined`, it is responsible for its own redirect and timeout enforcement inside the callback — the built-in fetch's redirect re-validation and `security.imageFetchTimeoutMs` do not apply to the loader's own requests.
 
 ## Security-Aware Behavior
 

@@ -6,7 +6,10 @@ import { normalizeSecurityOptions } from '../../src/security/security-policy';
 import { MdTokenType } from '../../src/enums/mdTokenType';
 import { RenderWarnings } from '../../src/store/renderWarnings';
 import type { ParsedElement } from '../../src/types/parsedElement';
-import type { RenderSecurityOptions } from '../../src/types/security';
+import type {
+    RenderSecurityOptions,
+    SecurityViolation,
+} from '../../src/types/security';
 import type { ImageLoader } from '../../src/types/renderOption';
 
 /**
@@ -186,5 +189,166 @@ describe('image.load through MdTextRender', () => {
         expect(
             result.warnings.filter((w) => w.code === 'IMAGE_LOAD_FAILED'),
         ).toEqual([]);
+    });
+});
+
+const SVG_DOC =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="red"/></svg>';
+const SVG_DATA_URL = `data:image/svg+xml;base64,${Buffer.from(SVG_DOC).toString('base64')}`;
+const SVG_BLOB_DATA_URL = `data:image/svg+xml;base64,${Buffer.from(SVG_DOC).toString('base64')}`;
+
+/**
+ * Security with a violation collector, so tests can assert which violation
+ * code the loader-content validation reported.
+ */
+const validatingSecurity = (
+    overrides: Partial<RenderSecurityOptions> = {},
+): { security: RenderSecurityOptions; violations: SecurityViolation[] } => {
+    const violations: SecurityViolation[] = [];
+    const security = permissiveSecurity({
+        ...overrides,
+        onSecurityViolation: (violation) => violations.push(violation),
+    });
+    return { security, violations };
+};
+
+describe('custom image loader content validation', () => {
+    it('rejects an SVG data: URL returned for a .png URL when SVGs are disallowed', async () => {
+        // The URL checks only ever saw the requested src, so the SVG policy
+        // must be enforced against what the loader actually returned.
+        const { security, violations } = validatingSecurity({
+            allowSvgImages: false,
+        });
+        const load: ImageLoader = async () => SVG_DATA_URL;
+        const nodes = [imageElement('https://example.com/photo.png')];
+
+        await prefetchImages(nodes, security, undefined, load);
+
+        expect(nodes[0].data).toBeUndefined();
+        expect(nodes[0].src).toBeUndefined();
+        expect(violations.map((v) => v.code)).toEqual(['SVG_BLOCKED']);
+        expect(violations[0].context).toBe('image-loader-content');
+    });
+
+    it('rejects an SVG Blob returned by the loader when SVGs are disallowed', async () => {
+        const { security, violations } = validatingSecurity({
+            allowSvgImages: false,
+        });
+        const load: ImageLoader = async () =>
+            new Blob([SVG_DOC], { type: 'image/svg+xml' });
+        const nodes = [imageElement('https://example.com/photo.png')];
+
+        await prefetchImages(nodes, security, undefined, load);
+
+        expect(nodes[0].data).toBeUndefined();
+        expect(nodes[0].src).toBeUndefined();
+        expect(violations.map((v) => v.code)).toEqual(['SVG_BLOCKED']);
+    });
+
+    it('rejects a returned string with a non-image MIME type', async () => {
+        const { security, violations } = validatingSecurity();
+        const load: ImageLoader = async () =>
+            `data:text/html;base64,${Buffer.from('<h1>hi</h1>').toString('base64')}`;
+        const nodes = [imageElement('https://example.com/a.png')];
+
+        await prefetchImages(nodes, security, undefined, load);
+
+        expect(nodes[0].data).toBeUndefined();
+        expect(nodes[0].src).toBeUndefined();
+        expect(violations.map((v) => v.code)).toEqual(['IMAGE_TYPE_BLOCKED']);
+    });
+
+    it('rejects a returned Blob with a non-image type', async () => {
+        const { security, violations } = validatingSecurity();
+        const load: ImageLoader = async () =>
+            new Blob([pngBytes()], { type: 'text/plain' });
+        const nodes = [imageElement('https://example.com/a.png')];
+
+        await prefetchImages(nodes, security, undefined, load);
+
+        expect(nodes[0].data).toBeUndefined();
+        expect(nodes[0].src).toBeUndefined();
+        expect(violations.map((v) => v.code)).toEqual(['IMAGE_TYPE_BLOCKED']);
+    });
+
+    it('rejects a returned string that is not a data: URL', async () => {
+        const { security, violations } = validatingSecurity();
+        const load: ImageLoader = async () => 'https://example.com/a.png';
+        const nodes = [imageElement('https://example.com/a.png')];
+
+        await prefetchImages(nodes, security, undefined, load);
+
+        expect(nodes[0].data).toBeUndefined();
+        expect(nodes[0].src).toBeUndefined();
+        expect(violations.map((v) => v.code)).toEqual(['IMAGE_TYPE_BLOCKED']);
+    });
+
+    it('rejects a returned data: URL when data URLs are disallowed', async () => {
+        const { security, violations } = validatingSecurity({
+            allowDataUrls: false,
+        });
+        const load: ImageLoader = async () => PNG_1PX;
+        const nodes = [imageElement('https://example.com/a.png')];
+
+        await prefetchImages(nodes, security, undefined, load);
+
+        expect(nodes[0].data).toBeUndefined();
+        expect(nodes[0].src).toBeUndefined();
+        expect(violations.map((v) => v.code)).toEqual(['DATA_URL_BLOCKED']);
+    });
+
+    it('accepts an SVG returned by the loader when SVGs are allowed', async () => {
+        const { security, violations } = validatingSecurity({
+            allowSvgImages: true,
+        });
+        const load: ImageLoader = async () => SVG_DATA_URL;
+        const nodes = [imageElement('https://example.com/photo.png')];
+
+        await prefetchImages(nodes, security, undefined, load);
+
+        expect(nodes[0].data).toBe(SVG_DATA_URL);
+        expect(violations).toEqual([]);
+    });
+
+    it('accepts an SVG Blob returned by the loader when SVGs are allowed', async () => {
+        const { security, violations } = validatingSecurity({
+            allowSvgImages: true,
+        });
+        const load: ImageLoader = async () =>
+            new Blob([SVG_DOC], { type: 'image/svg+xml' });
+        const nodes = [imageElement('https://example.com/photo.png')];
+
+        await prefetchImages(nodes, security, undefined, load);
+
+        expect(nodes[0].data).toBe(SVG_BLOB_DATA_URL);
+        expect(violations).toEqual([]);
+    });
+
+    it('still accepts a Blob with no type, defaulting to image/png', async () => {
+        const { security, violations } = validatingSecurity();
+        const load: ImageLoader = async () => new Blob([pngBytes()]);
+        const nodes = [imageElement('https://example.com/a.png')];
+
+        await prefetchImages(nodes, security, undefined, load);
+
+        expect(nodes[0].data).toBe(PNG_1PX);
+        expect(violations).toEqual([]);
+    });
+
+    it("throws in violationMode 'throw' when the loader returns a blocked SVG", async () => {
+        const { security, violations } = validatingSecurity({
+            allowSvgImages: false,
+            violationMode: 'throw',
+        });
+        const load: ImageLoader = async () => SVG_DATA_URL;
+        const nodes = [imageElement('https://example.com/photo.png')];
+
+        await expect(
+            prefetchImages(nodes, security, undefined, load),
+        ).rejects.toMatchObject({
+            name: 'SecurityViolationError',
+            violation: expect.objectContaining({ code: 'SVG_BLOCKED' }),
+        });
+        expect(violations.map((v) => v.code)).toEqual(['SVG_BLOCKED']);
     });
 });

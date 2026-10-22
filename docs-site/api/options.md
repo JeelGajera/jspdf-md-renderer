@@ -381,10 +381,17 @@ image: {
   images are. A throwing loader is treated like a failed fetch (the image is
   skipped with an `IMAGE_LOAD_FAILED` warning).
 - Security interplay: with `security.enabled`, the URL checks run *before*
-  the loader is called, so a blocked URL never reaches it, and
-  `security.maxImageSizeBytes` applies to whatever the loader returns. The
-  loader is not responsible for validating URLs or enforcing size limits —
-  the renderer does that around it.
+  the loader is called, so a blocked URL never reaches it,
+  `security.maxImageSizeBytes` applies to whatever the loader returns, and the
+  returned content itself is validated against the SVG (`allowSvgImages`) and
+  data-URL (`allowDataUrls`) policies — an SVG returned while SVGs are
+  disallowed is rejected with `SVG_BLOCKED`, and a non-image content type with
+  `IMAGE_TYPE_BLOCKED`. The loader is not responsible for validating URLs or
+  enforcing size limits — the renderer does that around it. If the loader
+  performs its own HTTP fetch instead of returning `undefined`, it is
+  responsible for its own redirect and timeout enforcement inside the callback:
+  the built-in fetch's redirect re-validation and `security.imageFetchTimeoutMs`
+  do not apply to the loader's own requests.
 
 ### Domain Allowlist Semantics
 

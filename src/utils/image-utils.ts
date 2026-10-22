@@ -9,6 +9,7 @@ import {
 } from '../security/security-policy';
 import {
     RenderSecurityOptions,
+    SecurityViolationCode,
     SecurityViolationError,
 } from '../types/security';
 import { RenderWarnings, WarningSink } from '../store/renderWarnings';
@@ -337,6 +338,107 @@ export const calculateImageDimensions = (
 };
 
 /**
+ * Extracts the MIME type from a loader-returned `data:` URL string —
+ * lowercased and without parameters, so `data:image/svg+xml;charset=utf-8,…`
+ * yields `image/svg+xml`. Returns null when the string is not a `data:` URL
+ * at all.
+ */
+const loaderDataUrlMimeType = (value: string): string | null => {
+    if (!isDataUrl(value)) return null;
+    const commaIndex = value.indexOf(',');
+    if (commaIndex < 0) return null;
+    const metadata = value.slice('data:'.length, commaIndex).toLowerCase();
+    const paramIndex = metadata.indexOf(';');
+    return paramIndex < 0 ? metadata : metadata.slice(0, paramIndex);
+};
+
+/** Returns true when a MIME type denotes SVG content. */
+const isSvgMimeType = (mime: string): boolean =>
+    mime === 'image/svg+xml' || mime === 'image/svg';
+
+/**
+ * A Blob with no type keeps the historical `image/png` default applied later
+ * by `blobToDataUrl` instead of being rejected: callers commonly construct
+ * `new Blob([bytes])` without one. A `data:` URL string with no MIME type is
+ * text/plain per RFC 2397, so it is not exempt.
+ */
+const isTypelessBlob = (loaded: string | Blob, mime: string): boolean =>
+    typeof loaded !== 'string' && mime === '';
+
+/**
+ * Validates what a custom `image.load` loader returned before the renderer
+ * accepts it.
+ *
+ * The URL checks run *before* the loader is called, so they only ever saw the
+ * requested `src` — a loader can return anything, including an SVG for a
+ * `.png` URL. The returned content is therefore held to the same content
+ * policies as a fetched image or an inline `data:` URL when `security.enabled`:
+ *
+ * - an SVG (returned string or Blob) while `allowSvgImages` is false →
+ *   `SVG_BLOCKED`;
+ * - a returned `data:` URL string while `allowDataUrls` is false →
+ *   `DATA_URL_BLOCKED`;
+ * - a returned string that is not a `data:` URL, a returned string whose data
+ *   URL has no image MIME type, or a returned Blob with a non-image type →
+ *   `IMAGE_TYPE_BLOCKED`. A Blob with no type keeps the historical
+ *   `image/png` default instead of being rejected: callers commonly construct
+ *   `new Blob([bytes])` without one.
+ *
+ * Every violation goes through `handleSecurityViolation`, so `violationMode:
+ * 'throw'` throws `SecurityViolationError`, `onSecurityViolation` still fires,
+ * and skip/placeholder handling matches every other image check — the check
+ * composes with the throw-mode and document-order violation machinery rather
+ * than bypassing it.
+ *
+ * Returns true when the returned content passed validation.
+ */
+export const validateLoaderReturnedContent = (
+    loaded: string | Blob,
+    security: RenderSecurityOptions,
+    src: string | undefined,
+): boolean => {
+    const reject = (code: SecurityViolationCode, message: string): false => {
+        handleSecurityViolation(security, {
+            code,
+            type: 'image',
+            message,
+            value: src,
+            context: 'image-loader-content',
+        });
+        return false;
+    };
+
+    const mime =
+        typeof loaded === 'string'
+            ? loaderDataUrlMimeType(loaded)
+            : loaded.type.split(';')[0].trim().toLowerCase();
+
+    if (mime === null) {
+        return reject(
+            'IMAGE_TYPE_BLOCKED',
+            'Image loader returned a string that is not a data: URL',
+        );
+    }
+
+    if (isSvgMimeType(mime)) {
+        if (!security.allowSvgImages) {
+            return reject('SVG_BLOCKED', 'SVG images are blocked');
+        }
+    } else if (!mime.startsWith('image/') && !isTypelessBlob(loaded, mime)) {
+        return reject(
+            'IMAGE_TYPE_BLOCKED',
+            `Image loader returned a disallowed content type: ${mime || '(missing)'}`,
+        );
+    }
+
+    if (typeof loaded === 'string' && !security.allowDataUrls) {
+        return reject('DATA_URL_BLOCKED', 'Data URLs are blocked for images');
+    }
+
+    return true;
+};
+
+/**
  * Recursively traverses parsed elements and loads image data for Image tokens.
  * @param elements - The parsed elements to process.
  * @param imageLoad - Optional caller-supplied image loader, called with the
@@ -482,7 +584,11 @@ export const prefetchImages = async (
                         // Bytes or a Blob are converted the same way fetched
                         // images are; a string is used as the data: URL as-is.
                         // maxImageSizeBytes applies to whatever the loader
-                        // returns, just like it does to fetched images.
+                        // returns, just like it does to fetched images. The
+                        // returned content is validated first: the URL checks
+                        // above only saw the requested src, so the SVG and
+                        // data-URL policies are enforced against what the
+                        // loader actually returned.
                         const maxBytes =
                             security?.enabled && security.maxImageSizeBytes
                                 ? security.maxImageSizeBytes
@@ -509,8 +615,28 @@ export const prefetchImages = async (
                             }
                             return false;
                         };
+                        const rejectInvalidContent = (
+                            loaded: string | Blob,
+                        ): boolean => {
+                            if (
+                                security?.enabled &&
+                                !validateLoaderReturnedContent(
+                                    loaded,
+                                    security,
+                                    element.src,
+                                )
+                            ) {
+                                element.data = undefined;
+                                element.src = undefined;
+                                return true;
+                            }
+                            return false;
+                        };
 
                         if (typeof loaded === 'string') {
+                            if (rejectInvalidContent(loaded)) {
+                                continue;
+                            }
                             if (
                                 rejectOversized(
                                     getDataUrlPayloadByteSize(loaded),
@@ -526,6 +652,9 @@ export const prefetchImages = async (
                                     : // slice() re-backs the view with a plain
                                       // ArrayBuffer, satisfying BlobPart.
                                       new Blob([loaded.slice()]);
+                            if (rejectInvalidContent(blob)) {
+                                continue;
+                            }
                             if (rejectOversized(blob.size)) {
                                 continue;
                             }
