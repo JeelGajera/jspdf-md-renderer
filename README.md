@@ -301,6 +301,9 @@ const options = {
     showPageNumbers: true,
     align: 'right',
   },
+  // 'document' (default): header/footer page numbers count the whole document.
+  // 'render-relative': each render numbers its own pages 1..N.
+  pageNumbers: 'document',
 }
 ```
 

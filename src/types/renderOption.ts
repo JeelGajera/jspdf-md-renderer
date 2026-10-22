@@ -219,6 +219,19 @@ export type RenderOption = {
         showPageNumbers?: boolean;
     };
     /**
+     * Which pages the header/footer page numbers refer to.
+     *
+     * - `'document'` (default): `pageNumber`/`totalPages` passed to the
+     *   header/footer callbacks (and rendered by `footer.showPageNumbers`)
+     *   are absolute within the whole document. This is the historical
+     *   behaviour and keeps existing documents rendering identically when
+     *   sections are appended to one globally numbered document.
+     * - `'render-relative'`: pages are numbered 1..N and the total is the
+     *   number of pages the current render produced, so a render appended
+     *   after existing content numbers its own pages from 1 (issue #116).
+     */
+    pageNumbers?: 'document' | 'render-relative';
+    /**
      * How a single newline inside a paragraph is treated.
      *
      * - `true` (default): renders a hard line break. This is the historical
@@ -294,8 +307,9 @@ type FontItem = {
  */
 export type ResolvedRenderOption = Omit<
     RenderOption,
-    'cursor' | 'page' | 'font' | 'endCursorYHandler'
+    'cursor' | 'page' | 'font' | 'endCursorYHandler' | 'pageNumbers'
 > & {
+    pageNumbers: 'document' | 'render-relative';
     cursor: Cursor;
     page: {
         format?: string | number[];

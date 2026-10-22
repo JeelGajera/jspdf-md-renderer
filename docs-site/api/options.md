@@ -147,6 +147,27 @@ the configured `spacing.*` values.
 Use `'collapse'` when you want spacing to be fully determined by your
 configuration. See [Scheduled default changes](#scheduled-default-changes).
 
+### Page Numbering
+
+```ts
+pageNumbers: 'document' // 'document' | 'render-relative'
+```
+
+Controls which pages the header/footer page numbers refer to — the
+`pageNumber`/`totalPages` arguments of the `header.text`/`footer.text`
+callbacks and the `footer.showPageNumbers` shortcut.
+
+- `'document'` (default) — page numbers and totals are absolute within the
+  whole document. This is the historical behaviour, so existing documents
+  render unchanged and callers appending sections to one globally numbered
+  document keep seeing continuous numbering.
+- `'render-relative'` — pages are numbered 1..N and the total is the number
+  of pages the current render produced, so a render appended after existing
+  content numbers its own pages from 1.
+
+Use `'render-relative'` when each `MdTextRender` call is a self-contained
+section whose pages should start at 1.
+
 ### Line Breaks
 
 ```ts

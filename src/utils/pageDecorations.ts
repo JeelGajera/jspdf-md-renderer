@@ -15,8 +15,16 @@ export const applyPageDecorations = (
 
     for (let pageNum = start; pageNum <= totalPages; pageNum++) {
         doc.setPage(pageNum);
-        applyHeader(doc, options, pageNum, totalPages);
-        applyFooter(doc, options, pageNum, totalPages);
+        // Render-relative numbering is opt-in (issue #116 follow-up): by
+        // default header/footer callbacks keep receiving the document's page
+        // numbers, so callers appending sections to one globally numbered
+        // document see no change. `pageNumbers: 'render-relative'` numbers
+        // pages 1..N of the decorated range instead.
+        const relative = options.pageNumbers === 'render-relative';
+        const shownPage = relative ? pageNum - start + 1 : pageNum;
+        const shownTotal = relative ? totalPages - start + 1 : totalPages;
+        applyHeader(doc, options, shownPage, shownTotal);
+        applyFooter(doc, options, shownPage, shownTotal);
     }
 };
 
