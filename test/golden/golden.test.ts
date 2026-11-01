@@ -185,6 +185,38 @@ describe('golden snapshots with decorations', () => {
     });
 });
 
+describe('golden snapshots with link underline opt-in (issue #104)', () => {
+    /**
+     * Pins the opt-in `link.underline` geometry — including the styled-link
+     * cases (bold, inline-code-first, inline-code-last) — as a full drawing
+     * transcript, so any future baseline change shows up as a coordinate
+     * diff rather than passing silently.
+     */
+    it('renders underlined plain, bold and codespan links', async () => {
+        const { doc, transcript } = recordDoc();
+
+        await MdTextRender(
+            doc,
+            [
+                '[plain link](https://example.com)',
+                '',
+                '[multi word link here](https://example.com)',
+                '',
+                '[**bold** and plain](https://example.com)',
+                '',
+                '[`code` plain](https://example.com)',
+                '',
+                '[plain `code`](https://example.com)',
+            ].join('\n'),
+            goldenOptions({ link: { underline: true } }),
+        );
+
+        await expect(transcript()).toMatchFileSnapshot(
+            './__snapshots__/link-underline.txt',
+        );
+    });
+});
+
 describe('table page margins (issue #82)', () => {
     /**
      * A multi-page table must stay inside the requested content area when

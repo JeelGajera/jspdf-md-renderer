@@ -194,6 +194,20 @@ codespan: {
 }
 ```
 
+### Links
+
+```ts
+link: {
+  linkColor: [0, 0, 255], // RGB tuple for link text color
+  underline: false, // underline link text (useful for greyscale printing)
+}
+```
+
+Behavior notes:
+- `link.underline` draws one continuous rule per same-link run on each line — a multi-word link gets a single unbroken underline, including under the spaces (and stretched gaps when justified); distinct links always keep separate, non-overlapping rules.
+- When a link wraps across lines, each line's run is underlined separately.
+- A clickable PDF link action is still added per word — see [Links](/elements/links).
+
 ### Table Width Behavior
 
 Tables follow the same content column as other block elements:

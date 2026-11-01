@@ -184,6 +184,9 @@ export const flattenToWords = (
                     linkColor: elIsLink
                         ? store.options.link?.linkColor || [0, 0, 255]
                         : undefined,
+                    linkUnderline: elIsLink
+                        ? store.options.link?.underline ?? false
+                        : undefined,
                     hasTrailingSpace: /\s$/.test(text),
                     isStrikethrough: elStruck,
                 });
@@ -212,6 +215,9 @@ export const flattenToWords = (
                     href: elHref,
                     linkColor: elIsLink
                         ? store.options.link?.linkColor || [0, 0, 255]
+                        : undefined,
+                    linkUnderline: elIsLink
+                        ? store.options.link?.underline ?? false
                         : undefined,
                     hasTrailingSpace: !isLastInLine || /[ \t]$/.test(lines[li]),
                     isStrikethrough: elStruck,

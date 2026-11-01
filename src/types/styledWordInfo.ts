@@ -24,6 +24,8 @@ export interface StyledWordInfo {
     href?: string;
     /** Optional link color override */
     linkColor?: number[];
+    /** Whether to underline this link word */
+    linkUnderline?: boolean;
     /** Whether this is an inline image */
     isImage?: boolean;
     /** The image parsed element */

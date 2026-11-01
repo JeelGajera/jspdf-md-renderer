@@ -137,7 +137,10 @@ export type RenderOption = {
         fontSizeScale?: number;
     };
     link?: {
-        linkColor: [number, number, number];
+        /** Link text color as [r, g, b]. Default: [0, 0, 255] */
+        linkColor?: [number, number, number];
+        /** Whether to underline links. Default: false */
+        underline?: boolean;
     };
     table?: UserOptions;
     image?: {
