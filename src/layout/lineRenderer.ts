@@ -65,14 +65,36 @@ export const renderLine = (
     // Justified lines stretch the inter-word spaces, so every word keeps its
     // own text call there; the last line of a justified paragraph uses the
     // normal space width and is safe to merge (issue #88).
+    //
+    // Merging is also off while the document's RTL setting is active: jsPDF
+    // reverses the entire string of a single text() call under R2L, so a
+    // merged "foo bar baz" would be emitted as one (zab rab oof) Tj at the
+    // first word's x — word order and glyph positions change even though
+    // the width guard passes. Per-word calls reverse only their own word,
+    // which is exactly what master emits (issue #111 follow-up).
     const mergeable =
-        wordRunMergingEnabled && (alignment !== 'justify' || isLastLine);
+        wordRunMergingEnabled &&
+        (alignment !== 'justify' || isLastLine) &&
+        !isRtlActive(doc);
     let currentX = startX;
 
     let i = 0;
+    // End index of the current same-style run, cached when its guard
+    // fails: every word inside the run shares this end (same merge key),
+    // so following words reuse it instead of rescanning the run's keys
+    // for each word — that rescan made a guard-failing 5,000-word line
+    // quadratic (~2.3 s here vs ~0.1 s on master). The per-suffix guard
+    // check still runs, so a suffix whose own origins hold still merges
+    // (e.g. "list item" after a longer run failed its guard).
+    let cachedRunEnd = 0;
     while (i < words.length) {
         const word = words[i];
-        const runEnd = mergeable ? findMergeableRun(words, i) : i + 1;
+        const runEnd =
+            mergeable && i < cachedRunEnd
+                ? cachedRunEnd
+                : mergeable
+                  ? findMergeableRun(words, i)
+                  : i + 1;
         if (
             runEnd - i > 1 &&
             renderWordRun(
@@ -92,6 +114,9 @@ export const renderLine = (
             i = runEnd;
             continue;
         }
+        if (runEnd - i > 1) {
+            cachedRunEnd = runEnd;
+        }
 
         const elementHeight =
             word.isImage && word.imageHeight
@@ -107,6 +132,14 @@ export const renderLine = (
         i++;
     }
 };
+
+/**
+ * Whether the document's RTL setting is active. jsPDF reverses the whole
+ * string of one text() call when it is, so word-run merging must stay off
+ * (see renderLine). The renderer never passes a per-call R2L option, so the
+ * document-level setting is the only one that can apply.
+ */
+const isRtlActive = (doc: jsPDF): boolean => doc.getR2L?.() ?? false;
 
 /**
  * How far the cursor advances past a merged run: the drawn text plus the
