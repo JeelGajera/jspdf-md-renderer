@@ -20,6 +20,29 @@ Markdown links use standard syntax:
 - Link color can be customized via `link.linkColor`.
 - PDF link action is added when allowed.
 
+## Anchor Links to Headings
+
+Links whose target starts with `#` jump to a heading inside the PDF instead
+of opening a URL:
+
+```markdown
+# Getting Started
+
+Jump to [Getting Started](#getting-started) to begin.
+```
+
+While rendering, each heading is given a GitHub-style slug (`My Heading` →
+`my-heading`; repeated headings get `-1`, `-2` suffixes) and its page and
+position are recorded. A link like `[text](#my-heading)` then becomes an
+internal PDF link to that heading — even when the link appears before the
+heading it points at.
+
+- The fragment must match the heading's lowercase slug (`#My-Heading` will
+  not match `my-heading`).
+- An anchor that matches no heading keeps the default URL-link behaviour.
+- When `security.enabled` is `true`, anchor links follow the same
+  link-policy rules as any other link.
+
 ## Security-Aware Behavior
 
 When `security.enabled` is `true`:

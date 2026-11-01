@@ -40,6 +40,7 @@ import {
     convertUnloadableImagesToAltText,
 } from '../security/security-transforms';
 import { buildOutline } from '../utils/outline';
+import { resolveAnchorLinks } from '../utils/headingAnchors';
 
 /**
  * Renders markdown into a jsPDF document.
@@ -344,6 +345,9 @@ export const MdTextRender = async (
     });
     // Opt-in PDF bookmarks: one nested outline entry per heading.
     buildOutline(doc, store.outlineEntries);
+    // `#anchor` links are created here, once every heading position is known,
+    // so links pointing at headings drawn later in the document resolve too.
+    resolveAnchorLinks(doc, store);
     validOptions.endCursorYHandler(store.Y);
 
     const lastPage =
