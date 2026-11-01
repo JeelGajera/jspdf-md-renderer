@@ -264,6 +264,51 @@ describe('link.underline option', () => {
         expect(x2 - x1).toBeGreaterThan(wordsWidth + 2 * doc.getTextWidth(' '));
     });
 
+    const underlineYFor = async (markdown: string): Promise<number> => {
+        const { MdTextRender } = await import('../../src/index');
+        const { jsPDF } = await import('jspdf');
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const lineSpy = vi.spyOn(doc, 'line');
+
+        await MdTextRender(doc, markdown, {
+            ...baseOptions,
+            link: { underline: true },
+        });
+
+        expect(lineSpy).toHaveBeenCalledTimes(1);
+        const [, y1, , y2] = lineSpy.mock.calls[0];
+        expect(y2).toBe(y1); // horizontal
+        return y1 as number;
+    };
+
+    it('draws the underline at the full-size Y when inline code comes first in the link', async () => {
+        // Regression: the rule used to take its height from the first word's
+        // reduced codespan font, pulling it ~0.5 mm up into the descenders.
+        const codeFirstY = await underlineYFor(
+            '[`code` plain](https://example.com)',
+        );
+        const plainOnlyY = await underlineYFor(
+            '[plain word](https://example.com)',
+        );
+        expect(codeFirstY).toBeCloseTo(plainOnlyY, 6);
+    });
+
+    it('draws the underline at the same Y when inline code comes last in the link', async () => {
+        // Order-independence: code-first and code-last links share one
+        // baseline derived from the run's full-size text metrics.
+        const codeLastY = await underlineYFor(
+            '[plain `code`](https://example.com)',
+        );
+        const codeFirstY = await underlineYFor(
+            '[`code` plain](https://example.com)',
+        );
+        const plainOnlyY = await underlineYFor(
+            '[plain word](https://example.com)',
+        );
+        expect(codeLastY).toBeCloseTo(codeFirstY, 6);
+        expect(codeLastY).toBeCloseTo(plainOnlyY, 6);
+    });
+
     it('draws one continuous rule for a styled (bold) link', async () => {
         const { MdTextRender } = await import('../../src/index');
         const { jsPDF } = await import('jspdf');

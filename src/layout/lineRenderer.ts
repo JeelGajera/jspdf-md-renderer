@@ -210,11 +210,27 @@ const drawUnderlineRun = (
     const first = words[runStart];
     const last = words[runEnd - 1];
     withSavedDocState(doc, () => {
-        applyStyleToDoc(doc, first.style, store);
         if (first.linkColor) {
             doc.setTextColor(...(first.linkColor as [number, number, number]));
         }
-        const h = doc.getTextDimensions('H').h;
+        // Derive the rule's vertical position from the whole run, not the
+        // first word's font: styles shrink text (codespan scales to 0.88),
+        // so a codespan-first run used to sit ~0.5 mm higher than the same
+        // link with a plain word first. The largest 'H' height across every
+        // word in the run is order-independent and keeps the rule below the
+        // full-size text's descenders in every style mix.
+        let h = 0;
+        let maxFontSize = 0;
+        // Codespan scales the *current* size, so reset to the body size
+        // before each word — otherwise a codespan-first run would measure
+        // the following plain words at the reduced size too.
+        const bodySize = doc.getFontSize();
+        for (let i = runStart; i < runEnd; i++) {
+            doc.setFontSize(bodySize);
+            applyStyleToDoc(doc, words[i].style, store);
+            h = Math.max(h, doc.getTextDimensions('H').h);
+            maxFontSize = Math.max(maxFontSize, doc.getFontSize());
+        }
         // Text is drawn with baseline 'top', so the underline sits just below
         // the text block with a small gap for descenders.
         const lineY = wordDrawYs[runStart] + h * 1.08;
@@ -222,7 +238,7 @@ const drawUnderlineRun = (
         const savedWidth = doc.getLineWidth();
         // Match the rule colour to the text so it reads as one decorated run.
         doc.setDrawColor(doc.getTextColor());
-        doc.setLineWidth(Math.max(0.1, doc.getFontSize() / 120));
+        doc.setLineWidth(Math.max(0.1, maxFontSize / 120));
         doc.line(
             wordXs[runStart],
             lineY,
