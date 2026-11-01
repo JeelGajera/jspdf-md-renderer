@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { MdTokenType } from '../enums/mdTokenType';
-import { ParsedElement } from '../types';
+import { ImageLoader, ParsedElement } from '../types';
 import {
     attachRenderWarnings,
     handleSecurityViolation,
@@ -11,6 +11,7 @@ import {
 import {
     RenderSecurityOptions,
     SecurityViolation,
+    SecurityViolationCode,
     SecurityViolationError,
 } from '../types/security';
 import {
@@ -419,6 +420,109 @@ const runWithBoundedConcurrency = async <T>(
 };
 
 /**
+ * Extracts the MIME type from a loader-returned `data:` URL string —
+ * lowercased and without parameters, so `data:image/svg+xml;charset=utf-8,…`
+ * yields `image/svg+xml`. Returns null when the string is not a `data:` URL
+ * at all.
+ */
+const loaderDataUrlMimeType = (value: string): string | null => {
+    if (!isDataUrl(value)) return null;
+    const commaIndex = value.indexOf(',');
+    if (commaIndex < 0) return null;
+    const metadata = value.slice('data:'.length, commaIndex).toLowerCase();
+    const paramIndex = metadata.indexOf(';');
+    return paramIndex < 0 ? metadata : metadata.slice(0, paramIndex);
+};
+
+/** Returns true when a MIME type denotes SVG content. */
+const isSvgMimeType = (mime: string): boolean =>
+    mime === 'image/svg+xml' || mime === 'image/svg';
+
+/**
+ * A Blob with no type keeps the historical `image/png` default applied later
+ * by `blobToDataUrl` instead of being rejected: callers commonly construct
+ * `new Blob([bytes])` without one. A `data:` URL string with no MIME type is
+ * text/plain per RFC 2397, so it is not exempt.
+ */
+const isTypelessBlob = (loaded: string | Blob, mime: string): boolean =>
+    typeof loaded !== 'string' && mime === '';
+
+/**
+ * Validates what a custom `image.load` loader returned before the renderer
+ * accepts it.
+ *
+ * The URL checks run *before* the loader is called, so they only ever saw the
+ * requested `src` — a loader can return anything, including an SVG for a
+ * `.png` URL. The returned content is therefore held to the same content
+ * policies as a fetched image or an inline `data:` URL when `security.enabled`:
+ *
+ * - an SVG (returned string or Blob) while `allowSvgImages` is false →
+ *   `SVG_BLOCKED`;
+ * - a returned `data:` URL string while `allowDataUrls` is false →
+ *   `DATA_URL_BLOCKED`;
+ * - a returned string that is not a `data:` URL, a returned string whose data
+ *   URL has no image MIME type, or a returned Blob with a non-image type →
+ *   `IMAGE_TYPE_BLOCKED`. A Blob with no type keeps the historical
+ *   `image/png` default instead of being rejected: callers commonly construct
+ *   `new Blob([bytes])` without one.
+ *
+ * Every violation goes through `handleSecurityViolation` on the security
+ * view the caller passes in, so inside `loadImageElement` — where that view
+ * is the deferred one with `violationMode: 'skip'` — a violation is collected
+ * as a report and replayed in document order (throwing the first one in
+ * document order in `'throw'` mode) instead of aborting the other in-flight
+ * loads. Called directly with a real security object, the usual
+ * throw/skip/placeholder handling applies.
+ *
+ * Returns true when the returned content passed validation.
+ */
+export const validateLoaderReturnedContent = (
+    loaded: string | Blob,
+    security: RenderSecurityOptions,
+    src: string | undefined,
+): boolean => {
+    const reject = (code: SecurityViolationCode, message: string): false => {
+        handleSecurityViolation(security, {
+            code,
+            type: 'image',
+            message,
+            value: src,
+            context: 'image-loader-content',
+        });
+        return false;
+    };
+
+    const mime =
+        typeof loaded === 'string'
+            ? loaderDataUrlMimeType(loaded)
+            : loaded.type.split(';')[0].trim().toLowerCase();
+
+    if (mime === null) {
+        return reject(
+            'IMAGE_TYPE_BLOCKED',
+            'Image loader returned a string that is not a data: URL',
+        );
+    }
+
+    if (isSvgMimeType(mime)) {
+        if (!security.allowSvgImages) {
+            return reject('SVG_BLOCKED', 'SVG images are blocked');
+        }
+    } else if (!mime.startsWith('image/') && !isTypelessBlob(loaded, mime)) {
+        return reject(
+            'IMAGE_TYPE_BLOCKED',
+            `Image loader returned a disallowed content type: ${mime || '(missing)'}`,
+        );
+    }
+
+    if (typeof loaded === 'string' && !security.allowDataUrls) {
+        return reject('DATA_URL_BLOCKED', 'Data URLs are blocked for images');
+    }
+
+    return true;
+};
+
+/**
  * Loads a single image element: security checks, fetch, and data-URL/SVG
  * handling exactly as the old sequential loop did. Nothing is reported
  * inline — violations and warnings are returned as reports so the caller can
@@ -428,10 +532,18 @@ const runWithBoundedConcurrency = async <T>(
  * in-flight loads. Every load runs to completion, the reports are replayed in
  * document order, and the FIRST violation in document order is thrown — not
  * the first one whose load happened to fail first.
+ *
+ * `imageLoad`, when given, is called only for non-`data:` sources and only
+ * after the input URL checks above have passed, so a blocked URL never
+ * reaches it. Returning `undefined` falls back to the built-in fetch. What
+ * the loader returns is validated (returned-content policy) and size-checked
+ * through the same deferred reports, so a bad return from one image neither
+ * aborts the other in-flight loads nor jumps the document-order queue.
  */
 const loadImageElement = async (
     element: ParsedElement,
     security: RenderSecurityOptions | undefined,
+    imageLoad?: ImageLoader,
 ): Promise<DeferredImageReport[]> => {
     const reports: DeferredImageReport[] = [];
     const reportViolation = (
@@ -558,46 +670,132 @@ const loadImageElement = async (
                 return reports;
             }
         } else {
-            // Try to fetch the image
-            const response = await secureImageFetch(
-                element.src!,
-                deferredSecurity,
-            );
-            if (!response.ok) {
-                await response.body?.cancel().catch(() => {});
-                throw new Error(
-                    `Failed to fetch image: ${response.statusText}`,
-                );
-            }
+            // A caller-supplied loader runs before the built-in fetch.
+            // It sees the src only after the security checks above, so
+            // a blocked URL never reaches it. Returning `undefined`
+            // falls back to the built-in fetch. A loader throw is caught
+            // by the outer catch and reported as IMAGE_LOAD_FAILED, like
+            // a fetch failure, without aborting the other in-flight loads.
+            const loaded = await imageLoad?.(element.src!);
 
-            let blob: Blob;
-            try {
-                blob = await readImageBlob(
-                    response,
-                    deferredSecurity.enabled
-                        ? (deferredSecurity.maxImageSizeBytes ?? 0)
-                        : 0,
+            if (loaded === undefined) {
+                // Try to fetch the image
+                const response = await secureImageFetch(
+                    element.src!,
+                    deferredSecurity,
                 );
-            } catch (error) {
-                if (!(error instanceof ImageTooLargeError)) {
-                    throw error;
+                if (!response.ok) {
+                    await response.body?.cancel().catch(() => {});
+                    throw new Error(
+                        `Failed to fetch image: ${response.statusText}`,
+                    );
                 }
-                handleSecurityViolation(deferredSecurity, {
-                    code: 'IMAGE_SIZE_EXCEEDED',
-                    type: 'image',
-                    message:
-                        error.source === 'content-length'
-                            ? 'Declared image size exceeds maxImageSizeBytes'
-                            : 'Fetched image exceeds maxImageSizeBytes',
-                    value: String(error.bytes),
-                    context: error.source,
-                });
-                element.data = undefined;
-                element.src = undefined;
-                return reports;
-            }
 
-            element.data = await blobToDataUrl(blob);
+                let blob: Blob;
+                try {
+                    blob = await readImageBlob(
+                        response,
+                        deferredSecurity.enabled
+                            ? (deferredSecurity.maxImageSizeBytes ?? 0)
+                            : 0,
+                    );
+                } catch (error) {
+                    if (!(error instanceof ImageTooLargeError)) {
+                        throw error;
+                    }
+                    handleSecurityViolation(deferredSecurity, {
+                        code: 'IMAGE_SIZE_EXCEEDED',
+                        type: 'image',
+                        message:
+                            error.source === 'content-length'
+                                ? 'Declared image size exceeds maxImageSizeBytes'
+                                : 'Fetched image exceeds maxImageSizeBytes',
+                        value: String(error.bytes),
+                        context: error.source,
+                    });
+                    element.data = undefined;
+                    element.src = undefined;
+                    return reports;
+                }
+
+                element.data = await blobToDataUrl(blob);
+            } else {
+                // Bytes or a Blob are converted the same way fetched
+                // images are; a string is used as the data: URL as-is.
+                // maxImageSizeBytes applies to whatever the loader
+                // returns, just like it does to fetched images. The
+                // returned content is validated first: the URL checks
+                // above only saw the requested src, so the SVG and
+                // data-URL policies are enforced against what the
+                // loader actually returned. Both checks report through
+                // the deferred security view, so violations are replayed
+                // in document order with the rest.
+                const maxBytes =
+                    deferredSecurity.enabled &&
+                    deferredSecurity.maxImageSizeBytes
+                        ? deferredSecurity.maxImageSizeBytes
+                        : 0;
+                const rejectOversized = (bytes: number | null): boolean => {
+                    if (maxBytes > 0 && bytes !== null && bytes > maxBytes) {
+                        handleSecurityViolation(deferredSecurity, {
+                            code: 'IMAGE_SIZE_EXCEEDED',
+                            type: 'image',
+                            message:
+                                'Image loader returned data exceeding maxImageSizeBytes',
+                            value: String(bytes),
+                            context: 'image-loader-size',
+                        });
+                        element.data = undefined;
+                        element.src = undefined;
+                        return true;
+                    }
+                    return false;
+                };
+
+                if (typeof loaded === 'string') {
+                    if (
+                        deferredSecurity.enabled &&
+                        !validateLoaderReturnedContent(
+                            loaded,
+                            deferredSecurity,
+                            element.src,
+                        )
+                    ) {
+                        element.data = undefined;
+                        element.src = undefined;
+                        return reports;
+                    }
+                    if (
+                        rejectOversized(getDataUrlPayloadByteSize(loaded))
+                    ) {
+                        return reports;
+                    }
+                    element.data = loaded;
+                } else {
+                    const blob =
+                        loaded instanceof Blob
+                            ? loaded
+                            : // slice() re-backs the view with a plain
+                              // ArrayBuffer, satisfying BlobPart.
+                              new Blob([loaded.slice()]);
+                    if (
+                        deferredSecurity.enabled &&
+                        !validateLoaderReturnedContent(
+                            blob,
+                            deferredSecurity,
+                            element.src,
+                        )
+                    ) {
+                        element.data = undefined;
+                        element.src = undefined;
+                        return reports;
+                    }
+                    if (rejectOversized(blob.size)) {
+                        return reports;
+                    }
+                    element.data = await blobToDataUrl(blob);
+                }
+            }
         }
 
         // If in browser, asynchronously rasterize SVG to a transparent PNG for jsPDF's synchronous engine
@@ -669,11 +867,14 @@ const loadImageElement = async (
  * the first one in document order, after all loads have settled.
  *
  * @param elements - The parsed elements to process.
+ * @param imageLoad - Optional caller-supplied image loader, called with the
+ * src before the built-in fetch. Returning `undefined` falls back to it.
  */
 export const prefetchImages = async (
     elements: ParsedElement[],
     security?: RenderSecurityOptions,
     warnings?: RenderWarnings,
+    imageLoad?: ImageLoader,
 ): Promise<void> => {
     const images: ParsedElement[] = [];
     collectImageElements(elements, images);
@@ -681,7 +882,7 @@ export const prefetchImages = async (
     const outcomes = await runWithBoundedConcurrency(
         images,
         MAX_CONCURRENT_IMAGE_LOADS,
-        (element) => loadImageElement(element, security),
+        (element) => loadImageElement(element, security, imageLoad),
     );
 
     for (const reports of outcomes) {
