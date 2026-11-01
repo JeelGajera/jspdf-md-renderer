@@ -85,7 +85,10 @@ export const applyStyleToDoc = (
             );
             break;
         default:
-            doc.setFont(regularFont, store.options.font.regular?.style || 'normal');
+            doc.setFont(
+                regularFont,
+                store.options.font.regular?.style || 'normal',
+            );
             break;
     }
 };
@@ -93,6 +96,14 @@ export const applyStyleToDoc = (
 /**
  * Flattens a ParsedElement tree into a flat array of StyledWordInfo.
  * This is the single source of truth for converting AST → layout words.
+ *
+ * Iterative: an explicit frame stack replaces the old per-`items` recursion,
+ * so arbitrarily deep inline nesting (e.g. alternating `<b>`/`<em>` wrappers
+ * the parser cannot collapse) cannot overflow the call stack. Each frame's
+ * `baseLength` reproduces the old recursion's frame-local `result`: a
+ * leading-space/soft-break flag touches the previous word only when this
+ * frame itself has already produced a word, not merely because an enclosing
+ * frame did. Output order and word objects are unchanged.
  */
 export const flattenToWords = (
     doc: jsPDF,
@@ -105,11 +116,38 @@ export const flattenToWords = (
 ): StyledWordInfo[] => {
     const result: StyledWordInfo[] = [];
 
-    for (const el of elements) {
-        const style = resolveStyle(el.type, parentStyle);
-        const elIsLink = el.type === 'link' || isLink;
-        const elHref = el.href || href;
-        const elStruck = el.type === 'del' || isStrikethrough;
+    interface Frame {
+        elements: ParsedElement[];
+        index: number;
+        style: TextStyle;
+        isLink: boolean;
+        href: string | undefined;
+        isStruck: boolean;
+        baseLength: number;
+    }
+    const stack: Frame[] = [
+        {
+            elements,
+            index: 0,
+            style: parentStyle,
+            isLink,
+            href,
+            isStruck: isStrikethrough,
+            baseLength: 0,
+        },
+    ];
+
+    while (stack.length > 0) {
+        const frame = stack[stack.length - 1];
+        if (frame.index >= frame.elements.length) {
+            stack.pop();
+            continue;
+        }
+        const el = frame.elements[frame.index++];
+        const style = resolveStyle(el.type, frame.style);
+        const elIsLink = el.type === 'link' || frame.isLink;
+        const elHref = el.href || frame.href;
+        const elStruck = el.type === 'del' || frame.isStruck;
 
         // Renders nothing by design (e.g. a link reference definition).
         if (el.type === 'noop') continue;
@@ -150,17 +188,15 @@ export const flattenToWords = (
         }
 
         if (el.items && el.items.length > 0) {
-            result.push(
-                ...flattenToWords(
-                    doc,
-                    el.items,
-                    store,
-                    style,
-                    elIsLink,
-                    elHref,
-                    elStruck,
-                ),
-            );
+            stack.push({
+                elements: el.items,
+                index: 0,
+                style,
+                isLink: elIsLink,
+                href: elHref,
+                isStruck: elStruck,
+                baseLength: result.length,
+            });
             continue;
         }
 
@@ -168,7 +204,7 @@ export const flattenToWords = (
         if (!text) continue;
 
         // Preserve leading space as trailing-space flag on previous word
-        if (/^\s/.test(text) && result.length > 0) {
+        if (/^\s/.test(text) && result.length > frame.baseLength) {
             result[result.length - 1].hasTrailingSpace = true;
         }
 
@@ -220,7 +256,7 @@ export const flattenToWords = (
             if (li < lines.length - 1) {
                 if (hardBreaks) {
                     result.push({ text: '', width: 0, style, isBr: true });
-                } else if (result.length > 0) {
+                } else if (result.length > frame.baseLength) {
                     // Soft break: the newline becomes a word separator.
                     result[result.length - 1].hasTrailingSpace = true;
                 }

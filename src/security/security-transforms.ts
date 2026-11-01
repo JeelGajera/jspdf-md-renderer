@@ -14,37 +14,47 @@ export const applyLinkPolicy = async (
 ): Promise<void> => {
     if (!security.enabled) return;
 
-    const walk = async (nodes: ParsedElement[]) => {
-        for (const node of nodes) {
-            if (node.type === MdTokenType.Link && node.href) {
-                if (security.disablePdfLinks) {
+    // Iterative pre-order walk: the old recursion overflowed on deeply
+    // nested inline wrappers. Link handling runs before descending, exactly
+    // as before (a placeholder replacement rewrites node.items first).
+    const stack: Array<{ nodes: ParsedElement[]; index: number }> = [
+        { nodes: elements, index: 0 },
+    ];
+    while (stack.length > 0) {
+        const frame = stack[stack.length - 1];
+        if (frame.index >= frame.nodes.length) {
+            stack.pop();
+            continue;
+        }
+        const node = frame.nodes[frame.index++];
+        if (node.type === MdTokenType.Link && node.href) {
+            if (security.disablePdfLinks) {
+                node.href = undefined;
+            } else {
+                const isAllowed = await validateResourceUrl(
+                    node.href,
+                    'link',
+                    security,
+                    'markdown-link',
+                );
+                if (!isAllowed) {
                     node.href = undefined;
-                } else {
-                    const isAllowed = await validateResourceUrl(
-                        node.href,
-                        'link',
-                        security,
-                        'markdown-link',
-                    );
-                    if (!isAllowed) {
-                        node.href = undefined;
-                        if (security.violationMode === 'placeholder') {
-                            node.text = security.placeholderText || '[blocked]';
-                            node.items = [
-                                {
-                                    type: MdTokenType.Text,
-                                    content: node.text,
-                                },
-                            ];
-                        }
+                    if (security.violationMode === 'placeholder') {
+                        node.text = security.placeholderText || '[blocked]';
+                        node.items = [
+                            {
+                                type: MdTokenType.Text,
+                                content: node.text,
+                            },
+                        ];
                     }
                 }
             }
-            if (node.items?.length) await walk(node.items);
         }
-    };
-
-    await walk(elements);
+        if (node.items?.length) {
+            stack.push({ nodes: node.items, index: 0 });
+        }
+    }
 };
 
 /**
@@ -56,17 +66,26 @@ export const convertBlockedImagesToPlaceholder = (
     security: RenderSecurityOptions,
 ) => {
     const placeholder = security.placeholderImageText || '[blocked image]';
-    const walk = (nodes: ParsedElement[]) => {
-        for (const node of nodes) {
-            if (node.type === MdTokenType.Image && !node.data) {
-                node.type = MdTokenType.Raw;
-                node.content = placeholder;
-                node.src = undefined;
-            }
-            if (node.items?.length) walk(node.items);
+    // Iterative pre-order walk (see applyLinkPolicy).
+    const stack: Array<{ nodes: ParsedElement[]; index: number }> = [
+        { nodes: elements, index: 0 },
+    ];
+    while (stack.length > 0) {
+        const frame = stack[stack.length - 1];
+        if (frame.index >= frame.nodes.length) {
+            stack.pop();
+            continue;
         }
-    };
-    walk(elements);
+        const node = frame.nodes[frame.index++];
+        if (node.type === MdTokenType.Image && !node.data) {
+            node.type = MdTokenType.Raw;
+            node.content = placeholder;
+            node.src = undefined;
+        }
+        if (node.items?.length) {
+            stack.push({ nodes: node.items, index: 0 });
+        }
+    }
 };
 
 /**
@@ -83,27 +102,40 @@ export const convertBlockedImagesToPlaceholder = (
 export const convertUnloadableImagesToAltText = (
     elements: ParsedElement[],
 ): void => {
-    const walk = (nodes: ParsedElement[]) => {
-        for (const node of nodes) {
-            if (node.items?.length) walk(node.items);
-
-            if (node.type !== MdTokenType.Image || node.data) continue;
-
-            const alt = node.alt?.trim();
-            if (alt) {
-                node.type = MdTokenType.Text;
-                node.content = alt;
-                node.src = undefined;
-            } else {
-                // Nothing meaningful to show in its place. Convert rather than
-                // remove: emptying a paragraph's items list makes the renderer
-                // fall back to the paragraph's raw markdown source, which would
-                // print the image syntax into the document.
-                node.type = MdTokenType.Noop;
-                node.content = '';
-                node.src = undefined;
+    // Iterative post-order walk (children before the node itself, as the old
+    // recursion did): a visited flag replaces the call stack.
+    const stack: Array<{ node: ParsedElement; visited: boolean }> = [];
+    for (let i = elements.length - 1; i >= 0; i--) {
+        stack.push({ node: elements[i], visited: false });
+    }
+    while (stack.length > 0) {
+        const entry = stack.pop() as { node: ParsedElement; visited: boolean };
+        const node = entry.node;
+        if (!entry.visited) {
+            stack.push({ node, visited: true });
+            if (node.items?.length) {
+                for (let i = node.items.length - 1; i >= 0; i--) {
+                    stack.push({ node: node.items[i], visited: false });
+                }
             }
+            continue;
         }
-    };
-    walk(elements);
+
+        if (node.type !== MdTokenType.Image || node.data) continue;
+
+        const alt = node.alt?.trim();
+        if (alt) {
+            node.type = MdTokenType.Text;
+            node.content = alt;
+            node.src = undefined;
+        } else {
+            // Nothing meaningful to show in its place. Convert rather than
+            // remove: emptying a paragraph's items list makes the renderer
+            // fall back to the paragraph's raw markdown source, which would
+            // print the image syntax into the document.
+            node.type = MdTokenType.Noop;
+            node.content = '';
+            node.src = undefined;
+        }
+    }
 };

@@ -31,6 +31,14 @@ const styledDepth = (node: ParsedElement): number => {
     return depth;
 };
 
+/**
+ * Same-style wrappers collapse at parse time (see the end-to-end rendering
+ * tests in test/rendering/deep-inline-html-rendering.test.ts): 4,000 nested
+ * `<b>` tags fold to ONE strong element, so downstream traversals never see
+ * a 4,000-deep tree. Styling semantics are unchanged — the text is still
+ * bold — only the redundant wrappers are gone.
+ */
+
 describe('nested inline styling-tag complexity', () => {
     it('converts 4,000 nested <b> tags in linear time', async () => {
         const md = '<b>'.repeat(NESTING_DEPTH) + 'x' + '</b>'.repeat(NESTING_DEPTH);
@@ -39,13 +47,17 @@ describe('nested inline styling-tag complexity', () => {
             parsed = await MdTextParser(md);
         });
         expect(elapsed).toBeLessThan(LIMIT_MS);
-        // Styling semantics are unchanged: one paragraph holding 4,000
-        // nested strong elements around the text.
+        // Styling semantics are unchanged (the text is still bold), but the
+        // redundant wrappers collapse: one paragraph holding ONE strong
+        // element around the text, not 4,000 nested ones.
         expect(parsed).toHaveLength(1);
         expect(parsed[0].type).toBe('paragraph');
-        expect(styledDepth(parsed[0].items?.[0] as ParsedElement)).toBe(
-            NESTING_DEPTH,
-        );
+        expect(styledDepth(parsed[0].items?.[0] as ParsedElement)).toBe(1);
+        expect(
+            (parsed[0].items?.[0] as ParsedElement).items
+                ?.map((i) => i.content)
+                .join(''),
+        ).toBe('x');
     });
 
     it('converts 4,000 unclosed <b> tags in linear time', async () => {
@@ -78,10 +90,10 @@ describe('nested inline styling-tag complexity', () => {
         const [outer] = node.items ?? [];
         expect(outer.type).toBe('strong');
         expect(outer.content).toBe('');
-        const [textA, inner] = outer.items ?? [];
+        // The redundant inner <b> collapses into the outer strong (same
+        // style), while the <i> still nests: a, b stay bold, c stays italic.
+        const [textA, textB, em] = outer.items ?? [];
         expect(textA).toMatchObject({ type: 'text', content: 'a' });
-        expect(inner.type).toBe('strong');
-        const [textB, em] = inner.items ?? [];
         expect(textB).toMatchObject({ type: 'text', content: 'b' });
         expect(em.type).toBe('em');
         expect(em.items?.[0]).toMatchObject({ type: 'text', content: 'c' });

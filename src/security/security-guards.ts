@@ -50,31 +50,41 @@ export const enforceNestedDepthAndImageCount = (
     let depthLimitViolated = false;
     let droppedNodeCount = 0;
 
-    const sanitizeNodes = (
-        nodes: ParsedElement[],
-        depth: number,
+    // Iterative version of the old recursive sanitizeNodes: an explicit
+    // frame stack replaces the per-`items` recursion, so deeply nested
+    // inline wrappers (which do not count towards maxNestedDepth and are
+    // therefore not dropped) cannot overflow the call stack. Node order,
+    // depth accounting, violation reporting and placeholder handling are
+    // unchanged.
+    interface SanitizeFrame {
+        nodes: ParsedElement[];
+        index: number;
+        depth: number;
+        out: ParsedElement[];
+        owner: ParsedElement | null;
+    }
+    const sanitizeNodesIterative = (
+        rootNodes: ParsedElement[],
     ): ParsedElement[] => {
-        if (maxDepth > 0 && depth > maxDepth) {
-            droppedNodeCount += countNodes(nodes);
-            // Report once per render rather than once per branch, but never
-            // stay silent: dropping a subtree under the default 'skip' mode
-            // used to remove content with no signal to the caller at all.
-            if (!depthLimitViolated) {
-                depthLimitViolated = true;
-                handleSecurityViolation(security, {
-                    code: 'MAX_NESTED_DEPTH_EXCEEDED',
-                    type: 'markdown',
-                    message:
-                        'Markdown nesting depth exceeds configured limit; ' +
-                        'the nested content was dropped',
-                    value: String(depth),
-                });
+        let rootOut: ParsedElement[] = [];
+        const stack: SanitizeFrame[] = [
+            { nodes: rootNodes, index: 0, depth: 1, out: [], owner: null },
+        ];
+        while (stack.length > 0) {
+            const frame = stack[stack.length - 1];
+            if (frame.index >= frame.nodes.length) {
+                stack.pop();
+                if (frame.owner) {
+                    frame.owner.items = frame.out;
+                    // The owner frame is suspended below, so pushing here
+                    // preserves document order exactly.
+                    stack[stack.length - 1].out.push(frame.owner);
+                } else {
+                    rootOut = frame.out;
+                }
+                continue;
             }
-            return [];
-        }
-
-        const sanitized: ParsedElement[] = [];
-        for (const node of nodes) {
+            const node = frame.nodes[frame.index++];
             if (node.type === MdTokenType.Image) {
                 imageCount++;
                 const exceedsLimit =
@@ -91,7 +101,7 @@ export const enforceNestedDepthAndImageCount = (
                     }
 
                     if (security.violationMode === 'placeholder') {
-                        sanitized.push({
+                        frame.out.push({
                             type: MdTokenType.Raw,
                             content: placeholderText,
                         });
@@ -108,18 +118,45 @@ export const enforceNestedDepthAndImageCount = (
                 // AST depth 22 and tripped a limit documented as 20 "markdown
                 // nesting" levels — the real ceiling was about 9.
                 const nextDepth = STRUCTURAL_TYPES.has(node.type)
-                    ? depth + 1
-                    : depth;
-                node.items = sanitizeNodes(node.items, nextDepth);
+                    ? frame.depth + 1
+                    : frame.depth;
+                if (maxDepth > 0 && nextDepth > maxDepth) {
+                    droppedNodeCount += countNodes(node.items);
+                    // Report once per render rather than once per branch, but
+                    // never stay silent: dropping a subtree under the default
+                    // 'skip' mode used to remove content with no signal to
+                    // the caller at all.
+                    if (!depthLimitViolated) {
+                        depthLimitViolated = true;
+                        handleSecurityViolation(security, {
+                            code: 'MAX_NESTED_DEPTH_EXCEEDED',
+                            type: 'markdown',
+                            message:
+                                'Markdown nesting depth exceeds configured limit; ' +
+                                'the nested content was dropped',
+                            value: String(nextDepth),
+                        });
+                    }
+                    node.items = [];
+                    frame.out.push(node);
+                    continue;
+                }
+                stack.push({
+                    nodes: node.items,
+                    index: 0,
+                    depth: nextDepth,
+                    out: [],
+                    owner: node,
+                });
+                continue;
             }
 
-            sanitized.push(node);
+            frame.out.push(node);
         }
-
-        return sanitized;
+        return rootOut;
     };
 
-    const sanitizedRoot = sanitizeNodes(elements, 1);
+    const sanitizedRoot = sanitizeNodesIterative(elements);
     elements.length = 0;
     elements.push(...sanitizedRoot);
 
@@ -148,8 +185,18 @@ const STRUCTURAL_TYPES: ReadonlySet<string> = new Set<string>([
 ]);
 
 /** Total nodes in a subtree, for reporting how much was dropped. */
-const countNodes = (nodes: ParsedElement[]): number =>
-    nodes.reduce((total, node) => total + 1 + countNodes(node.items ?? []), 0);
+const countNodes = (nodes: ParsedElement[]): number => {
+    let total = 0;
+    const stack: ParsedElement[][] = [nodes];
+    while (stack.length > 0) {
+        const list = stack.pop() as ParsedElement[];
+        for (const node of list) {
+            total++;
+            if (node.items?.length) stack.push(node.items);
+        }
+    }
+    return total;
+};
 
 /**
  * Creates a lightweight timeout guard function for long render flows.

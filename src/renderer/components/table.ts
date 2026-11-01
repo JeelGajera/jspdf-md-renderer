@@ -40,16 +40,32 @@ const resolveAutoTable = (): AutoTableFn => {
  * custom cell renderer and is tracked for a later release.
  */
 const cellToText = (cell: ParsedElement): string => {
-    const fromTokens = (nodes: ParsedElement[] | undefined): string =>
-        (nodes ?? [])
-            .map((node) => {
-                if (node.items && node.items.length > 0) {
-                    return fromTokens(node.items);
-                }
-                if (node.type === 'br') return ' ';
-                return node.content ?? node.text ?? '';
-            })
-            .join('');
+    // Iterative pre-order flattening: the old recursion overflowed on
+    // deeply nested inline wrappers inside a cell.
+    const fromTokens = (nodes: ParsedElement[] | undefined): string => {
+        const parts: string[] = [];
+        const stack: Array<{ nodes: ParsedElement[]; index: number }> = [
+            { nodes: nodes ?? [], index: 0 },
+        ];
+        while (stack.length > 0) {
+            const frame = stack[stack.length - 1];
+            if (frame.index >= frame.nodes.length) {
+                stack.pop();
+                continue;
+            }
+            const node = frame.nodes[frame.index++];
+            if (node.items && node.items.length > 0) {
+                stack.push({ nodes: node.items, index: 0 });
+                continue;
+            }
+            if (node.type === 'br') {
+                parts.push(' ');
+            } else {
+                parts.push(node.content ?? node.text ?? '');
+            }
+        }
+        return parts.join('');
+    };
 
     const text = fromTokens(cell.items);
     return (text || cell.content || '').trim();

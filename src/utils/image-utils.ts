@@ -337,7 +337,201 @@ export const calculateImageDimensions = (
 };
 
 /**
- * Recursively traverses parsed elements and loads image data for Image tokens.
+ * Loads image data for a single Image element.
+ *
+ * Returns false when the old loop body would have hit `continue` (a blocked
+ * image whose subtree must not be descended into); true otherwise, including
+ * for non-image elements.
+ */
+const prefetchSingleImage = async (
+    element: ParsedElement,
+    security?: RenderSecurityOptions,
+    warnings?: RenderWarnings,
+): Promise<boolean> => {
+    if (element.type === MdTokenType.Image && element.src) {
+        try {
+            if (security?.enabled) {
+                if (isDataUrl(element.src)) {
+                    const isSvg = isSvgDataUrl(element.src);
+
+                    if (isSvg && !security.allowSvgImages) {
+                        handleSecurityViolation(security, {
+                            code: 'SVG_BLOCKED',
+                            type: 'image',
+                            message: 'SVG images are blocked',
+                            value: element.src,
+                            context: 'image-src',
+                        });
+                        element.data = undefined;
+                        element.src = undefined;
+                        return false;
+                    }
+                    if (!security.allowDataUrls) {
+                        handleSecurityViolation(security, {
+                            code: 'DATA_URL_BLOCKED',
+                            type: 'image',
+                            message: 'Data URLs are blocked for images',
+                            value: element.src,
+                            context: 'image-src',
+                        });
+                        element.data = undefined;
+                        element.src = undefined;
+                        return false;
+                    }
+                } else {
+                    if (!security.allowRemoteImages) {
+                        handleSecurityViolation(security, {
+                            code: 'IMAGE_PROTOCOL_BLOCKED',
+                            type: 'image',
+                            message: 'Remote images are disabled',
+                            value: element.src,
+                            context: 'image-src',
+                        });
+                        element.data = undefined;
+                        element.src = undefined;
+                        return false;
+                    }
+
+                    const allowed = await validateResourceUrl(
+                        element.src,
+                        'image',
+                        security,
+                        'image-src',
+                    );
+                    if (!allowed) {
+                        element.data = undefined;
+                        element.src = undefined;
+                        return false;
+                    }
+                }
+            }
+
+            // If the src is already a data URI, we treat it as loaded (or just store it as data)
+            if (element.src.startsWith('data:')) {
+                element.data = element.src;
+                const dataUrlBytes = getDataUrlPayloadByteSize(element.data);
+                if (
+                    security?.enabled &&
+                    security.maxImageSizeBytes &&
+                    dataUrlBytes !== null &&
+                    dataUrlBytes > security.maxImageSizeBytes
+                ) {
+                    handleSecurityViolation(security, {
+                        code: 'IMAGE_SIZE_EXCEEDED',
+                        type: 'image',
+                        message: 'Data URL image exceeds maxImageSizeBytes',
+                        value: String(dataUrlBytes),
+                        context: 'data-url-size',
+                    });
+                    element.data = undefined;
+                    element.src = undefined;
+                    return false;
+                }
+            } else {
+                // Try to fetch the image
+                const response = await secureImageFetch(element.src, security);
+                if (!response.ok) {
+                    await response.body?.cancel().catch(() => {});
+                    throw new Error(
+                        `Failed to fetch image: ${response.statusText}`,
+                    );
+                }
+
+                let blob: Blob;
+                try {
+                    blob = await readImageBlob(
+                        response,
+                        security?.enabled
+                            ? (security.maxImageSizeBytes ?? 0)
+                            : 0,
+                    );
+                } catch (error) {
+                    if (!(error instanceof ImageTooLargeError)) {
+                        throw error;
+                    }
+                    handleSecurityViolation(security!, {
+                        code: 'IMAGE_SIZE_EXCEEDED',
+                        type: 'image',
+                        message:
+                            error.source === 'content-length'
+                                ? 'Declared image size exceeds maxImageSizeBytes'
+                                : 'Fetched image exceeds maxImageSizeBytes',
+                        value: String(error.bytes),
+                        context: error.source,
+                    });
+                    element.data = undefined;
+                    element.src = undefined;
+                    return false;
+                }
+
+                element.data = await blobToDataUrl(blob);
+            }
+
+            // If in browser, asynchronously rasterize SVG to a transparent PNG for jsPDF's synchronous engine
+            if (element.data && element.data.startsWith('data:image/svg')) {
+                if (
+                    typeof window !== 'undefined' &&
+                    typeof document !== 'undefined'
+                ) {
+                    element.data = await new Promise<string>((resolve) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const dims = extractSvgDimensions(
+                                element.data!,
+                                warnings,
+                            );
+                            const w = dims ? dims.width : img.width || 300;
+                            const h = dims ? dims.height : img.height || 150;
+
+                            // Save natural dimensions before we scale up for PDF render context
+                            element.naturalWidth = w;
+                            element.naturalHeight = h;
+
+                            const scale = 4; // High-res PDF scaling
+                            canvas.width = w * scale;
+                            canvas.height = h * scale;
+
+                            const ctx = canvas.getContext('2d');
+                            if (ctx) {
+                                ctx.scale(scale, scale);
+                                ctx.drawImage(img, 0, 0, w, h);
+                                resolve(canvas.toDataURL('image/png'));
+                            } else {
+                                resolve(element.data!);
+                            }
+                        };
+                        img.onerror = () => resolve(element.data!);
+                        img.src = element.data!;
+                    });
+                }
+            }
+        } catch (error) {
+            if (error instanceof SecurityViolationError) {
+                throw error;
+            }
+            warnings?.warn({
+                code: 'IMAGE_LOAD_FAILED',
+                message: `Failed to load image: ${String(error)}`,
+                context: element.src,
+            });
+            if (!warnings) {
+                console.warn(
+                    `[jspdf-md-renderer] Warning: Failed to load image at ${element.src}. It will be skipped.`,
+                    error,
+                );
+            }
+        }
+    }
+    return true;
+};
+
+/**
+ * Traverses parsed elements and loads image data for Image tokens.
+ *
+ * Iterative: an explicit frame stack replaces the old per-`items` recursion,
+ * so deeply nested inline wrappers cannot overflow the call stack. Elements
+ * are visited in document order, exactly as the old depth-first walk did.
  * @param elements - The parsed elements to process.
  */
 export const prefetchImages = async (
@@ -345,192 +539,19 @@ export const prefetchImages = async (
     security?: RenderSecurityOptions,
     warnings?: RenderWarnings,
 ): Promise<void> => {
-    for (const element of elements) {
-        if (element.type === MdTokenType.Image && element.src) {
-            try {
-                if (security?.enabled) {
-                    if (isDataUrl(element.src)) {
-                        const isSvg = isSvgDataUrl(element.src);
-
-                        if (isSvg && !security.allowSvgImages) {
-                            handleSecurityViolation(security, {
-                                code: 'SVG_BLOCKED',
-                                type: 'image',
-                                message: 'SVG images are blocked',
-                                value: element.src,
-                                context: 'image-src',
-                            });
-                            element.data = undefined;
-                            element.src = undefined;
-                            continue;
-                        }
-                        if (!security.allowDataUrls) {
-                            handleSecurityViolation(security, {
-                                code: 'DATA_URL_BLOCKED',
-                                type: 'image',
-                                message: 'Data URLs are blocked for images',
-                                value: element.src,
-                                context: 'image-src',
-                            });
-                            element.data = undefined;
-                            element.src = undefined;
-                            continue;
-                        }
-                    } else {
-                        if (!security.allowRemoteImages) {
-                            handleSecurityViolation(security, {
-                                code: 'IMAGE_PROTOCOL_BLOCKED',
-                                type: 'image',
-                                message: 'Remote images are disabled',
-                                value: element.src,
-                                context: 'image-src',
-                            });
-                            element.data = undefined;
-                            element.src = undefined;
-                            continue;
-                        }
-
-                        const allowed = await validateResourceUrl(
-                            element.src,
-                            'image',
-                            security,
-                            'image-src',
-                        );
-                        if (!allowed) {
-                            element.data = undefined;
-                            element.src = undefined;
-                            continue;
-                        }
-                    }
-                }
-
-                // If the src is already a data URI, we treat it as loaded (or just store it as data)
-                if (element.src.startsWith('data:')) {
-                    element.data = element.src;
-                    const dataUrlBytes = getDataUrlPayloadByteSize(
-                        element.data,
-                    );
-                    if (
-                        security?.enabled &&
-                        security.maxImageSizeBytes &&
-                        dataUrlBytes !== null &&
-                        dataUrlBytes > security.maxImageSizeBytes
-                    ) {
-                        handleSecurityViolation(security, {
-                            code: 'IMAGE_SIZE_EXCEEDED',
-                            type: 'image',
-                            message: 'Data URL image exceeds maxImageSizeBytes',
-                            value: String(dataUrlBytes),
-                            context: 'data-url-size',
-                        });
-                        element.data = undefined;
-                        element.src = undefined;
-                        continue;
-                    }
-                } else {
-                    // Try to fetch the image
-                    const response = await secureImageFetch(
-                        element.src,
-                        security,
-                    );
-                    if (!response.ok) {
-                        await response.body?.cancel().catch(() => {});
-                        throw new Error(
-                            `Failed to fetch image: ${response.statusText}`,
-                        );
-                    }
-
-                    let blob: Blob;
-                    try {
-                        blob = await readImageBlob(
-                            response,
-                            security?.enabled
-                                ? (security.maxImageSizeBytes ?? 0)
-                                : 0,
-                        );
-                    } catch (error) {
-                        if (!(error instanceof ImageTooLargeError)) {
-                            throw error;
-                        }
-                        handleSecurityViolation(security!, {
-                            code: 'IMAGE_SIZE_EXCEEDED',
-                            type: 'image',
-                            message:
-                                error.source === 'content-length'
-                                    ? 'Declared image size exceeds maxImageSizeBytes'
-                                    : 'Fetched image exceeds maxImageSizeBytes',
-                            value: String(error.bytes),
-                            context: error.source,
-                        });
-                        element.data = undefined;
-                        element.src = undefined;
-                        continue;
-                    }
-
-                    element.data = await blobToDataUrl(blob);
-                }
-
-                // If in browser, asynchronously rasterize SVG to a transparent PNG for jsPDF's synchronous engine
-                if (element.data && element.data.startsWith('data:image/svg')) {
-                    if (
-                        typeof window !== 'undefined' &&
-                        typeof document !== 'undefined'
-                    ) {
-                        element.data = await new Promise<string>((resolve) => {
-                            const img = new Image();
-                            img.onload = () => {
-                                const canvas = document.createElement('canvas');
-                                const dims = extractSvgDimensions(
-                                    element.data!,
-                                    warnings,
-                                );
-                                const w = dims ? dims.width : img.width || 300;
-                                const h = dims
-                                    ? dims.height
-                                    : img.height || 150;
-
-                                // Save natural dimensions before we scale up for PDF render context
-                                element.naturalWidth = w;
-                                element.naturalHeight = h;
-
-                                const scale = 4; // High-res PDF scaling
-                                canvas.width = w * scale;
-                                canvas.height = h * scale;
-
-                                const ctx = canvas.getContext('2d');
-                                if (ctx) {
-                                    ctx.scale(scale, scale);
-                                    ctx.drawImage(img, 0, 0, w, h);
-                                    resolve(canvas.toDataURL('image/png'));
-                                } else {
-                                    resolve(element.data!);
-                                }
-                            };
-                            img.onerror = () => resolve(element.data!);
-                            img.src = element.data!;
-                        });
-                    }
-                }
-            } catch (error) {
-                if (error instanceof SecurityViolationError) {
-                    throw error;
-                }
-                warnings?.warn({
-                    code: 'IMAGE_LOAD_FAILED',
-                    message: `Failed to load image: ${String(error)}`,
-                    context: element.src,
-                });
-                if (!warnings) {
-                    console.warn(
-                        `[jspdf-md-renderer] Warning: Failed to load image at ${element.src}. It will be skipped.`,
-                        error,
-                    );
-                }
-            }
+    const stack: Array<{ elements: ParsedElement[]; index: number }> = [
+        { elements, index: 0 },
+    ];
+    while (stack.length > 0) {
+        const frame = stack[stack.length - 1];
+        if (frame.index >= frame.elements.length) {
+            stack.pop();
+            continue;
         }
-
-        if (element.items && element.items.length > 0) {
-            await prefetchImages(element.items, security, warnings);
+        const element = frame.elements[frame.index++];
+        const descend = await prefetchSingleImage(element, security, warnings);
+        if (descend && element.items && element.items.length > 0) {
+            stack.push({ elements: element.items, index: 0 });
         }
     }
 };

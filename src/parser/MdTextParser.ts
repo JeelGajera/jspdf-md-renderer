@@ -139,10 +139,12 @@ const pairInlineStyleTags = (
  * each token exactly once — nested styled ranges are folded iteratively via
  * the open-range stack, never by slicing the list and re-pairing the inner
  * copy (that recursive rescan made deeply nested tags quadratic: 4,000
- * nested `<b>` tags took seconds instead of milliseconds). Handlers still
- * recurse into child token arrays (a paragraph's inline tokens, a table
- * cell's tokens, …), but each token belongs to exactly one such list, so
- * the full conversion stays linear in the total token count.
+ * nested `<b>` tags took seconds instead of milliseconds). Ranges whose
+ * style matches the enclosing range collapse into it (see the pair branch
+ * below), so the tree stays shallow for downstream traversal. Handlers
+ * still recurse into child token arrays (a paragraph's inline tokens, a
+ * table cell's tokens, …), but each token belongs to exactly one such list,
+ * so the full conversion stays linear in the total token count.
  *
  * @param tokens - The list of markdown tokens.
  * @returns Parsed elements in a custom structure.
@@ -155,8 +157,11 @@ const convertTokens = (
     const stylePairs = pairInlineStyleTags(tokens);
     // Open styled ranges, innermost last. Each frame owns the items array
     // that the tokens inside its range are appended to.
-    const openRanges: Array<{ closeIndex: number; items: ParsedElement[] }> =
-        [];
+    const openRanges: Array<{
+        closeIndex: number;
+        items: ParsedElement[];
+        elementType: string;
+    }> = [];
     let target = parsedElements;
     for (let i = 0; i < tokens.length; i++) {
         // A range whose closing tag sits at this index ends here: pop back
@@ -181,6 +186,26 @@ const convertTokens = (
             // no slicing and no re-pairing of the nested range.
             const pair = stylePairs.get(i);
             if (pair) {
+                const enclosing = openRanges[openRanges.length - 1];
+                if (enclosing && enclosing.elementType === pair.elementType) {
+                    // Redundant wrapper: the enclosing range already
+                    // resolves to this exact style (strong-in-strong stays
+                    // bold, em-in-em stays italic), so creating another
+                    // element would only deepen the tree. Collapse it: the
+                    // inner range shares the enclosing items array, and its
+                    // closing tag pops this transparent frame without
+                    // changing the target. Without this, 4,000 nested
+                    // `<b>` tags built a 4,000-deep tree that overflowed
+                    // every recursive downstream traversal (prefetch,
+                    // flattenToWords) even though parsing itself was
+                    // already iterative.
+                    openRanges.push({
+                        closeIndex: pair.closeIndex,
+                        items: enclosing.items,
+                        elementType: pair.elementType,
+                    });
+                    continue;
+                }
                 const element: ParsedElement = {
                     type: pair.elementType,
                     content: '',
@@ -189,7 +214,11 @@ const convertTokens = (
                 target.push(element);
                 // `items` was just created above, so it is always defined.
                 const items = element.items as ParsedElement[];
-                openRanges.push({ closeIndex: pair.closeIndex, items });
+                openRanges.push({
+                    closeIndex: pair.closeIndex,
+                    items,
+                    elementType: pair.elementType,
+                });
                 target = items;
                 continue;
             }
