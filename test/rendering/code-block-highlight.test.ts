@@ -296,6 +296,81 @@ describe('codeBlock.highlight', () => {
         },
     );
 
+    /**
+     * Regression test for the CHANGES_REQUESTED review on PR #110: when
+     * the caller has set jsPDF character spacing, advancing between
+     * highlight runs must include the spacing emitted for the previous
+     * run, or splitting a line into runs shifts every later glyph.
+     *
+     * Repro from the review: doc.setCharSpace(0.5), code block `abcdef`,
+     * hook returns `abc` in red and `def` in blue. With the default
+     * Courier code font the first run starts at X=14 and measures
+     * 6.2865 mm, so the second run must start at
+     * 14 + 6.2865 + 3 * 0.5 = 21.7865 — the three 0.5 mm character
+     * advances emitted for the first run — not at 20.2865.
+     */
+    it('includes character spacing when advancing between highlight runs', async () => {
+        const red = recordedColor('#FF0000');
+        const blue = recordedColor('#0000FF');
+        const highlighted = recordDoc();
+        highlighted.doc.setCharSpace(0.5);
+        const hResult = await MdTextRender(
+            highlighted.doc,
+            '```\nabcdef\n```',
+            {
+                ...MINIMAL,
+                // The reviewer's repro starts the block at X=14: cursor
+                // x=10, no indent, plus the default padding of 4.
+                cursor: { x: 10, y: 10 },
+                codeBlock: {
+                    highlight: () => [
+                        [
+                            { text: 'abc', color: '#FF0000' },
+                            { text: 'def', color: '#0000FF' },
+                        ],
+                    ],
+                },
+            },
+        );
+
+        expect(hResult.warnings).toEqual([]);
+        const texts = codeTexts(highlighted.ops);
+        const first = texts.find((t) => t.color === red)!;
+        const second = texts.find((t) => t.color === blue)!;
+        expect(first.y).toBe(second.y);
+        expect(first.x).toBe(14);
+        // The reviewer's exact repro numbers.
+        expect(second.x).toBeCloseTo(21.7865, 3);
+
+        // And against the unhighlighted line with the same character
+        // spacing: the highlighted runs must land exactly where the
+        // plain line's glyphs land, so splitting into runs changes no
+        // glyph position.
+        const plain = recordDoc();
+        plain.doc.setCharSpace(0.5);
+        await MdTextRender(plain.doc, '```\nabcdef\n```', {
+            ...MINIMAL,
+            cursor: { x: 10, y: 10 },
+        });
+        const plainLine = codeTexts(plain.ops).find(
+            (t) => t.text === 'abcdef',
+        )!;
+        expect(first.x).toBe(plainLine.x);
+        expect(first.y).toBe(plainLine.y);
+        // The second run starts where the plain line's fourth glyph
+        // starts: the first run's measured width plus its three
+        // character-spacing advances.
+        const measure = new jsPDF({ unit: 'mm', format: 'a4' });
+        measure.setFont('courier', 'normal');
+        measure.setFontSize(first.size as number);
+        expect(second.x).toBeCloseTo(
+            (plainLine.x as number) +
+                measure.getTextWidth('abc') +
+                3 * 0.5,
+            3,
+        );
+    });
+
     it('attributes each wrapped fragment to the run it came from', async () => {
         const line = 'alpha beta gamma delta epsilon zeta eta theta iota kappa';
         const red = recordedColor('#FF0000');

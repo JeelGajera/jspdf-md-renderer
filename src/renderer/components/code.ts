@@ -463,8 +463,15 @@ const renderCodeBlock = (
         doc.setTextColor(defaultTextColor);
         if (runsToRender !== null) {
             // Highlighted: draw each run in its own colour, advancing the
-            // cursor by the fragment's measured width. The code font is
-            // monospace, so the fragments tile the line exactly.
+            // cursor by the run's measured width plus the active
+            // character spacing for every glyph in the run. jsPDF emits
+            // the spacing (Tc) after each glyph, including a run's last
+            // one, so a run of N glyphs advances N spacings: without
+            // this, a nonzero charSpace makes every later run start too
+            // early and overlap the previous run's tail (PR #110
+            // review). The code font is monospace, so the fragments tile
+            // the line exactly.
+            const charSpace = doc.getCharSpace?.() ?? 0;
             for (const runs of runsToRender) {
                 let xPos = boxX + padding;
                 for (const run of runs) {
@@ -476,7 +483,9 @@ const renderCodeBlock = (
                         doc.setTextColor(color);
                     }
                     doc.text(run.text, xPos, yPos, { baseline: 'top' });
-                    xPos += doc.getTextWidth(run.text);
+                    xPos +=
+                        doc.getTextWidth(run.text) +
+                        run.text.length * charSpace;
                     if (color !== defaultTextColor) {
                         doc.setTextColor(defaultTextColor);
                     }
