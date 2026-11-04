@@ -4,6 +4,39 @@ import { RenderSecurityOptions, SecurityViolation } from './security';
 import { RenderWarning, WarningListener } from '../store/renderWarnings';
 import { ComponentOverrides } from './components';
 
+/**
+ * One coloured run of a highlighted code line: a piece of text and the colour
+ * it should be drawn in. A missing `color` renders in
+ * `codeBlock.textColor` (default `'#000000'`).
+ */
+export type CodeBlockHighlightRun = {
+    text: string;
+    color?: string;
+};
+
+/**
+ * Hook that colours the tokens of a code block without replacing the
+ * built-in renderer's layout: background box, padding, language label and
+ * page breaking are all still handled by the renderer (issue #86).
+ *
+ * Receives the block's code (tabs already expanded, trailing whitespace
+ * trimmed) and its info-string language, and returns one array of runs per
+ * source line. The hook must be synchronous, like the renderers themselves.
+ * The library stays dependency-free: convert a real highlighter's output
+ * (highlight.js, Shiki, ...) into runs in your own code — the
+ * [code-block highlighting guide](/guide/code-block-highlighting) shows how.
+ *
+ * A hook result that throws, returns the wrong number of lines, or whose
+ * runs do not tile a source line is ignored for the affected lines (with a
+ * `CODE_HIGHLIGHT_FAILED` warning) and the block renders in the default
+ * text colour. Long source lines still wrap; each wrapped fragment keeps the
+ * colour of the run it came from.
+ */
+export type CodeBlockHighlightFn = (
+    code: string,
+    lang?: string,
+) => Array<Array<CodeBlockHighlightRun>>;
+
 export type RenderOption = {
     /**
      * Where rendering starts. Defaults to the top-left of the content area —
@@ -158,6 +191,16 @@ export type RenderOption = {
         labelColor?: string;
         /** Tab stop width used to expand tabs in code blocks. Default: 4 */
         tabSize?: number;
+        /**
+         * Opt-in syntax highlighting for code blocks (issue #86).
+         *
+         * A synchronous hook the built-in renderer calls with the block's
+         * code and language. It returns one array of coloured runs per source
+         * line; the renderer keeps doing the layout (wrapping, pagination,
+         * background box, language label) and draws each run in its colour.
+         * Without it, output is unchanged.
+         */
+        highlight?: CodeBlockHighlightFn;
     };
     spacing?: {
         /** Space below headings in doc units. Default: 2 */

@@ -65,6 +65,10 @@ export default defineConfig({
                             text: 'Component Overrides',
                             link: '/guide/component-overrides',
                         },
+                        {
+                            text: 'Code Block Highlighting',
+                            link: '/guide/code-block-highlighting',
+                        },
                         { text: 'Browser Usage', link: '/guide/browser-usage' },
                         { text: 'Security Guide', link: '/guide/security' },
                     ],

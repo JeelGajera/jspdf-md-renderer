@@ -365,3 +365,49 @@ describe('examples/custom-fonts', () => {
         expect(brand.font.bold.style).toBe('normal');
     });
 });
+
+describe('guide/code-block-highlighting', () => {
+    // Matches the code-block-highlighting guide recipe.
+    const KEYWORDS = new Set(['const', 'let', 'function', 'return', 'if', 'else']);
+
+    const highlightKeywords = (code: string) =>
+        code.split('\n').map((line) => {
+            const runs: Array<{ text: string; color?: string }> = [];
+            for (const match of line.matchAll(/(\w+)|(\W+)/g)) {
+                const [token, word] = match;
+                runs.push({
+                    text: token,
+                    color: word && KEYWORDS.has(word) ? '#CF222E' : undefined,
+                });
+            }
+            return runs;
+        });
+
+    it('colours runs through the highlight hook', async () => {
+        // jsPDF normalises hex colours on set/get; resolve the recorded value
+        // through a real doc instead of hard-coding its internal rounding.
+        const probe = new jsPDF({ unit: 'mm', format: 'a4' });
+        probe.setTextColor('#CF222E');
+        const keywordColor = probe.getTextColor();
+
+        const { doc, ops } = recordDoc();
+        const result = await MdTextRender(doc, '```js\nconst answer = 42\n```', {
+            ...MINIMAL,
+            codeBlock: { highlight: (code) => highlightKeywords(code) },
+        });
+
+        expect(result.warnings).toEqual([]);
+        const texts = ops.filter((o) => o.op === 'text');
+        // The keyword run drew red; the rest drew in the default code colour.
+        expect(texts.some((t) => t.color === keywordColor)).toBe(true);
+        expect(texts.some((t) => t.color === '#000000')).toBe(true);
+        // The keyword fragment is a prefix of the line: the full line text is
+        // still on the page, split across coloured runs.
+        expect(
+            texts
+                .filter((t) => t.font === 'courier/normal')
+                .map((t) => t.text as string)
+                .join(''),
+        ).toContain('const answer = 42');
+    });
+});
