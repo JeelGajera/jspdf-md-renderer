@@ -23,6 +23,11 @@ const silent = (over = {}) => goldenOptions({ silent: true, ...over });
 const textOps = (ops: ReturnType<typeof recordDoc>['ops']) =>
     ops.filter((o) => o.op === 'text');
 
+// Same-style words on a line share one text call (issue #88), so split the
+// drawn runs back into words for word-level assertions.
+const drawnWords = (ops: ReturnType<typeof recordDoc>['ops']): string[] =>
+    textOps(ops).flatMap((o) => String(o.text).split(' '));
+
 const ALL_COMPONENTS: ComponentName[] = [
     'heading',
     'paragraph',
@@ -151,7 +156,7 @@ describe('ctx.next()', () => {
         );
 
         expect(
-            textOps(ops).filter((o) => o.text === 'Once'),
+            textOps(ops).filter((o) => String(o.text).includes('Once')),
         ).toHaveLength(1);
     });
 });
@@ -204,7 +209,7 @@ describe('context contents', () => {
             }),
         );
 
-        expect(textOps(ops).map((o) => o.text)).toContain('quoted');
+        expect(drawnWords(ops)).toContain('quoted');
         // The built-in would have drawn the quote bar; this override did not.
         expect(ops.some((o) => o.op === 'line')).toBe(false);
     });
@@ -252,7 +257,7 @@ describe('a misbehaving override degrades safely', () => {
         );
 
         // The block is not lost.
-        expect(textOps(ops).map((o) => o.text)).toContain('Still');
+        expect(drawnWords(ops)).toContain('Still');
         // And the failure is reported rather than swallowed.
         const failures = result.warnings.filter(
             (w) => w.code === 'COMPONENT_OVERRIDE_FAILED',
@@ -279,7 +284,7 @@ describe('a misbehaving override degrades safely', () => {
         );
 
         expect(
-            textOps(ops).filter((o) => o.text === 'Once'),
+            textOps(ops).filter((o) => String(o.text).includes('Once')),
         ).toHaveLength(1);
         expect(
             result.warnings.some(
@@ -303,7 +308,7 @@ describe('a misbehaving override degrades safely', () => {
             }),
         );
 
-        expect(textOps(ops).map((o) => o.text)).toContain('survives.');
+        expect(drawnWords(ops)).toContain('survives.');
     });
 });
 

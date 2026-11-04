@@ -193,6 +193,8 @@ describe('relaxed option requirements (item 6)', () => {
         await MdTextRender(doc, 'Body text.', {
             font: { regular: { name: 'helvetica', style: 'normal' } },
         });
+        // Helvetica falls back to per-word calls (issue #111); the words
+        // keep their exact positions.
         expect(textOps(ops).map((o) => o.text)).toEqual(['Body', 'text.']);
     });
 
