@@ -1,5 +1,10 @@
 import { Cursor, ResolvedRenderOption } from '../types';
 import { RenderWarning, RenderWarnings } from './renderWarnings';
+import {
+    HeadingAnchor,
+    PendingAnchorLink,
+    slugifyHeading,
+} from '../utils/headingAnchors';
 
 /** A heading recorded for the PDF outline (bookmarks). */
 export type OutlineEntry = {
@@ -28,6 +33,27 @@ export class RenderStore {
      * Built into nested outline items once rendering is complete.
      */
     private outlineEntries_: OutlineEntry[] = [];
+    /**
+     * Heading anchors drawn so far, keyed by their GitHub-style slug.
+     * Lets `[text](#slug)` links jump to the heading's page and position.
+     */
+    private headingAnchors_: Map<string, HeadingAnchor> = new Map();
+    /**
+     * Next suffix to try for each slug base. Restarting the search at zero
+     * for every repeated heading is quadratic (20,000 repeated headings did
+     * ~200M registry lookups); this counter only ever advances, so the
+     * total suffix search across a render is linear in the headings drawn.
+     * The occupied registry above stays the authority — the loop below
+     * keeps advancing past slugs a natural heading already took, and the
+     * counter is only stored after a free slug is found, so no unused
+     * candidate below it can exist (occupancy never decreases).
+     */
+    private headingAnchorNextSuffix_: Map<string, number> = new Map();
+    /**
+     * `#anchor` links collected during rendering. Resolved once rendering is
+     * complete, because a link can point at a heading drawn after it.
+     */
+    private pendingAnchorLinks_: PendingAnchorLink[] = [];
 
     constructor(options: ResolvedRenderOption, warnings?: RenderWarnings) {
         this.options_ = options;
@@ -137,6 +163,50 @@ export class RenderStore {
     /** Headings recorded for the outline, in document order. */
     public get outlineEntries(): readonly OutlineEntry[] {
         return this.outlineEntries_;
+    }
+
+    /**
+     * Records a heading's draw position for `[text](#slug)` links. The slug
+     * is GitHub-style (`My Heading` → `my-heading`); repeated headings get
+     * `-1`, `-2` suffixes. The occupied set includes every already-assigned
+     * slug — including ones that came from natural heading names with
+     * numeric suffixes (`A-1` → `a-1`) — so the candidate is incremented
+     * until it is unused and no destination is ever overwritten.
+     * Returns the slug that was registered.
+     */
+    public registerHeadingAnchor(
+        plainText: string,
+        page: number,
+        top: number,
+    ): string {
+        const base = slugifyHeading(plainText);
+        let suffix = this.headingAnchorNextSuffix_.get(base) ?? 0;
+        let slug = suffix === 0 ? base : `${base}-${suffix}`;
+        while (this.headingAnchors_.has(slug)) {
+            suffix += 1;
+            slug = `${base}-${suffix}`;
+        }
+        this.headingAnchors_.set(slug, { slug, page, top });
+        this.headingAnchorNextSuffix_.set(base, suffix + 1);
+        return slug;
+    }
+
+    /** The draw position of the heading with `slug`, if one was drawn. */
+    public getHeadingAnchor(slug: string): HeadingAnchor | undefined {
+        return this.headingAnchors_.get(slug);
+    }
+
+    /**
+     * Defers an `#anchor` link for resolution after rendering completes,
+     * when every heading position is known.
+     */
+    public deferAnchorLink(link: PendingAnchorLink): void {
+        this.pendingAnchorLinks_.push(link);
+    }
+
+    /** `#anchor` links collected during rendering, in draw order. */
+    public get pendingAnchorLinks(): readonly PendingAnchorLink[] {
+        return this.pendingAnchorLinks_;
     }
 
     // Convenience methods to get individual x and y values

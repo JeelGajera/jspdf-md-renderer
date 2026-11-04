@@ -64,6 +64,16 @@ const renderHeading = (
             }
         }
 
+        // Anchor target for `[text](#slug)` links: recorded after the page
+        // break so the page and Y point at where the heading is drawn.
+        // Runs unconditionally (unlike the opt-in outline above) so anchor
+        // links resolve whether or not bookmarks are enabled.
+        store.registerHeadingAnchor(
+            headingPlainText(element),
+            currentPageNumber(doc),
+            store.Y,
+        );
+
         const maxWidth = store.options.page.maxContentWidth - indent;
 
         if (element.items && element.items.length > 0) {
