@@ -14,6 +14,7 @@ export type SecurityViolationCode =
     | 'IMAGE_DOMAIN_BLOCKED'
     | 'DATA_URL_BLOCKED'
     | 'SVG_BLOCKED'
+    | 'IMAGE_TYPE_BLOCKED'
     | 'LOCALHOST_BLOCKED'
     | 'PRIVATE_IP_BLOCKED'
     | 'LINK_LOCAL_IP_BLOCKED'
