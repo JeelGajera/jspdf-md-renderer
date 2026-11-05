@@ -43,7 +43,15 @@ const renderHeading = (
         }
         doc.setTextColor(headingColor);
 
-        breakIfOverflow(doc, store, getCharHight(doc) * 1.8);
+        const headingHeight = getCharHight(doc) * 1.8;
+        // `keepWithNext` reserves one line of body text in addition to the
+        // heading, so a heading never strands alone at the bottom of a page.
+        const reserveHeight = store.options.heading?.keepWithNext
+            ? headingHeight +
+              (store.options.page.defaultFontSize / doc.internal.scaleFactor) *
+                  store.options.page.defaultLineHeightFactor
+            : headingHeight;
+        breakIfOverflow(doc, store, reserveHeight);
 
         // Opt-in PDF bookmarks: record the heading's depth, plain-text
         // title and page. Read after the page break so the entry points at
