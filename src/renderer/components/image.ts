@@ -6,6 +6,7 @@ import {
     calculateImageDimensions,
     detectImageFormat,
 } from '../../utils/image-utils';
+import { getDocUnit } from '../../utils/doc-helpers';
 
 /**
  * Renders an image element into the jsPDF document with smart sizing and alignment.
@@ -31,7 +32,11 @@ const renderImage = (
     }
 
     const options = store.options;
-    const docUnit = options.page.unit || 'mm';
+    // The document's own unit is authoritative: `page.unit` defaults to `'mm'`
+    // even when the document was created with a different unit, so sizing from
+    // it drew images at the wrong physical size. Fall back to it only when the
+    // scale factor cannot be read (e.g. a mock document).
+    const docUnit = getDocUnit(doc) ?? options.page.unit ?? 'mm';
     const indent = indentLevel * options.page.indent;
     const maxWidth = options.page.maxContentWidth - indent;
     const pageLeftX = store.X + indent;
